@@ -1,0 +1,38 @@
+{
+  "name": "discogs-submitter",
+  "version": "1.0.0",
+  "description": "Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital and submit releases to Discogs.",
+  "keywords": [
+    "userscript",
+    "tampermonkey-userscript",
+    "violentmonkey-userscript",
+    "discogs",
+    "bandcamp",
+    "qobuz",
+    "junodownload",
+    "beatport",
+    "7digital"
+  ],
+  "author": "Denis G. <https://github.com/denis-g>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/denis-g/userscript-discogs-submitter.git"
+  },
+  "bugs": {
+    "url": "https://github.com/denis-g/userscript-discogs-submitter/issues"
+  },
+  "homepage": "https://github.com/denis-g/userscript-discogs-submitter#readme",
+  "main": "discogs-submitter.user.js",
+  "scripts": {
+    "lint": "eslint .",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "@babel/eslint-parser": "^7.28.6",
+    "eslint": "^8.57.1",
+    "eslint-config-airbnb": "^19.0.4",
+    "eslint-config-prettier": "^9.1.2",
+    "eslint-plugin-userscripts": "^0.5.6",
+    "prettier": "^3.8.1"
+  }
+}

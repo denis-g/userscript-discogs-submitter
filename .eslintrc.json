@@ -1,0 +1,49 @@
+{
+  "root": true,
+  "env": {
+    "browser": true,
+    "es2022": true,
+    "greasemonkey": true
+  },
+  "parserOptions": {
+    "ecmaVersion": 2022,
+    "sourceType": "script"
+  },
+  "extends": ["airbnb-base", "prettier"],
+  "globals": {
+    "unsafeWindow": "readonly",
+    "GM": "readonly",
+    "GM_info": "readonly"
+  },
+  "rules": {
+    "camelcase": [
+      "error",
+      {
+        // user script global variables and some internal variables
+        "allow": ["GM", "GM_info", "unsafeWindow", "full_data", "sub_notes"]
+      }
+    ],
+    "no-console": "off",
+    "no-plusplus": "off",
+    "no-underscore-dangle": "off",
+    "import/no-extraneous-dependencies": "off",
+    "import/prefer-default-export": "off",
+    "class-methods-use-this": "off",
+    "no-use-before-define": ["error", { "functions": false, "classes": false, "variables": false }],
+    "no-param-reassign": "off",
+    "no-restricted-globals": "off",
+    "no-restricted-syntax": "off",
+    "no-continue": "off",
+    "prefer-rest-params": "off",
+    "func-names": "off",
+    "array-callback-return": ["error", { "allowImplicit": true }],
+    "strict": "off",
+    "prefer-destructuring": "off"
+  },
+  "overrides": [
+    {
+      "files": ["*.user.js"],
+      "extends": ["plugin:userscripts/recommended"]
+    }
+  ]
+}

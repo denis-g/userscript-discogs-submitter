@@ -1,0 +1,50 @@
+name: Feature Request
+description: Suggest an idea.
+labels: ['feature']
+assignees:
+  - denis-g
+body:
+  - type: dropdown
+    id: type
+    attributes:
+      label: Type of Request
+      multiple: true
+      options:
+        - New Digital Store Support
+        - UI/UX Improvement
+        - New Feature
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: |
+        Describe your idea or the new digital store support you are requesting.
+      placeholder: |
+        I would like to see support for ...
+        This feature would help by ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: urls
+    attributes:
+      label: Store URL(s)
+      description: |
+        If requesting support for a new digital store, please provide links to album/release pages.
+      placeholder: |
+        https://example-store.com/album/123456
+      render: yaml
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: Confirmation
+      options:
+        - label: I confirm that I am requesting an enhancement or a new feature.
+          required: true

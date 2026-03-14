@@ -1,0 +1,22 @@
+name: Miscellaneous
+description: Any other message.
+labels: ['miscellaneous']
+assignees:
+  - denis-g
+body:
+  - type: textarea
+    id: message
+    attributes:
+      label: Message
+      placeholder: |
+        Provide any additional information you think is relevant.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: Confirmation
+      options:
+        - label: I confirm that I am sending a message.
+          required: true
