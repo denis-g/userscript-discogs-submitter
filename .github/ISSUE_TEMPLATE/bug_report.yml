@@ -1,0 +1,106 @@
+name: Bug Report
+description: Report a bug.
+labels: ['bug']
+assignees:
+  - denis-g
+body:
+  - type: dropdown
+    id: browser
+    attributes:
+      label: Browser
+      description: |
+        Select the browser you are using.
+      multiple: true
+      options:
+        - Chrome
+        - Firefox
+        - Safari
+        - Edge
+        - Opera
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: other_browser
+    attributes:
+      label: Other browser
+      description: |
+        If you selected Other, please enter the browser here.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: userscript_extension
+    attributes:
+      label: Userscript Extension
+      description: |
+        Select the userscript extension you are using.
+      multiple: true
+      options:
+        - Tampermonkey
+        - Violentmonkey
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: other_userscript_extension
+    attributes:
+      label: Other userscript extension
+      description: |
+        If you selected Other, please enter the userscript extension here.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: store
+    attributes:
+      label: Digital Store
+      description: |
+        Select the digital store where the bug appears.
+      options:
+        - Bandcamp
+        - Qobuz
+        - Juno Download
+        - Beatport
+        - 7digital
+    validations:
+      required: true
+
+  - type: textarea
+    id: urls
+    attributes:
+      label: Relevant URL(s)
+      description: |
+        On which pages does the bug appear?
+      placeholder: |
+        https://example.com/album/release/123456
+      render: yaml
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: |
+        What actually happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: debug_info
+    attributes:
+      label: Debug info
+      description: |
+        Copy and paste data from "🐞" (Copy debug) button in the widget.
+      render: yaml
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: Confirmation
+      options:
+        - label: I confirm that I am reporting a bug.
+          required: true
