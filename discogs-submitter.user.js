@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Discogs Submitter
-// @version      2.0.0
+// @version      2.0.5
 // @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital and submit releases to Discogs.
 // @license      MIT
 // @namespace    discogs-submitter
@@ -12,6 +12,7 @@
 // @homepageURL  https://github.com/denis-g/userscript-discogs-submitter#readme
 // @supportURL   https://github.com/denis-g/userscript-discogs-submitter/issues
 // @match        https://*.bandcamp.com/album/*
+// @match        https://web.archive.org/web/*/*://*.bandcamp.com/album/*
 // @match        https://*.qobuz.com/*/album/*
 // @match        https://*.junodownload.com/products/*
 // @match        https://*.beatport.com/*
@@ -34,7 +35,9 @@
 // @grant        GM_xmlhttpRequest
 // @grant        GM_info
 // @grant        GM_openInTab
+// @grant        GM_getResourceText
 // @grant        unsafeWindow
+// @resource     DS_ICON https://github.com/denis-g/userscript-discogs-submitter/raw/refs/heads/master/assets/icon.svg
 // ==/UserScript==
 
 (async () => {
@@ -42,6 +45,10 @@
    * Internal helpers for configuration and parsing.
    */
   const Helper = {
+    isWebArchive: () => {
+      return location.href.includes('https://web.archive.org/web/');
+    },
+
     /**
      * Shared templates for artist credits to prevent duplication.
      * @type {string[]}
@@ -159,7 +166,7 @@
         Helper.GLOBAL_CREDIT_REGEX,
       ),
     },
-    ignoreCapitalization: ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'AM', 'PM', 'AI', 'DJ', 'MC', 'EP', 'CD', 'DVD', 'HD', 'LP', 'DAT', 'NASA', 'FM', 'VHS', 'VIP', 'UK', 'USA', 'UFO', 'WTF'],
+    ignoreCapitalization: ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'AM', 'PM', 'AI', 'DJ', 'MC', 'EP', 'CD', 'DVD', 'HD', 'LP', 'DAT', 'NASA', 'FM', 'VHS', 'VIP', 'UK', 'USA', 'UFO', 'WTF', 'WWII', 'LSD', 'TNT'],
   };
 
   /**
@@ -196,23 +203,39 @@
    */
   const Utils = {
     /**
+     * Converts glob-style URL patterns (using * as wildcard) into RegExp testers.
+     * Regexes are compiled once at definition time, not on every call.
+     * @param {...string} patterns - URL patterns using * as wildcard (e.g. 'https://*.example.com/album/*').
+     * @returns {(url: string) => boolean} Function that returns true if the URL matches strictly from the start.                                                                 │
+     */
+    matchUrls: (...patterns) => {
+      const regexes = patterns.map(p =>
+        new RegExp(`^${p.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')}`, 'i'),
+      );
+
+      return url => regexes.some(re => re.test(url));
+    },
+
+    /**
      * Trims, collapses multiple spaces/newlines/tabs into a single space,
      * and replaces &nbsp; entities. Returns null if the result is an empty string.
      * Non-string values are returned as-is.
      * @param {*} str - The value to clean.
+     * @param {boolean} collapseWhitespace - Whether to collapse multiple spaces/newlines into one.
      * @returns {string|null|*} Cleaned string, null if empty, or the original value if not a string.
      */
-    cleanString: (str) => {
+    cleanString: (str, collapseWhitespace = true) => {
       if (typeof str !== 'string') {
         return str;
       }
 
-      return (
-        str
-          .replace(/&nbsp;/gi, ' ')
-          .replace(/\s+/g, ' ')
-          .trim() || null
-      );
+      let cleaned = str.replace(/&nbsp;/gi, ' ');
+
+      if (collapseWhitespace) {
+        cleaned = cleaned.replace(/\s+/g, ' ');
+      }
+
+      return cleaned.trim() || null;
     },
 
     /**
@@ -355,12 +378,10 @@
           br.replaceWith('\n');
         });
 
-        return clone.textContent.trim();
+        return Utils.cleanString(clone.textContent, false);
       }
 
-      const text = result.textContent || '';
-
-      return Utils.cleanString(text);
+      return Utils.cleanString(result.textContent);
     },
 
     /**
@@ -985,38 +1006,35 @@
             0 0 30px rgba(0, 0, 0, 0.8);
         }
 
-        &::before,
-        &::after {
-          content: '';
-          position: absolute;
-          z-index: -1;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          opacity: 0;
-          transition: opacity 0.8s ease;
+        &.is-webarchive {
+          top: calc(var(--wm-toolbar-height) + var(--ds-gap));
         }
+      }
+
+      .discogs-submitter__loader {
+        content: '';
+        position: absolute;
+        z-index: -1;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--ds-color-white);
+        opacity: 0;
+        transition: opacity 0.8s ease;
 
         &.is-loading {
-          &::before,
-          &::after {
-            z-index: 10;
-          }
+          z-index: 10;
+          opacity: 0.75;
+        }
 
-          &::before {
-            background: var(--ds-color-white);
-            opacity: 0.75;
-          }
-
-          &::after {
-            background-image: var(--ds-logo);
-            background-size: 100px 100px;
-            background-repeat: no-repeat;
-            background-position: center;
-            opacity: 1;
-            animation: ds-spinner 0.5s linear infinite;
-          }
+        svg {
+          width: 70px;
+          height: 70px;
+          animation: ds-spinner 0.5s linear infinite;
         }
       }
 
@@ -1432,7 +1450,7 @@
      */
     widgetHtml: `
       <div class="discogs-submitter__header">
-        <img class="discogs-submitter__header__logo" src="${GM_info.script.icon}" alt="${GM_info.script.name} Logo" />
+        <svg class="discogs-submitter__header__logo" aria-hidden="true"><use href="#icon-logo"></use></svg>
         <span class="discogs-submitter__header__title">${GM_info.script.name} <small>v${GM_info.script.version}</small></span>
         <div class="discogs-submitter__header__drag-btn" title="Grab to move" role="button"></div>
         <div class="discogs-submitter__header__close-btn" title="Close widget" role="button"></div>
@@ -1454,6 +1472,9 @@
           <a href="https://buymeacoffee.com/denis_g" target="_blank">Made with <span>♥</span> for music</a>
         </div>
       </div>
+      <div class="discogs-submitter__loader">
+        <svg class="discogs-submitter__loader__logo" aria-hidden="true"><use href="#icon-logo"></use></svg>
+      </div>
     `,
 
     /**
@@ -1461,7 +1482,7 @@
      */
     injectButtonHtml: `
       <div class="discogs-submitter__inject__btn" role="button">
-        <img class="discogs-submitter__inject__logo" src="${GM_info.script.icon}" alt="${GM_info.script.name} Logo" />
+        <svg class="discogs-submitter__inject__logo" aria-hidden="true"><use href="#icon-logo"></use></svg>
         <span>${GM_info.script.name}</span>
       </div>
     `,
@@ -1600,7 +1621,10 @@
     list: [
       {
         id: 'bandcamp',
-        test: url => /bandcamp\.com\/album\//i.test(url),
+        test: Utils.matchUrls(
+          'https://*.bandcamp.com/album/*',
+          'https://web.archive.org/web/*/*://*.bandcamp.com/album/*',
+        ),
         target: '.tralbumCommands',
         injectButton: (button, target) => {
           button.classList.add('follow-unfollow');
@@ -1746,7 +1770,9 @@
       },
       {
         id: 'qobuz',
-        test: url => /qobuz\.com\/.*\/album\//i.test(url),
+        test: Utils.matchUrls(
+          'https://*.qobuz.com/*/album/*',
+        ),
         target: '.album-meta',
         injectButton: (button, target) => {
           button.classList.add('btn-secondary');
@@ -1827,7 +1853,9 @@
       },
       {
         id: 'junodownload',
-        test: url => /junodownload\.com\/products\//i.test(url),
+        test: Utils.matchUrls(
+          'https://*.junodownload.com/products/*',
+        ),
         target: '#product-action-btns',
         injectButton: (button, target) => {
           button.classList.add('btn', 'btn-cta');
@@ -1910,7 +1938,9 @@
       },
       {
         id: 'beatport',
-        test: url => /beatport\.com\/release\//i.test(url),
+        test: Utils.matchUrls(
+          'https://*.beatport.com/release/*',
+        ),
         target: '[class*="ReleaseDetailCard-style__Controls"]',
         injectButton: (button, target) => {
           button.classList.add('primary', 'hzHZaW');
@@ -2003,7 +2033,9 @@
       },
       {
         id: '7digital',
-        test: url => /7digital\.com\/artist\/[^/]+\/release\/[^/]+/i.test(url),
+        test: Utils.matchUrls(
+          'https://*.7digital.com/artist/*/release/*',
+        ),
         target: '.release-purchase',
         injectButton: (button, target) => {
           button.classList.add('btn-primary');
@@ -2047,11 +2079,9 @@
           const albumLabel = data[0].release.label.name;
           const albumReleased = Utils.normalizeReleaseDate(Utils.getTextFromTag('.release-data-label + .release-data-info'));
           const albumTracks = data.map((track, i) => {
-            const rawArtists = track.artist.name.split(',').map(name => name.trim());
-
             const trackPosition = `${i + 1}`;
             const trackExtraArtists = [];
-            const trackArtists = Utils.normalizeArtists(rawArtists, trackExtraArtists);
+            const trackArtists = Utils.normalizeArtists(track.artist.name, trackExtraArtists);
             const trackTitle = Utils.normalizeTrackTitle(track.version !== '' ? `${track.title} (${track.version})` : track.title, trackExtraArtists);
             const trackDuration = Utils.normalizeDuration(track.duration);
 
@@ -2123,13 +2153,53 @@
     }
 
     /**
+     * Builds a hidden SVG sprite from loaded GM resources and injects it into the DOM.
+     */
+    buildSvgSprite() {
+      if (document.getElementById(`${this.WIDGET_ID}-svg-sprite`)) {
+        return;
+      }
+
+      const svgSprite = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+
+      svgSprite.id = `${this.WIDGET_ID}-svg-sprite`;
+      svgSprite.style.display = 'none';
+
+      const rawIcons = {
+        'icon-logo': GM_getResourceText('DS_ICON'),
+      };
+
+      let symbolsHtml = '';
+
+      Object.entries(rawIcons).forEach(([iconId, svgString]) => {
+        if (!svgString) {
+          return;
+        }
+
+        const viewBoxMatch = svgString.match(/viewBox=["']([^"']+)["']/i);
+        const viewBox = viewBoxMatch ? viewBoxMatch[1] : '0 0 1024 1024';
+        const innerMatch = svgString.match(/<svg[^>]*>([\s\S]*?)<\/svg>/i);
+
+        if (innerMatch && innerMatch[1]) {
+          const innerContent = innerMatch[1].trim();
+
+          symbolsHtml += `<symbol id="${iconId}" viewBox="${viewBox}">${innerContent}</symbol>`;
+        }
+      });
+
+      svgSprite.innerHTML = symbolsHtml;
+
+      document.body.appendChild(svgSprite);
+    }
+
+    /**
      * Builds the main widget popup.
      */
     buildPopup() {
       const container = document.createElement('aside');
 
       container.id = this.WIDGET_ID;
-      container.className = container.id;
+      container.className = `${container.id} ${Helper.isWebArchive() ? 'is-webarchive' : ''}`;
       container.innerHTML = Renderer.widgetHtml;
 
       document.body.appendChild(container);
@@ -2144,6 +2214,7 @@
       this.ui.statusDebugCopyBtn = container.querySelector('.discogs-submitter__status-debug-btn');
       this.ui.previewContainer = container.querySelector('.discogs-submitter__preview-container');
       this.ui.actionsSubmitBtn = container.querySelector('.discogs-submitter__actions__btn-submit');
+      this.ui.loader = container.querySelector('.discogs-submitter__loader');
 
       this.ui.widget.style.setProperty('--ds-logo', `url('${GM_info.script.icon}')`);
     }
@@ -2165,10 +2236,10 @@
      */
     setLoader(isActive) {
       if (isActive) {
-        this.ui.widget.classList.add('is-loading');
+        this.ui.loader.classList.add('is-loading');
       }
       else {
-        this.ui.widget.classList.remove('is-loading');
+        this.ui.loader.classList.remove('is-loading');
       }
     }
 
@@ -2651,6 +2722,7 @@
       this.currentDigitalStore = DigitalStoreRegistry.detectByLocation();
 
       this.injectStyles();
+      this.buildSvgSprite();
       this.buildPopup();
       this.buildInjectButton();
       this.bindDraggableEvent();
