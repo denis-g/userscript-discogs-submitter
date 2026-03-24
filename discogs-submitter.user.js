@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Discogs Submitter
-// @version      2.0.5
+// @version      2.0.6
 // @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital and submit releases to Discogs.
 // @license      MIT
 // @namespace    discogs-submitter
