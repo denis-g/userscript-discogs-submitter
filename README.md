@@ -35,8 +35,8 @@ It extracts metadata from the source page, normalizes it to meet Discogs formatt
 
 <div><sup><strong>Bandcamp</strong>: Catalog number extraction depends on the release description text. Country is extracted from the publisher location.</sup></div>
 <div><sup><strong>Juno Download</strong>: Cover art maximum size is 700x700.</sup></div>
-<div><sup><strong>7digital</strong>: Cover art maximum size is 800x800, definitely available for all releases.</sup><div>
-<div><sup><strong>Web Archive</strong>: Almost all sites had different designs and layouts in different years.</sup><div>
+<div><sup><strong>7digital</strong>: Cover art maximum size is 800x800, definitely available for all releases.</sup></div>
+<div><sup><strong>Web Archive</strong>: Almost all sites had different designs and layouts in different years.</sup></div>
 
 ## Supported Credit Roles
 
