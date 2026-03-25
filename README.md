@@ -19,9 +19,46 @@ It extracts metadata from the source page, normalizes it to meet Discogs formatt
 ## Features
 
 - **Metadata Extraction:** Automatically parses artist names (`VA` normalization), release titles, label names (with `Self-released` support), catalog numbers, release dates, and complete tracklists with track artists. If a release is identified as a compilation (e.g., contains "Compiled by ..."), the compiler is automatically prioritized as the primary release artist.
-- **Credit Extraction:** Automatically identifies and extracts credit roles from titles and descriptions.
-- **Smart Normalization:** Automatically cleans track titles (removes `(Original Mix)`, `[Explicit]`, `(Remastered)`, etc.), standardizes apostrophes, applies **Unicode-aware Title Case**, and cleans whitespace.
+- **Credit Extraction:** Automatically identifies and extracts credit roles from titles and descriptions, moving them to the "Extra Artists" section while cleaning the original text.
+- **Smart Normalization:** Automatically cleans technical tags, standardizes punctuation, and applies intelligent casing.
 - **Cover Art & BPM:** Automatically attaches cover art and includes BPM data in Discogs notes.
+
+## Normalization & Transformations
+
+### Smart Capitalization
+
+The script applies a Unicode-aware Title Case to all fields, ensuring consistent formatting regardless of the source. It preserves stylistic casing (e.g., `Sci-Fi`, `iPhone`) and handles common abbreviations.
+
+- **Standardization:** `yet another track (super mix)` → `Yet Another Track (Super Mix)`, `LIVE AT LONDON` → `Live At London`.
+- **Preserved Abbreviations:** `DJ`, `VIP`, `EP`, `UK`, `I`, `II`, `III`, and etc.
+- **Dotted Abbreviations:** `A.I.`, `U.S.A.` are kept in uppercase.
+- **Mixed Case:** `McDonalds`, `bOOm` are kept as is.
+- **Punctuation:** Normalizes apostrophes (`’`, `` ` ``, `´` → `'`) and cleans whitespace around parentheses.
+
+### Title Cleaning
+
+To meet Discogs standards, common technical suffixes and bracketed tags are removed from track titles:
+- `Track Title (Original Mix)` → `Track Title`
+- `Track Title [Explicit]` → `Track Title`
+- `Album Name - 24 bit` → `Album Name`
+- `Track Title - Bonus Track` → `Track Title`
+
+And more...
+
+### Credit Extraction & Movement
+
+The script scans track titles and release descriptions for artist credits. When found, it creates an `Credit` entry and (in most cases) removes the credit from the title to keep it clean.
+
+- **Features:** `Track Title (feat. Artist B)` → Title: `Track Title`, Featuring: `Artist B`.
+- **Remixes:** `Track Title (Remix By Artist C)` → Title: `Track Title (Remix By Artist C)`, Remix: `Artist C`.
+- **Production:** `Track Title (prod. by Artist D)` → Title: `Track Title`, Producer: `Artist D`.
+
+And more...
+
+### Artist Joiner Parsing
+
+Artist strings are automatically split into individual artists using common joiners:
+- `Artist A, Artist B & Artist C` → `Artist A` (join: `,`), `Artist B` (join: `&`), `Artist C`.
 
 ## Supported Digital Stores
 
