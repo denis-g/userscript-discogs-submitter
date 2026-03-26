@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Discogs Submitter
-// @version      2.0.8
+// @version      2.0.9
 // @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital and submit releases to Discogs.
 // @license      MIT
 // @namespace    discogs-submitter
@@ -206,7 +206,7 @@
      * Converts glob-style URL patterns (using * as wildcard) into RegExp testers.
      * Regexes are compiled once at definition time, not on every call.
      * @param {...string} patterns - URL patterns using * as wildcard (e.g. 'https://*.example.com/album/*').
-     * @returns {(url: string) => boolean} Function that returns true if the URL matches strictly from the start.                                                                 │
+     * @returns {(url: string) => boolean} Function that returns true if the URL matches strictly from the start.
      */
     matchUrls: (...patterns) => {
       const regexes = patterns.map(p =>
@@ -366,7 +366,7 @@
         return null;
       }
 
-      if (attribute !== '') {
+      if (attribute) {
         return Utils.cleanString(result.getAttribute(attribute));
       }
 
@@ -909,7 +909,7 @@
       return {
         _previewObject: payload,
         full_data: JSON.stringify(payload),
-        sub_notes: `${sourceUrl}\n---\nDigital release in ${format} format has been added.`,
+        sub_notes: `${sourceUrl}\n---\nA digital release in ${format} format has been added.`,
       };
     },
   };
