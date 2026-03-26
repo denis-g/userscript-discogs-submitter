@@ -30,7 +30,7 @@ It extracts metadata from the source page, normalizes it to meet Discogs formatt
 The script applies a Unicode-aware Title Case to all fields, ensuring consistent formatting regardless of the source. It preserves stylistic casing (e.g., `Sci-Fi`, `iPhone`) and handles common abbreviations.
 
 - **Standardization:** `yet another track (super mix)` → `Yet Another Track (Super Mix)`, `LIVE AT LONDON` → `Live At London`.
-- **Preserved Abbreviations:** `DJ`, `VIP`, `EP`, `UK`, `I`, `II`, `III`, and etc.
+- **Preserved Abbreviations:** `DJ`, `VIP`, `EP`, `UK`, `I`, `II`, `III`, etc.
 - **Dotted Abbreviations:** `A.I.`, `U.S.A.` are kept in uppercase.
 - **Mixed Case:** `McDonalds`, `bOOm` are kept as is.
 - **Punctuation:** Normalizes apostrophes (`’`, `` ` ``, `´` → `'`) and cleans whitespace around parentheses.
@@ -47,7 +47,7 @@ And more...
 
 ### Credit Extraction & Movement
 
-The script scans track titles and release descriptions for artist credits. When found, it creates an `Credit` entry and (in most cases) removes the credit from the title to keep it clean.
+The script scans track titles and release descriptions for artist credits. When found, it creates a `Credit` entry and (in most cases) removes the credit from the title to keep it clean.
 
 - **Features:** `Track Title (feat. Artist B)` → Title: `Track Title`, Featuring: `Artist B`.
 - **Remixes:** `Track Title (Remix By Artist C)` → Title: `Track Title (Remix By Artist C)`, Remix: `Artist C`.
