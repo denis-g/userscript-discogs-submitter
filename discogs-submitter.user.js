@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Discogs Submitter
-// @version      2.0.9
+// @version      2.0.10
 // @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital and submit releases to Discogs.
 // @license      MIT
 // @namespace    discogs-submitter
@@ -107,7 +107,7 @@
     ),
     removeFromArtistName: [],
     removeFromTitleName: Helper.buildCreditRegexes(
-      ['original mix', 'original', 'remaster', 'remastered', 'explicit', 'digital bonus track', 'digital bonus', 'bonus track', 'bonus', '24 bit', '16 bit'],
+      ['original mix', 'original', 'remaster', 'remastered', 'explicit', 'digital bonus track', 'digital bonus', 'bonus track', 'bonus', '24bit', '24 bit', '16bit', '16 bit'],
       // "(Pattern)", "[Pattern]", "- Pattern"
       ['\\(\\s*{{p}}\\s*\\)', '\\[\\s*{{p}}\\s*\\]', '-\\s*{{p}}\\b'],
     ),
@@ -166,7 +166,7 @@
         Helper.GLOBAL_CREDIT_REGEX,
       ),
     },
-    ignoreCapitalization: ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'AM', 'PM', 'AI', 'DJ', 'MC', 'EP', 'CD', 'DVD', 'HD', 'LP', 'DAT', 'NASA', 'FM', 'VHS', 'VIP', 'UK', 'USA', 'UFO', 'WTF', 'WWII', 'LSD', 'TNT'],
+    ignoreCapitalization: ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'AM', 'PM', 'AI', 'DJ', 'MC', 'EP', 'CD', 'DVD', 'HD', 'LP', 'DAT', 'NASA', 'FM', 'VHS', 'VIP', 'UK', 'USA', 'USSR', 'UFO', 'WTF', 'WWII', 'WWIII', 'LSD', 'TNT'],
   };
 
   /**
@@ -688,11 +688,51 @@
     },
 
     /**
-     * Cleans and standardizes artist names while extracting credits.
+     * Attempts to split a single string (often a track title) into artist and title components.
+     * Specifically designed for stores like Bandcamp where artists and titles are frequently combined.
+     * @param {string} rawTitle - The potentially combined string to split.
+     * @param {Array<{name: string, join: string}>} defaultArtists - Fallback artist list if no split is found.
+     * @param {Array<{name: string, role: string}>} extraArtists - Collector for extra artist credits (e.g., "featuring") found during splitting.
+     * @returns {{artists: Array<{name: string, join: string}>, title: string}} Object containing the parsed artist list and normalized track title.
+     */
+    splitArtistTitle: (rawTitle, defaultArtists, extraArtists) => {
+      let cleanTitleForSplit = rawTitle || '';
+
+      // Pre-clean technical suffixes that might interfere with splitting
+      PATTERNS.removeFromTitleName.forEach((pattern) => {
+        cleanTitleForSplit = cleanTitleForSplit.replace(pattern, '').trim();
+      });
+
+      // Split by common delimiters (hyphen, en-dash, em-dash) followed by a space
+      // supported formats: "Artist - Title", "Artist- Title"
+      const splitMatch = cleanTitleForSplit.match(/^(\S(?:.*?\S)?)\s+[-\u2013\u2014]\s*(\S.*)$/)
+        || cleanTitleForSplit.match(/^(\S(?:.*?\S)?)[-\u2013\u2014]\s+(\S.*)$/);
+
+      if (splitMatch) {
+        const artistPart = splitMatch[1];
+        const titlePart = splitMatch[2];
+
+        // If split exists, normalize both parts
+        return {
+          artists: Utils.normalizeArtists(artistPart, extraArtists),
+          title: Utils.normalizeTrackTitle(titlePart, extraArtists),
+        };
+      }
+
+      // If no split is found, return default artists and the normalized original title
+      return {
+        artists: defaultArtists,
+        title: Utils.normalizeTrackTitle(rawTitle, extraArtists),
+      };
+    },
+
+    /**
+     * Cleans and standardizes artist names while extracting extra credits.
+     * Handles splitting by joiners (e.g., ",", "&", "feat") recursively.
      * @param {string|string[]} artists - Artist name(s) to normalize.
-     * @param {Array<{name: string, role: string}>} [extraArtists] - Collector for credits found inside the artist string.
-     * @param {boolean} [isSubcall] - Internal flag to prevent infinite recursion during splitting.
-     * @returns {Array<{name: string, join: string}>} List of cleaned artist objects.
+     * @param {Array<{name: string, role: string}>} [extraArtists] - Collector for credits (e.g., Remixers, Features) found inside the artist string.
+     * @param {boolean} [isSubcall] - Internal flag to prevent infinite recursion during recursive splitting.
+     * @returns {Array<{name: string, join: string}>} List of cleaned artist objects with their respective joiners.
      */
     normalizeArtists: (artists, extraArtists = null, isSubcall = false) => {
       if (!artists) {
@@ -1636,7 +1676,7 @@
           hdAudio: true,
         },
         parse: () => {
-          const data = unsafeWindow.TralbumData;
+          const data = JSON.parse(Utils.getTextFromTag('script[data-tralbum]', null, 'data-tralbum'));
 
           const albumCover = Utils.getTextFromTag('a.popupImage', null, 'href');
           const albumExtraArtists = [];
@@ -1671,21 +1711,9 @@
           let albumReleased = null;
 
           const albumTracks = data?.trackinfo?.map((track, i) => {
-            const rawTitle = track.title;
-            // Pre-clean title from technical tags before Artist - Title splitting.
-            // This prevents suffixes like "- 24 bit" from being mistaken for track title delimiters.
-            let cleanTitleForSplit = rawTitle;
-
-            PATTERNS.removeFromTitleName.forEach((pattern) => {
-              cleanTitleForSplit = cleanTitleForSplit.replace(pattern, '').trim();
-            });
-
-            const titleRow = cleanTitleForSplit.match(/^(\S(?:.*?\S)?)\s+-\s*(\S.*)$/) || cleanTitleForSplit.match(/^(\S(?:.*?\S)?)-\s+(\S.*)$/);
-
             const trackPosition = `${i + 1}`;
             const trackExtraArtists = [];
-            const trackArtists = titleRow ? Utils.normalizeArtists(titleRow[1], trackExtraArtists) : albumArtists;
-            const trackTitle = Utils.normalizeTrackTitle(titleRow ? titleRow[2] : rawTitle, trackExtraArtists);
+            const { artists: trackArtists, title: trackTitle } = Utils.splitArtistTitle(track.title, albumArtists, trackExtraArtists);
             const trackDuration = Utils.normalizeDuration(track.duration);
 
             return {
