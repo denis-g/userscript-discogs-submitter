@@ -12,18 +12,17 @@ export default antfu(
       indent: 2,
       semi: true,
     },
+    jsonc: true,
+    markdown: true,
     // only Vanilla JS
     typescript: false,
     jsx: false,
     vue: false,
-    jsonc: false,
     yaml: false,
     toml: false,
     angular: false,
   },
-  {
-    files: ['**/*.md'],
-  },
+
   {
     files: ['discogs-submitter.user.js'],
     plugins: {
