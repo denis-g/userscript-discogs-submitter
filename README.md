@@ -16,87 +16,20 @@
 **Discogs Submitter** is a userscript designed to automate the process of migrating music releases from popular digital stores to the Discogs database.
 It extracts metadata from the source page, normalizes it to meet Discogs formatting standards, and submits it directly as a "Draft".
 
-## Features
+### Supported Digital Stores
 
-- **Metadata Extraction:** Automatically parses artist names (`VA` normalization), release titles, label names (with `Self-released` support), catalog numbers, release dates, and complete tracklists with track artists. If a release is identified as a compilation (e.g., contains "Compiled by ..."), the compiler is automatically prioritized as the primary release artist.
-- **Credit Extraction:** Automatically identifies and extracts credit roles from titles and descriptions, moving them to the "Extra Artists" section while cleaning the original text.
-- **Smart Normalization:** Automatically cleans technical tags, standardizes punctuation, and applies intelligent casing.
-- **Cover Art & BPM:** Automatically attaches cover art and includes BPM data in Discogs notes.
+| Store             | Release page URL pattern            | Country | Catalog Number | BPM info | 24-bit | Hi-Res Cover | Web Archive |
+| ----------------- |-------------------------------------| :-----: | :------------: | :------: | :----: |:------------:|:-----------:|
+| **Bandcamp**      | `*.bandcamp.com/album/*`            |   🟡    |       🟡       |    ❌    |   ✅   |    ✅         |     ✅       |
+| **Qobuz**         | `*.qobuz.com/*/album/*`             |   ❌    |       ❌       |    ❌    |   ✅   |      ✅       |      ❌      |
+| **Juno Download** | `*.junodownload.com/products/*`     |   ❌    |       ✅       |    ✅    |   ❌   |      ❌       |      ❌      |
+| **Beatport**      | `*.beatport.com/release/*`          |   ❌    |       ✅       |    ✅    |   ✅   |      ✅       |      ❌      |
+| **7digital**      | `*.7digital.com/artist/*/release/*` |   ❌    |       ❌       |    ❌    |   ✅   |      ❌       |      ❌      |
 
-## Normalization & Transformations
-
-### Smart Capitalization
-
-The script applies a Unicode-aware Title Case to all fields, ensuring consistent formatting regardless of the source. It preserves stylistic casing (e.g., `Sci-Fi`, `iPhone`) and handles common abbreviations.
-
-- **Standardization:** `yet another track (super mix)` → `Yet Another Track (Super Mix)`, `LIVE AT LONDON` → `Live At London`.
-- **Preserved Abbreviations:** `DJ`, `VIP`, `EP`, `UK`, `I`, `II`, `III`, etc.
-- **Dotted Abbreviations:** `A.I.`, `U.S.A.` are kept in uppercase.
-- **Mixed Case:** `McDonalds`, `bOOm` are kept as is.
-- **Punctuation:** Normalizes apostrophes (`’`, `` ` ``, `´` → `'`) and cleans whitespace around parentheses.
-
-### Title Cleaning
-
-To meet Discogs standards, common technical suffixes and bracketed tags are removed from track titles:
-- `Track Title (Original Mix)` → `Track Title`
-- `Track Title [Explicit]` → `Track Title`
-- `Album Name - 24 bit` → `Album Name`
-- `Track Title - Bonus Track` → `Track Title`
-
-And more...
-
-### Credit Extraction & Movement
-
-The script scans track titles and release descriptions for artist credits. When found, it creates a `Credit` entry and (in most cases) removes the credit from the title to keep it clean.
-
-- **Features:** `Track Title (feat. Artist B)` → Title: `Track Title`, Featuring: `Artist B`.
-- **Remixes:** `Track Title (Remix By Artist C)` → Title: `Track Title (Remix By Artist C)`, Remix: `Artist C`.
-- **Production:** `Track Title (prod. by Artist D)` → Title: `Track Title`, Producer: `Artist D`.
-
-And more...
-
-### Artist Joiner Parsing
-
-Artist strings are automatically split into individual artists using common joiners:
-- `Artist A, Artist B & Artist C` → `Artist A` (join: `,`), `Artist B` (join: `&`), `Artist C`.
-
-## Supported Digital Stores
-
-| Store             | Release page URL pattern              | Country | Catalog Number | BPM info | 24-bit | Hi-Res Cover | Web Archive |
-| ----------------- | ------------------------------------- | :-----: | :------------: | :------: | :----: |:------------:|:-----------:|
-| **Bandcamp**      | `*.bandcamp.com/album/*`              |   🟡    |       🟡       |    ❌    |   ✅   |    ✅         |     ✅       |
-| **Qobuz**         | `*.qobuz.com/*/album/*`              |   ❌    |       ❌       |    ❌    |   ✅   |      ✅       |      ❌      |
-| **Juno Download** | `*.junodownload.com/products/*`      |   ❌    |       ✅       |    ✅    |   ❌   |      ❌       |      ❌      |
-| **Beatport**      | `*.beatport.com/*` (SPA navigation)  |   ❌    |       ✅       |    ✅    |   ✅   |      ✅       |      ❌      |
-| **7digital**      | `*.7digital.com/artist/*/release/*`  |   ❌    |       ❌       |    ❌    |   ✅   |      ❌       |      ❌      |
-
-<div><sup><strong>Bandcamp</strong>: Catalog number extraction depends on the release description text. Country is extracted from the publisher location.</sup></div>
+<div><sup><strong>Bandcamp</strong>: Catalog number extraction relies on both the release credits and description. Country is extracted from the publisher location.</sup></div>
 <div><sup><strong>Juno Download</strong>: Cover art maximum size is 700x700.</sup></div>
 <div><sup><strong>7digital</strong>: Cover art maximum size is 800x800, definitely available for all releases.</sup></div>
 <div><sup><strong>Web Archive</strong>: Almost all sites had different designs and layouts in different years.</sup></div>
-
-## Supported Credit Roles
-
-The userscript parses track titles and release descriptions for the following credit roles, automatically mapping them to the correct Discogs format:
-
-```text
-Featuring, Remix, DJ Mix
-Compiled By, Artwork, Producer, Mastered By, Written-By
-```
-
-## Store-Specific Nuances
-
-- **Bandcamp**: Metadata formatting can vary significantly between different labels and artists. Always double-check the parsed data to ensure accuracy.
-- **Qobuz / Beatport / 7digital**: Artist order is often separated by a comma (`,`) and may not match the official release name. It is recommended to verify these against the label's official information.
-
-## Usage Guide
-
-1. Open a music release page on any supported store.
-2. Click the **Discogs Submitter** button (usually located near the album buy/download controls).
-3. The floating widget will appear and parse the data automatically.
-4. Review the draft in the preview area.
-5. Select your preferred **Format** and **Bit Depth** if available.
-6. Click **Submit to Discogs** to create your draft.
 
 ### Screenshots
 
@@ -136,6 +69,73 @@ Compiled By, Artwork, Producer, Mastered By, Written-By
 ![Discogs Submitter - 7digital](https://github.com/denis-g/userscript-discogs-submitter/raw/refs/heads/master/screenshots/7digital.png)
 
 </details>
+
+## Features
+
+- **Metadata Extraction:** Automatically parses artist names (`VA` normalization), release titles, label names (with `Self-released` support), catalog numbers, release dates, and complete tracklists with track artists. If a release is identified as a compilation (e.g., contains "Compiled by..."), the compiler is automatically prioritized as the primary release artist.
+- **Credit Extraction:** Automatically identifies and extracts credit roles from titles and descriptions, moving them to the "Extra Artists" section while keeping the original title text clean.
+- **Smart Normalization:** Automatically filters out technical tags, standardizes punctuation, and applies intelligent casing to all fields.
+- **Cover Art & BPM:** Automatically fetches and attaches cover art, ensuring BPM data is included in the Discogs release notes when available.
+
+### Store-Specific Nuances
+
+- **Bandcamp**: Metadata formatting can vary significantly between different labels and artists. Always double-check the parsed data to ensure accuracy.
+- **Qobuz / Beatport / 7digital**: Artist lists are often comma-separated and may not reflect the precise artist credits featured on the official release artwork. Verify these against the label's source if possible.
+
+## Normalization & Transformations
+
+### Smart Capitalization
+
+The script applies a Unicode-aware Title Case to all fields, ensuring consistent formatting regardless of the source. It preserves stylistic casing (e.g., `Sci-Fi`, `iPhone`) and handles common abbreviations.
+
+- **Standardization:** `yet another track (super mix)` → `Yet Another Track (Super Mix)`, `LIVE AT LONDON` → `Live At London`.
+- **Preserved Abbreviations:** `DJ`, `VIP`, `EP`, `UK`, `I`, `II`, `III`, etc.
+- **Dotted Abbreviations:** `A.I.`, `U.S.A.` are preserved in uppercase.
+- **Mixed Case:** `McDonalds`, `bOOm` are preserved exactly as written.
+- **Punctuation:** Normalizes apostrophes (`’`, `` ` ``, `´` → `'`) and cleans whitespace around parentheses.
+
+### Title Cleaning
+
+To meet Discogs standards, common technical suffixes and bracketed tags are removed from track titles:
+- `Track Title (Original Mix)` → `Track Title`
+- `Track Title [Explicit]` → `Track Title`
+- `Album Name - 24 bit` → `Album Name`
+- `Track Title - Bonus Track` → `Track Title`
+
+And more...
+
+### Credit Extraction & Movement
+
+The script scans track titles and release descriptions for artist credits. When found, it creates a `Credit` entry and (in most cases) removes the credit from the title to keep it clean.
+
+- **Features:** `Track Title (feat. Artist B)` → Title: `Track Title`, Featuring: `Artist B`.
+- **Remixes:** `Track Title (Remix By Artist C)` → Title: `Track Title (Remix By Artist C)`, Remix: `Artist C`.
+- **Production:** `Track Title (prod. by Artist D)` → Title: `Track Title`, Producer: `Artist D`.
+
+And more...
+
+### Artist Joiner Parsing
+
+Artist strings are automatically split into individual artists using common joiners:
+- `Artist A, Artist B & Artist C` → `Artist A` (join: `,`), `Artist B` (join: `&`), `Artist C`.
+
+## Supported Credit Roles
+
+The userscript parses track titles and release descriptions for the following credit roles, automatically mapping them to the correct Discogs format:
+
+```text
+Featuring, Remix, DJ Mix
+Compiled By, Artwork, Producer, Mastered By, Written-By
+```
+
+## Usage Guide
+
+1. Open a music release page on any supported store.
+2. Click the **Discogs Submitter** button (usually located near the album buy/download controls).
+3. The floating widget will appear and parse the data automatically.
+4. Review the draft in the preview area.
+5. Select your preferred **Format** and **Bit Depth** if available.
+6. Click **Submit to Discogs** to create your draft.
 
 ## Installation
 
