@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Discogs Submitter
-// @version      2.0.10
+// @version      2.0.11
 // @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital and submit releases to Discogs.
 // @license      MIT
 // @namespace    discogs-submitter
@@ -166,7 +166,7 @@
         Helper.GLOBAL_CREDIT_REGEX,
       ),
     },
-    ignoreCapitalization: ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'AM', 'PM', 'AI', 'DJ', 'MC', 'EP', 'CD', 'DVD', 'HD', 'LP', 'DAT', 'NASA', 'FM', 'VHS', 'VIP', 'UK', 'USA', 'USSR', 'UFO', 'WTF', 'WWII', 'WWIII', 'LSD', 'TNT'],
+    ignoreCapitalization: ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'AM', 'PM', 'AI', 'DJ', 'MC', 'EP', 'CD', 'DVD', 'HD', 'LP', 'DAT', 'NASA', 'FM', 'VHS', 'VIP', 'UK', 'USA', 'USSR', 'UFO', 'WTF', 'WWII', 'WWIII', 'LSD', 'TNT', 'DNA'],
   };
 
   /**
@@ -1707,6 +1707,7 @@
           const albumArtists = Utils.normalizeMainArtists(data?.artist, albumExtraArtists);
           const albumTitle = Utils.normalizeTrackTitle(data?.current?.title, albumExtraArtists);
           let albumLabel = null;
+          let labelNumber = null;
           let labelCountry = null;
           let albumReleased = null;
 
@@ -1735,15 +1736,82 @@
             albumLabel = Utils.getTextFromTag('.title', locationTag);
           }
 
-          if (!albumLabel) {
-            const nodes = albumCredits.querySelectorAll('a, span, div');
-            const items = Array.from(nodes)
-              .map(el => Utils.cleanString(el.textContent))
-              .filter(Boolean);
+          const creditItems = [];
 
-            items.some((el) => {
+          if (albumCreditsText) {
+            albumCreditsText.split(/\r?\n/).forEach((line) => {
+              const cleaned = Utils.cleanString(line);
+
+              if (cleaned) {
+                creditItems.push(cleaned);
+              }
+            });
+          }
+
+          const aboutNode = document.querySelector('.tralbum-about');
+          const aboutItems = [];
+
+          if (aboutNode) {
+            aboutNode.textContent.split(/\r?\n/).forEach((line) => {
+              const cleaned = Utils.cleanString(line);
+
+              if (cleaned) {
+                aboutItems.push(cleaned);
+              }
+            });
+          }
+
+          const combinedItems = [...creditItems, ...aboutItems];
+          // Arrays for catalog number
+          const catPrefixes = [
+            'Catalog Number',
+            'Calalog No',
+            'Catalogue N°',
+            'Release Catalog No',
+            'Cat.#',
+            'Cat#',
+            'CatNo',
+            'Cat.no',
+            'Cat. Number',
+            'Cat.',
+          ];
+          const labelPrefixes = [
+            'Label',
+            'Released on',
+          ];
+          // Helper to compile plain text strings into a robust regex
+          const buildPrefixRegex = (prefixes) => {
+            const escaped = prefixes.map((p) => {
+              // Escape special regex characters
+              const safe = p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+              // Make spaces robust (e.g. match any whitespace)
+              return safe.replace(/\s+/g, '\\s+');
+            });
+
+            // Matches any of the prefixes followed by spaces/colons/dashes, capturing the rest
+            return new RegExp(`(?:${escaped.join('|')})[\\s:-]+(.+)`, 'i');
+          };
+          const catRegex = buildPrefixRegex(catPrefixes);
+          const labelRegex = buildPrefixRegex(labelPrefixes);
+
+          combinedItems.some((el) => {
+            const match = el.match(catRegex);
+
+            if (match?.[1]) {
+              labelNumber = Utils.cleanString(match[1]);
+
+              return true;
+            }
+
+            return false;
+          });
+
+          if (!albumLabel) {
+            combinedItems.some((el) => {
+              // Quick pre-check using simple regex for optimization before exact extract
               if (/label|released\s+on/i.test(el) && el.length < 100) {
-                const match = el.match(/(?:label|released\s+on)[:\s-]*(.+)/i);
+                const match = el.match(labelRegex);
 
                 if (match?.[1]) {
                   albumLabel = Utils.cleanString(match[1]);
@@ -1755,8 +1823,8 @@
               return false;
             });
 
-            if (!albumLabel && items.length) {
-              albumLabel = items.find(it => it.length > 1) || null;
+            if (!albumLabel && creditItems.length) {
+              albumLabel = creditItems.find(it => it.length > 1) || null;
             }
           }
 
@@ -1790,6 +1858,7 @@
             artists: albumArtists,
             title: albumTitle,
             label: albumLabel,
+            number: labelNumber,
             country: labelCountry,
             released: albumReleased,
             tracks: albumTracks,
