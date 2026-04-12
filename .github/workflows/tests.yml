@@ -10,6 +10,8 @@ jobs:
   validate:
     name: Lint, Typecheck, and Test
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout Repository
