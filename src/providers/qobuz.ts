@@ -16,9 +16,9 @@ import {
  *
  * @returns The parsed structured data or null.
  */
-async function getData() {
+async function getData(): Promise<any> {
   const scripts = document.querySelectorAll('script[type="application/ld+json"]');
-  let data = null;
+  let data: any = null;
 
   Array.from(scripts).some((script) => {
     try {
