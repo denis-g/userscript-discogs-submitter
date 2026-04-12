@@ -1,5 +1,5 @@
 export default {
-  '*.{js,json,md}': [
-    'eslint --fix',
+  '*.{ts,js,json,md}': [
+    'eslint --fix --quiet',
   ],
 };

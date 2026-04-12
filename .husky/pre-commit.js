@@ -1,41 +1,32 @@
 import { execSync } from 'node:child_process';
-import fs from 'node:fs';
 import process from 'node:process';
 
-const FILE_PATH = 'discogs-submitter.user.js';
-const VERSION_REGEX = /(@version\s+)[0-9.]+/;
+const MIN_NODE_VERSION = 22;
+
+/**
+ * Ensures the developer is using the required Node.js version.
+ */
+function checkNodeVersion() {
+  const currentVersion = process.versions.node.split('.')[0];
+
+  if (Number.parseInt(currentVersion, 10) < MIN_NODE_VERSION) {
+    console.error(`\x1B[31m[Husky] Error: Node.js v${MIN_NODE_VERSION} or higher is required.\x1B[0m`);
+    console.error(`\x1B[31m[Husky] Current version: v${process.version}\x1B[0m`);
+
+    process.exit(1);
+  }
+}
 
 /**
  * Automates the versioning process for the userscript.
- * Bumps the NPM version and syncs it with the userscript header.
  */
 function updateVersion() {
   try {
-    // Bump version and get the new version
-    console.warn('[Husky] Bumping version...');
+    console.warn('\x1B[33m[Husky] Bumping version...\x1B[0m');
+    execSync('npm version patch --no-git-tag-version', { stdio: 'inherit' });
+    execSync('git add package.json package-lock.json');
 
-    const rawVersion = execSync('npm version patch --no-git-tag-version', { encoding: 'utf8' }).trim();
-    const version = rawVersion.startsWith('v') ? rawVersion.slice(1) : rawVersion;
-
-    if (!fs.existsSync(FILE_PATH)) {
-      throw new Error(`Source file ${FILE_PATH} not found.`);
-    }
-
-    // Read the userscript file and update the @version tag
-    const content = fs.readFileSync(FILE_PATH, 'utf8');
-
-    if (VERSION_REGEX.test(content)) {
-      const updatedContent = content.replace(VERSION_REGEX, `$1${version}`);
-      fs.writeFileSync(FILE_PATH, updatedContent, 'utf8');
-
-      // Stage the modified files back to the commit
-      execSync(`git add package.json package-lock.json ${FILE_PATH}`);
-
-      console.warn(`[Husky] Successfully updated version to ${version} and staged changes.`);
-    }
-    else {
-      throw new Error(`Could not find @version tag in ${FILE_PATH}`);
-    }
+    console.warn('\x1B[32m[Husky] Successfully updated version and staged changes.\x1B[0m');
   }
   catch (error) {
     throw new Error(`Version auto-update failed: ${error.message}`);
@@ -43,27 +34,33 @@ function updateVersion() {
 }
 
 /**
- * Husky `pre-commit` hook in JavaScript.
- * Orchestrates linting and automated versioning.
+ * Husky `pre-commit` hook.
  */
 function preCommit() {
   try {
-    // Run lint-staged to ensure code quality
-    console.warn('[Husky] Running lint-staged...');
+    checkNodeVersion();
 
+    console.warn('\x1B[36m[Husky] Running tests...\x1B[0m');
+    execSync('npm run test:run', { stdio: 'inherit' });
+
+    console.warn('\x1B[36m[Husky] Running lint-staged...\x1B[0m');
     execSync('npx lint-staged', { stdio: 'inherit' });
 
-    // Check if the userscript was modified and needs a version bump
-    const stagedFiles = execSync('git diff --cached --name-only', { encoding: 'utf8' });
+    const stagedFiles = execSync('git diff --cached --name-only', { encoding: 'utf8' })
+      .split('\n')
+      .map(f => f.trim())
+      .filter(Boolean);
 
-    if (stagedFiles.includes(FILE_PATH)) {
-      console.warn('[Husky] Userscript changes detected. Running version auto-update...');
+    const srcFilesChanged = stagedFiles.some(file => file.startsWith('src/'));
+
+    if (srcFilesChanged) {
+      console.warn('\x1B[33m[Husky] Detected changes in src/. Triggering auto-version...\x1B[0m');
 
       updateVersion();
     }
   }
   catch (error) {
-    console.error(`[Husky] Pre-commit hook failed: ${error.message}`);
+    console.error(`\x1B[31m[Husky] Pre-commit hook failed: ${error.message}\x1B[0m`);
 
     process.exit(1);
   }

@@ -1,0 +1,53 @@
+/* --- INJECTED BUTTONS --- */
+
+.discogs-submitter__inject__btn {
+  display: inline-flex;
+  vertical-align: middle;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+
+  &:hover {
+    .discogs-submitter__inject__logo {
+      animation: ds-spinner 1s linear infinite;
+    }
+  }
+
+  &.is-disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  &.is-bandcamp {
+    margin-bottom: 1.5em;
+    padding: 8px 5px;
+    box-sizing: border-box;
+  }
+
+  &.is-qobuz {
+    margin-top: 20px;
+    text-transform: none;
+  }
+
+  &.is-qobuz {
+    .discogs-submitter__inject__logo {
+      margin-top: -4px;
+    }
+  }
+
+  &.is-junodownload {
+    margin-top: 20px;
+  }
+
+  &.is-beatport {
+    margin-top: 8px;
+  }
+}
+
+.discogs-submitter__inject__logo {
+  display: block;
+  width: 1.25em;
+  height: 1.25em;
+}

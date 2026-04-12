@@ -20,13 +20,13 @@ It extracts metadata from the source page, normalizes it to meet Discogs formatt
 
 | Store             | Release page URL pattern            | Country | Catalog Number | BPM info | 24-bit | Hi-Res Cover | Web Archive |
 | ----------------- |-------------------------------------| :-----: | :------------: | :------: | :----: |:------------:|:-----------:|
-| **Bandcamp**      | `*.bandcamp.com/album/*`            |   🟡    |       🟡       |    ❌    |   ✅   |    ✅         |     ✅       |
+| **Bandcamp**      | `*.bandcamp.com/album/*`            |   🟡    |       🟡       |    🟡    |   ✅   |       ✅      |     ✅       |
 | **Qobuz**         | `*.qobuz.com/*/album/*`             |   ❌    |       ❌       |    ❌    |   ✅   |      ✅       |      ❌      |
 | **Juno Download** | `*.junodownload.com/products/*`     |   ❌    |       ✅       |    ✅    |   ❌   |      ❌       |      ❌      |
 | **Beatport**      | `*.beatport.com/release/*`          |   ❌    |       ✅       |    ✅    |   ✅   |      ✅       |      ❌      |
 | **7digital**      | `*.7digital.com/artist/*/release/*` |   ❌    |       ❌       |    ❌    |   ✅   |      ❌       |      ❌      |
 
-<div><sup><strong>Bandcamp</strong>: Catalog number extraction relies on both the release credits and description. Country is extracted from the publisher location.</sup></div>
+<div><sup><strong>Bandcamp</strong>: Catalog number and BPM extraction relies on both the release credits and description. Country is extracted from the publisher location.</sup></div>
 <div><sup><strong>Juno Download</strong>: Cover art maximum size is 700x700.</sup></div>
 <div><sup><strong>7digital</strong>: Cover art maximum size is 800x800, definitely available for all releases.</sup></div>
 <div><sup><strong>Web Archive</strong>: Almost all sites had different designs and layouts in different years.</sup></div>
@@ -72,7 +72,7 @@ It extracts metadata from the source page, normalizes it to meet Discogs formatt
 
 ## Features
 
-- **Metadata Extraction:** Automatically parses artist names (`VA` normalization), release titles, label names (with `Self-released` support), catalog numbers, release dates, and complete tracklists with track artists. If a release is identified as a compilation (e.g., contains "Compiled by..."), the compiler is automatically prioritized as the primary release artist.
+- **Metadata Extraction:** Automatically parses artist names (`VA` normalization), release titles, label names (with `Self-released` support), catalog numbers, release dates, and complete tracklists with track artists. If a release is identified as a compilation (e.g., contains "Compiled by..." or "Selected by..."), the compiler is automatically prioritized as the primary release artist.
 - **Credit Extraction:** Automatically identifies and extracts credit roles from titles and descriptions, moving them to the "Extra Artists" section while keeping the original title text clean.
 - **Smart Normalization:** Automatically filters out technical tags, standardizes punctuation, and applies intelligent casing to all fields.
 - **Cover Art & BPM:** Automatically fetches and attaches cover art, ensuring BPM data is included in the Discogs release notes when available.
@@ -100,6 +100,7 @@ To meet Discogs standards, common technical suffixes and bracketed tags are remo
 - `Track Title (Original Mix)` → `Track Title`
 - `Track Title [Explicit]` → `Track Title`
 - `Album Name - 24 bit` → `Album Name`
+- `Track Title (156 bpm)` → `Track Title`
 - `Track Title - Bonus Track` → `Track Title`
 
 And more...
@@ -109,8 +110,10 @@ And more...
 The script scans track titles and release descriptions for artist credits. When found, it creates a `Credit` entry and (in most cases) removes the credit from the title to keep it clean.
 
 - **Features:** `Track Title (feat. Artist B)` → Title: `Track Title`, Featuring: `Artist B`.
-- **Remixes:** `Track Title (Remix By Artist C)` → Title: `Track Title (Remix By Artist C)`, Remix: `Artist C`.
-- **Production:** `Track Title (prod. by Artist D)` → Title: `Track Title`, Producer: `Artist D`.
+- **Remixes (Type A):** `Track Title (Remix By Artist C)` → Title: `Track Title (Remix By Artist C)`, Remix: `Artist C`.
+- **Remixes (Type B):** `Track Title (Artist D Remix)` → Title: `Track Title (Artist D Remix)`, Remix: `Artist D`.
+- **Multiple Remixers:** `Track Title (Artist E & Artist F Remix)` → Title: `Track Title (Artist E & Artist F Remix)`, Remix: `Artist E` & `Artist F`.
+- **Production:** `Track Title (prod. by Artist G)` → Title: `Track Title`, Producer: `Artist G`.
 
 And more...
 

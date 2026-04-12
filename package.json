@@ -1,7 +1,7 @@
 {
   "name": "discogs-submitter",
   "type": "module",
-  "version": "2.0.11",
+  "version": "3.0.1",
   "description": "Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital and submit releases to Discogs.",
   "author": "Denis G. <https://github.com/denis-g>",
   "homepage": "https://github.com/denis-g/userscript-discogs-submitter",
@@ -24,20 +24,34 @@
     "7digital"
   ],
   "main": "discogs-submitter.user.js",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "lint": "eslint",
     "lint:fix": "eslint --fix",
-    "prepare": "husky"
-  },
-  "dependencies": {
-    "@antfu/eslint-config": "^7.7.3",
-    "eslint-plugin-userscripts": "^0.5.6",
-    "globals": "^17.4.0"
+    "prepare": "husky",
+    "build": "npm run lint && npm run prebuild && vite build && npm run postbuild",
+    "prebuild": "rm -f discogs-submitter.user.js",
+    "postbuild": "eslint --config eslint.userscript.config.js --fix --no-cache ./discogs-submitter.user.js",
+    "watch": "vite build --watch",
+    "test": "vitest",
+    "test:run": "vitest run"
   },
   "devDependencies": {
+    "@antfu/eslint-config": "^8.1.1",
     "@commitlint/cli": "^20.5.0",
     "@commitlint/config-conventional": "^20.5.0",
+    "@types/node": "^22.0.0",
+    "@types/tampermonkey": "^5.0.5",
+    "eslint-plugin-userscripts": "^0.5.6",
+    "globals": "^17.5.0",
     "husky": "^9.1.7",
-    "lint-staged": "^16.4.0"
+    "jsdom": "^29.0.2",
+    "lint-staged": "^16.4.0",
+    "typescript": "^6.0.2",
+    "vite": "^7.3.2",
+    "vite-plugin-monkey": "^7.1.9",
+    "vitest": "^4.1.4"
   }
 }
