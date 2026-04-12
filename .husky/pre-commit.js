@@ -24,12 +24,17 @@ function updateVersion() {
   try {
     console.warn('\x1B[33m[Husky] Bumping version...\x1B[0m');
     execSync('npm version patch --no-git-tag-version', { stdio: 'inherit' });
-    execSync('git add package.json package-lock.json');
 
-    console.warn('\x1B[32m[Husky] Successfully updated version and staged changes.\x1B[0m');
+    console.warn('\x1B[33m[Husky] Rebuilding userscript with new version...\x1B[0m');
+    execSync('npm run build', { stdio: 'inherit' });
+
+    console.warn('\x1B[33m[Husky] Staging updated files...\x1B[0m');
+    execSync('git add package.json package-lock.json discogs-submitter.user.js');
+
+    console.warn('\x1B[32m[Husky] Successfully updated version, rebuilt and staged changes.\x1B[0m');
   }
   catch (error) {
-    throw new Error(`Version auto-update failed: ${error.message}`);
+    throw new Error(`Version auto-update and build failed: ${error.message}`);
   }
 }
 
