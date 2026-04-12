@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discogs Submitter
 // @namespace    discogs-submitter
-// @version      3.0.2
+// @version      3.0.3
 // @author       Denis G. <https://github.com/denis-g>
 // @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital and submit releases to Discogs.
 // @icon         https://raw.githubusercontent.com/denis-g/userscript-discogs-submitter/master/src/assets/icon-main.svg
@@ -974,12 +974,14 @@
                 const albumLabel = data[0].label.name;
                 const albumReleased = normalizeReleaseDate(getTextFromTag('#product-page-digi [itemprop="datePublished"]'));
                 let labelNumber = null;
-                Array.from(document.querySelectorAll("#product-page-digi .mb-2")).forEach((el) => {
-                    const html = el.innerHTML || "";
-                    const match = html.match(/<strong>Cat:<\/strong>\s*([a-z0-9-](?:[a-z0-9\s-]*[a-z0-9-])?)\s*<br>/i);
+                Array.from(document.querySelectorAll("#product-page-digi .mb-2")).some((el) => {
+                    const html = (el.innerHTML || "").replace(/&nbsp;/g, " ");
+                    const match = html.match(/<strong>Cat:<\/strong>([^<]+)<br>/i);
                     if (match?.[1]) {
                         labelNumber = cleanString(match[1]);
+                        return true;
                     }
+                    return false;
                 });
                 const albumTracks = data.map((track, i) => {
                     const trackPosition = `${i + 1}`;

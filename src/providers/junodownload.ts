@@ -69,13 +69,18 @@ export const junodownload: StoreAdapter = {
     const albumReleased = normalizeReleaseDate(getTextFromTag('#product-page-digi [itemprop="datePublished"]'));
     let labelNumber = null;
 
-    Array.from(document.querySelectorAll('#product-page-digi .mb-2')).forEach((el) => {
-      const html = el.innerHTML || '';
-      const match = html.match(/<strong>Cat:<\/strong>\s*([a-z0-9-](?:[a-z0-9\s-]*[a-z0-9-])?)\s*<br>/i);
+    Array.from(document.querySelectorAll('#product-page-digi .mb-2')).some((el) => {
+      // Normalize &nbsp; and other entities to ensure regex match
+      const html = (el.innerHTML || '').replace(/&nbsp;/g, ' ');
+      const match = html.match(/<strong>Cat:<\/strong>([^<]+)<br>/i);
 
       if (match?.[1]) {
         labelNumber = cleanString(match[1]);
+
+        return true;
       }
+
+      return false;
     });
 
     const albumTracks = data.map((track: any, i: number) => {
