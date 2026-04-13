@@ -1,5 +1,44 @@
 import { describe, expect, it } from 'vitest';
-import { groupExtraArtists, normalizeTrackTitle, splitArtistTitle } from './artists';
+import {
+  groupExtraArtists,
+  normalizeMainArtists,
+  normalizeTrackTitle,
+  splitArtistTitle,
+} from './artists';
+
+describe('normalizeMainArtists', () => {
+  it('converts 4 or more artists to "Various"', () => {
+    const fourArtists = 'Artist 1, Artist 2, Artist 3 & Artist 4';
+    const result = normalizeMainArtists(fourArtists);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toBe('Various');
+  });
+
+  it('keeps 3 or fewer artists lists', () => {
+    const threeArtists = 'Artist 1, Artist 2 & Artist 3';
+    const result = normalizeMainArtists(threeArtists);
+
+    expect(result).toHaveLength(3);
+    expect(result[0].name).toBe('Artist 1');
+    expect(result[1].name).toBe('Artist 2');
+    expect(result[2].name).toBe('Artist 3');
+  });
+
+  it('normalizes common VA variations to "Various"', () => {
+    expect(normalizeMainArtists('VA')[0].name).toBe('Various');
+    expect(normalizeMainArtists('Various Artists')[0].name).toBe('Various');
+    expect(normalizeMainArtists('V/A')[0].name).toBe('Various');
+  });
+
+  it('elevates "Compiled By" artists to primary', () => {
+    const extra = [{ name: 'Compiler Name', role: 'Compiled By' }];
+    const result = normalizeMainArtists('Various Artists', extra);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toBe('Compiler Name');
+  });
+});
 
 describe('normalizeTrackTitle', () => {
   it('strips BPM from titles', () => {

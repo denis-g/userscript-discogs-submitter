@@ -3,9 +3,9 @@
  */
 
 const SPACE_REGEX = /\s+/g;
-const WORD_BOUNDARY_END_REGEX = /\\w$/;
+const WORD_BOUNDARY_END_REGEX = /\w$/;
 const PLACEHOLDER_REGEX = /\{\{p\}\}/g;
-const PLACEHOLDER_BOUNDARY_REGEX = /\\\{\\\{p\\\}\\\}\\b/g;
+const PLACEHOLDER_BOUNDARY_REGEX = /\{\{p\}\}\\b/g;
 const JOINER_REPLACE_REGEX = /[.*+?^${}()|[\]\\]/g;
 
 /**

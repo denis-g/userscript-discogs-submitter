@@ -31,5 +31,12 @@ export function matchUrls(...patterns: string[]): (_url: string) => boolean {
  * ```
  */
 export function getReleaseIdFromUrl(url: string = window.location.href): string | null {
-  return url.split('/').filter(Boolean).at(-1) || null;
+  try {
+    const path = new URL(url).pathname;
+
+    return path.split('/').filter(Boolean).at(-1) || null;
+  }
+  catch {
+    return url.split('/').filter(Boolean).at(-1) || null;
+  }
 }

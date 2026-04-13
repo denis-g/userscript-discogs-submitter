@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discogs Submitter
 // @namespace    discogs-submitter
-// @version      3.0.3
+// @version      3.0.4
 // @author       Denis G. <https://github.com/denis-g>
 // @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital and submit releases to Discogs.
 // @icon         https://raw.githubusercontent.com/denis-g/userscript-discogs-submitter/master/src/assets/icon-main.svg
@@ -74,9 +74,9 @@
         }
 
         const SPACE_REGEX = /\s+/g;
-        const WORD_BOUNDARY_END_REGEX = /\\w$/;
+        const WORD_BOUNDARY_END_REGEX = /\w$/;
         const PLACEHOLDER_REGEX = /\{\{p\}\}/g;
-        const PLACEHOLDER_BOUNDARY_REGEX = /\\\{\\\{p\\\}\\\}\\b/g;
+        const PLACEHOLDER_BOUNDARY_REGEX = /\{\{p\}\}\\b/g;
         const JOINER_REPLACE_REGEX = /[.*+?^${}()|[\]\\]/g;
         function buildCreditRegexes(phrases, templates) {
             return phrases.flatMap((phrase) => {
@@ -447,7 +447,7 @@
                     return Array.from(compilerMap.values()).map((name) => ({ name, join: "," }));
                 }
             }
-            if (normalized.length > 5) {
+            if (normalized.length >= 4) {
                 return [{ name: "Various", join: "," }];
             }
             const vaPatterns = PATTERNS.variousArtists;
@@ -633,7 +633,12 @@
             return (url) => regexes.some((re) => re.test(url));
         }
         function getReleaseIdFromUrl(url = window.location.href) {
-            return url.split("/").filter(Boolean).at(-1) || null;
+            try {
+                const path = new URL(url).pathname;
+                return path.split("/").filter(Boolean).at(-1) || null;
+            } catch {
+                return url.split("/").filter(Boolean).at(-1) || null;
+            }
         }
 
         async function getData$3() {
@@ -1200,12 +1205,19 @@
                 const validBpmTracks = (data.tracks || []).filter((track) => track.bpm);
                 const infoBpm = validBpmTracks.length > 0 ? `BPM's:
 ${validBpmTracks.map((track) => `${track.position}: ${track.bpm}`).join("\n")}` : "";
+                let finalArtists = finalReleaseArtists;
+                if ((!finalArtists.length || finalArtists[0]?.name === "") && tracks.length > 1) {
+                    const uniqueArtists = new Set(tracks.map((t) => (t.artists?.[0]?.name || "").toLowerCase()).filter(Boolean));
+                    if (uniqueArtists.size >= 4) {
+                        finalArtists = [{ name: "Various", join: "," }];
+                    }
+                }
                 const payload = {
                     cover: data.cover || null,
                     title: data.title || "",
-                    artists: finalReleaseArtists.length ? finalReleaseArtists : [{ name: "", join: "," }],
+                    artists: finalArtists.length ? finalArtists : [{ name: "", join: "," }],
                     extraartists: groupExtraArtists(data.extraartists || []),
-                    country: data.country || "",
+                    country: data.country || "Worldwide",
                     released: data.released || "",
                     labels: labelName ? [{ name: labelName, catno: data.number || "none" }] : [{ name: "", catno: "" }],
                     format: [{ name: "File", qty: totalTracks, desc: [format], text: formatText }],

@@ -276,7 +276,7 @@ export function normalizeMainArtists(rawArtists: string | string[] | null | unde
     }
   }
 
-  if (normalized.length > 5) {
+  if (normalized.length >= 4) {
     return [{ name: 'Various', join: ',' }];
   }
 
