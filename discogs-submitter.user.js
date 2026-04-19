@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discogs Submitter
 // @namespace    discogs-submitter
-// @version      3.0.7
+// @version      3.0.9
 // @author       Denis G. <https://github.com/denis-g>
 // @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital, Amazon Music and submit releases to Discogs.
 // @icon         https://raw.githubusercontent.com/denis-g/userscript-discogs-submitter/master/src/assets/icon-main.svg
@@ -893,7 +893,6 @@
                 target.insertAdjacentElement("afterend", button);
             },
             parse: async () => {
-                const data = JSON.parse(getTextFromTag("script[data-tralbum]", null, "data-tralbum") || "{}");
                 const albumCover = getTextFromTag("a.popupImage", null, "href");
                 const albumExtraArtists = [];
                 const about = getManyTextFromTags(".tralbum-about", null, true);
@@ -908,12 +907,12 @@
                         normalizeTrackTitle(trimmedLine, albumExtraArtists);
                     }
                 });
-                const albumArtists = normalizeMainArtists(data?.artist || null, albumExtraArtists);
-                const albumTitle = normalizeTrackTitle(data?.current?.title || null, albumExtraArtists);
-                const albumTracks = (data?.trackinfo || []).map((track, i) => {
+                const albumArtists = normalizeMainArtists(getTextFromTag("#name-section h3 span") || getTextFromTag("#band-name-location .title"), albumExtraArtists);
+                const albumTitle = normalizeTrackTitle(getTextFromTag("#name-section .trackTitle"), albumExtraArtists);
+                const albumTracks = Array.from(document.querySelectorAll("#track_table .track_row_view")).map((track, i) => {
                     const trackExtraArtists = [];
-                    const { artists: trackArtists, title: trackTitle, bpm: trackBpm } = splitArtistTitle(track.title, albumArtists, trackExtraArtists);
-                    const trackDuration = normalizeDuration(track.duration);
+                    const { artists: trackArtists, title: trackTitle, bpm: trackBpm } = splitArtistTitle(getTextFromTag(".track-title", track), albumArtists, trackExtraArtists);
+                    const trackDuration = normalizeDuration(getTextFromTag(".time, .time.secondaryText", track));
                     return {
                         position: `${i + 1}`,
                         extraartists: trackExtraArtists,
@@ -922,7 +921,7 @@
                         duration: trackDuration,
                         bpm: trackBpm
                     };
-                }) || [];
+                });
                 const location = document.querySelector("#band-name-location");
                 let albumLabel = location ? getTextFromTag(".title", location) : null;
                 const labelCountry = location ? getTextFromTag(".location", location)?.split(",").pop()?.trim() || null : null;
@@ -937,10 +936,8 @@
                 if (!albumLabel) {
                     albumLabel = getTextFromTag('[itemprop="publisher"]');
                 }
-                const rawReleaseDate = data?.current?.release_date;
-                const rawPublishDate = data?.current?.publish_date;
-                let albumReleased = normalizeReleaseDate(rawReleaseDate);
-                if (albumReleased && rawPublishDate) {
+                let albumReleased = normalizeReleaseDate(getTextFromTag(".tralbum-credits"));
+                if (albumReleased) {
                     const dateParts = albumReleased.split("-");
                     const year = Number.parseInt(dateParts[0], 10);
                     const month = dateParts[1] ? Number.parseInt(dateParts[1], 10) : 0;
@@ -948,10 +945,7 @@
                     const isOldMonth = year === 2008 && month < 9;
                     const isPre2008 = isOldYear || isOldMonth;
                     if (isPre2008) {
-                        const published = normalizeReleaseDate(rawPublishDate);
-                        if (published) {
-                            albumReleased = published;
-                        }
+                        albumReleased = null;
                     }
                 }
                 return {

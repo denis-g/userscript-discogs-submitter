@@ -8,16 +8,18 @@ describe('bandcamp provider', () => {
         <h2 class="trackTitle" itemprop="name">Album Title</h2>
         <h3 class="album-artist">by <span itemprop="byArtist">Artist Name</span></h3>
       </div>
-      <script data-tralbum='{
-        "artist": "Artist Name",
-        "current": { "title": "Album Title", "release_date": "13 Apr 2026 00:00:00 GMT" },
-        "trackinfo": [
-          { "title": "Track One", "duration": 300, "file": { "mp3-128": "..." } }
-        ]
-      }'></script>
       <div id="band-name-location">
         <span class="title">Label Name</span>
         <span class="location">London, UK</span>
+      </div>
+      <table id="track_table">
+        <tr class="track_row_view">
+          <td class="track-title">Track One</td>
+          <td class="time">5:00</td>
+        </tr>
+      </table>
+      <div class="tralbum-credits">
+        released April 13, 2026
       </div>
     `;
 
@@ -34,7 +36,6 @@ describe('bandcamp provider', () => {
 
   it('should handle missing label by falling back to publisher', async () => {
     document.body.innerHTML = `
-      <script data-tralbum='{ "artist": "A", "current": { "title": "T" }, "trackinfo": [] }'></script>
       <span itemprop="publisher">Publisher Name</span>
     `;
 
