@@ -36,7 +36,7 @@ It extracts metadata from the source page, normalizes it to meet Discogs formatt
 
 ![Discogs Draft](https://github.com/denis-g/userscript-discogs-submitter/raw/refs/heads/master/screenshots/discogs.png)
 
-<details>
+<details open>
 <summary>Bandcamp</summary>
 
 ![Discogs Submitter - Bandcamp](https://github.com/denis-g/userscript-discogs-submitter/raw/refs/heads/master/screenshots/bandcamp.png)
@@ -88,7 +88,7 @@ It extracts metadata from the source page, normalizes it to meet Discogs formatt
 ### Store-Specific Nuances
 
 - **Bandcamp**: Metadata formatting can vary significantly between different labels and artists. Always double-check the parsed data to ensure accuracy.
-- **Qobuz / Beatport / 7digital**: Artist lists are often comma-separated and may not reflect the precise artist credits featured on the official release artwork. Verify these against the label's source if possible.
+- **Qobuz / Beatport / 7digital / Amazon Music**: Artist lists are often comma-separated (`,`) and may not reflect the precise artist credits featured on the official release artwork. Verify these against the label's source if possible.
 
 ## Normalization & Transformations
 
