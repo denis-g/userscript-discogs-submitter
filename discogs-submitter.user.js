@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discogs Submitter
 // @namespace    discogs-submitter
-// @version      3.0.5
+// @version      3.0.6
 // @author       Denis G. <https://github.com/denis-g>
 // @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital, Amazon Music and submit releases to Discogs.
 // @icon         https://raw.githubusercontent.com/denis-g/userscript-discogs-submitter/master/src/assets/icon-main.svg
@@ -135,7 +135,7 @@
         }
 
         const GLOBAL_CREDIT_REGEX = [
-            "(?:\\(|\\[)\\s*{{p}}\\b\\s*(?:by)?\\s*[:\\s-]*(.+?)(?:\\)|\\])",
+            "(?:\\(|\\[)\\s*{{p}}\\b\\s*(?:by)?\\s*[:\\s-]*([^()[\\]]+)(?:\\)|\\])",
             "(?:\\s+|^)(?:\\w+\\s+(?:and|&)\\s+)?{{p}}(?:\\s+(?:and|&)\\s+\\w+)?\\s+by\\b\\s*[:\\s-]*(.+?)(?=\\s*(?:\\/|;|[A-Z][a-z]+:(?=\\s*\\S)|,|$))",
             "(?:\\s+|^)(?:\\w+\\s+(?:and|&)\\s+)?{{p}}(?:\\s+(?:and|&)\\s+\\w+)?\\b\\s*[:-]\\s*(.+?)(?=\\s*(?:\\/|;|[A-Z][a-z]+:(?=\\s*\\S)|,|$))",
             "(?:\\s+|^){{p}}(?:\\s+\\w+)*\\s+by\\b\\s*[:\\s-]*(.+?)(?=\\s*(?:\\/|;|,|$))"
@@ -158,7 +158,7 @@
                 "Featuring": buildCreditRegexes(
                     ["featuring", "feat", "ft", "f/"],
                     [
-                        "(?:\\(|\\[)\\s*{{p}}\\b\\.?\\s*(.*?)(?:\\)|\\])",
+                        "(?:\\(|\\[)\\s*{{p}}\\b\\.?\\s*([^()[\\]]+)(?:\\)|\\])",
                         "(?:\\s+|^){{p}}\\b\\.?\\s*(.+?)(?=\\s+\\b(?:feat|ft|prod|remix|vs|with|and|&)\\b|\\s*[\\[\\(]|$)"
                     ]
                 ),
@@ -166,14 +166,14 @@
                     ...buildCreditRegexes(
                         ["remix", "rmx", "remixed", "mix", "mixed", "re-mix", "re-mixed", "version", "edit", "edited", "re-edit", "re-edited", "rework", "reworked", "rebuild", "rebuilt"],
                         [
-                            "(?:\\(|\\[)\\s*{{p}}\\b\\s*(?:by)?\\s*[:\\s-]*(.+?)(?:\\)|\\])",
+                            "(?:\\(|\\[)\\s*{{p}}\\b\\s*(?:by)?\\s*[:\\s-]*([^()[\\]]+)(?:\\)|\\])",
                             "(?:\\s+|^)-\\s*{{p}}\\b\\s*(?:by)?\\s*[:\\s-]*(.+?)(?=\\s*[\\[\\(]|$)"
                         ]
                     ),
                     ...buildCreditRegexes(
                         ["remix", "rmx", "re-mix"],
                         [
-                            "(?:\\(|\\[)\\s*(.+?)\\s+{{p}}\\b\\s*(?:\\)|\\])"
+                            "(?:\\(|\\[)\\s*([^()[\\]]+)\\s+{{p}}\\b\\s*(?:\\)|\\])"
                         ]
                     )
                 ],

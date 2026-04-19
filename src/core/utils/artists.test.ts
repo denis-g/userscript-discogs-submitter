@@ -177,4 +177,12 @@ describe('normalizeTrackTitle with Credits', () => {
     expect(title2).toBe('Track Title (Edit)');
     expect(extra2).toHaveLength(0);
   });
+
+  it('prevents bridging between consecutive parenthesized groups (Remix + Instrumental)', () => {
+    const extra: any[] = [];
+    const title = normalizeTrackTitle('Track title (Remix) (Instrumental)', extra);
+
+    expect(title).toBe('Track Title (Remix) (Instrumental)');
+    expect(extra).toHaveLength(0);
+  });
 });
