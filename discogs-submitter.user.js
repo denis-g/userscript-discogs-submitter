@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         Discogs Submitter
 // @namespace    discogs-submitter
-// @version      3.0.4
+// @version      3.0.5
 // @author       Denis G. <https://github.com/denis-g>
-// @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital and submit releases to Discogs.
+// @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital, Amazon Music and submit releases to Discogs.
 // @icon         https://raw.githubusercontent.com/denis-g/userscript-discogs-submitter/master/src/assets/icon-main.svg
 // @homepage     https://github.com/denis-g/userscript-discogs-submitter
 // @homepageURL  https://github.com/denis-g/userscript-discogs-submitter
@@ -17,6 +17,28 @@
 // @match        https://*.junodownload.com/products/*
 // @match        https://*.beatport.com/release/*
 // @match        https://*.7digital.com/artist/*/release/*
+// @match        https://*.amazon.co.jp/*
+// @match        https://*.amazon.com/*
+// @match        https://*.amazon.ae/*
+// @match        https://*.amazon.co.uk/*
+// @match        https://*.amazon.it/*
+// @match        https://*.amazon.in/*
+// @match        https://*.amazon.eg/*
+// @match        https://*.amazon.com.au/*
+// @match        https://*.amazon.nl/*
+// @match        https://*.amazon.ca/*
+// @match        https://*.amazon.sa/*
+// @match        https://*.amazon.sg/*
+// @match        https://*.amazon.se/*
+// @match        https://*.amazon.es/*
+// @match        https://*.amazon.de/*
+// @match        https://*.amazon.com.tr/*
+// @match        https://*.amazon.com.br/*
+// @match        https://*.amazon.fr/*
+// @match        https://*.amazon.com.be/*
+// @match        https://*.amazon.pl/*
+// @match        https://*.amazon.com.mx/*
+// @match        https://*.amazon.cn/*
 // @connect      discogs.com
 // @connect      bandcamp.com
 // @connect      bcbits.com
@@ -30,6 +52,7 @@
 // @connect      7digital.com
 // @connect      api.7digital.com
 // @connect      artwork-cdn.7static.com
+// @connect      m.media-amazon.com
 // @grant        GM_info
 // @grant        GM_openInTab
 // @grant        GM_setClipboard
@@ -48,6 +71,8 @@
                 const config = {
                     method: "GET",
                     timeout,
+                    anonymous: false,
+                    fetch: false,
                     ...options,
                     onload: (response) => {
                         if (response.status >= 200 && response.status < 300) {
@@ -556,6 +581,16 @@
                     return `${year}-${String(monthIndex + 1).padStart(2, "0")}-${day}`;
                 }
             }
+            const usDateMatch = date.match(/([a-z]{3,})\s+(\d{1,2}),?\s+(\d{4})/i);
+            if (usDateMatch) {
+                const monthStr = usDateMatch[1].substring(0, 3).toLowerCase();
+                const day = usDateMatch[2].padStart(2, "0");
+                const year = usDateMatch[3];
+                const monthIndex = MONTHS.findIndex((m) => m.toLowerCase() === monthStr);
+                if (monthIndex !== -1) {
+                    return `${year}-${String(monthIndex + 1).padStart(2, "0")}-${day}`;
+                }
+            }
             const yearOnlyMatch = date.match(/(?<![\d-])\b(19|20)\d{2}\b(?![\d-])/);
             if (yearOnlyMatch) {
                 return yearOnlyMatch[0];
@@ -690,6 +725,66 @@
                         duration: trackDuration
                     };
                 });
+                return {
+                    cover: albumCover,
+                    extraartists: albumExtraArtists,
+                    artists: albumArtists,
+                    title: albumTitle,
+                    label: albumLabel,
+                    released: albumReleased,
+                    tracks: albumTracks
+                };
+            }
+        };
+
+        const amazonmusic = {
+            id: "amazonmusic",
+            test: matchUrls(
+                "https://*.amazon.*/*"
+            ),
+            supports: {
+                formats: ["MP3"],
+                hdAudio: false
+            },
+            target: 'music-detail-header[primary-text-href] div[slot="icons"]',
+            injectButton: (button, target) => {
+                button.classList.add("a-button", "a-button-oneclick");
+                target.style.whiteSpace = "normal";
+                target.append(button);
+            },
+            parse: async () => {
+                const albumCover = getTextFromTag("#main_content music-detail-header", null, "image-src");
+                const albumExtraArtists = [];
+                const albumArtists = normalizeMainArtists(getTextFromTag("#main_content music-detail-header", null, "primary-text"), albumExtraArtists);
+                const albumTitle = normalizeTrackTitle(getTextFromTag("#main_content music-detail-header", null, "headline"), albumExtraArtists);
+                let albumLabel = getTextFromTag("#main_content .music-tertiary-text");
+                let albumTracks = [];
+                if (albumLabel) {
+                    albumLabel = albumLabel.replace(/^[℗©\s\d:]+/, "").trim();
+                }
+                let albumReleased = getTextFromTag("#main_content music-detail-header", null, "tertiary-text");
+                if (albumReleased) {
+                    const dateParts = albumReleased.split("•");
+                    albumReleased = normalizeReleaseDate(dateParts[dateParts.length - 1].trim());
+                }
+                const tracklistContainer = document.querySelector("#main_content music-container");
+                const tracklistRows = (tracklistContainer?.shadowRoot ?? tracklistContainer)?.querySelectorAll("music-text-row") || [];
+                if (tracklistRows.length) {
+                    albumTracks = Array.from(tracklistRows).map((track, i) => {
+                        const trackPosition = `${i + 1}`;
+                        const trackExtraArtists = [];
+                        const trackArtists = normalizeArtists(getTextFromTag(".col3 > music-link", track, "title") || albumArtists.map((artist) => artist.name), trackExtraArtists);
+                        const trackTitle = normalizeTrackTitle(getTextFromTag(".col1 > music-link", track), trackExtraArtists);
+                        const trackDuration = normalizeDuration(getTextFromTag(".col4 > music-link", track, "title"));
+                        return {
+                            position: trackPosition,
+                            extraartists: trackExtraArtists,
+                            artists: trackArtists,
+                            title: trackTitle,
+                            duration: trackDuration
+                        };
+                    });
+                }
                 return {
                     cover: albumCover,
                     extraartists: albumExtraArtists,
@@ -1099,12 +1194,13 @@
                 qobuz,
                 junodownload,
                 beatport,
-                sevendigital
+                sevendigital,
+                amazonmusic
             ],
             detectByLocation: () => DigitalStoreRegistry.list.find((p) => p.test(window.location.href))
         };
 
-        const injectBtnCss = "/* --- INJECTED BUTTONS --- */\n\n.discogs-submitter__inject__btn {\n  display: inline-flex;\n  vertical-align: middle;\n  align-items: center;\n  justify-content: center;\n  gap: 10px;\n  cursor: pointer;\n  user-select: none;\n\n  &:hover {\n    .discogs-submitter__inject__logo {\n      animation: ds-spinner 1s linear infinite;\n    }\n  }\n\n  &.is-disabled {\n    opacity: 0.5;\n    pointer-events: none;\n  }\n\n  &.is-bandcamp {\n    margin-bottom: 1.5em;\n    padding: 8px 5px;\n    box-sizing: border-box;\n  }\n\n  &.is-qobuz {\n    margin-top: 20px;\n    text-transform: none;\n  }\n\n  &.is-qobuz {\n    .discogs-submitter__inject__logo {\n      margin-top: -4px;\n    }\n  }\n\n  &.is-junodownload {\n    margin-top: 20px;\n  }\n\n  &.is-beatport {\n    margin-top: 8px;\n  }\n}\n\n.discogs-submitter__inject__logo {\n  display: block;\n  width: 1.25em;\n  height: 1.25em;\n}\n";
+        const injectBtnCss = "/* --- INJECTED BUTTONS --- */\n\n.discogs-submitter__inject__btn {\n  display: inline-flex;\n  vertical-align: middle;\n  align-items: center;\n  justify-content: center;\n  gap: 10px;\n  white-space: nowrap;\n  cursor: pointer;\n  user-select: none;\n\n  &:hover {\n    .discogs-submitter__inject__logo {\n      animation: ds-spinner 1s linear infinite;\n    }\n  }\n\n  &.is-disabled {\n    opacity: 0.5;\n    pointer-events: none;\n  }\n\n  &.is-bandcamp {\n    margin-bottom: 1.5em;\n    padding: 8px 5px;\n    box-sizing: border-box;\n  }\n\n  &.is-qobuz {\n    margin-top: 20px;\n    text-transform: none;\n  }\n\n  &.is-qobuz {\n    .discogs-submitter__inject__logo {\n      margin-top: -4px;\n    }\n  }\n\n  &.is-junodownload {\n    margin-top: 20px;\n  }\n\n  &.is-beatport {\n    margin-top: 8px;\n  }\n\n  &.is-amazonmusic {\n    margin-top: 24px;\n    margin-right: 100%;\n    padding: 6px 12px 6px 6px;\n  }\n}\n\n.discogs-submitter__inject__logo {\n  display: block;\n  width: 1.25em;\n  height: 1.25em;\n}\n";
 
         let btnTemplate = null;
         function getInjectBtnTemplate() {
@@ -1616,7 +1712,11 @@ ${error.stack || error}`;
                         throw new Error("Response missing release ID");
                     }
                 } catch (error) {
-                    this.setStatus(`Failed to create Discogs draft:<br />${error.message || error}`, "error");
+                    let errMsg = error.message || String(error);
+                    if (errMsg.includes("404")) {
+                        errMsg = "This usually means you are not logged in or use Containers, Incognito, or strict tracking protection.";
+                    }
+                    this.setStatus(`Failed to create Discogs draft:<br />${errMsg}`, "error");
                 } finally {
                     this.setLoader(false);
                     this.ui.actionsSubmitBtn?.classList.remove("is-disabled");
@@ -1740,7 +1840,8 @@ ${error.stack || error}`;
                     }
                     return;
                 }
-                const target = document.querySelector(store.target);
+                const targets = document.querySelectorAll(store.target);
+                const target = Array.from(targets).find((t) => t.offsetWidth > 0) || targets[0];
                 if (target && this.injectBtn.element && !this.injectBtn.element.isConnected) {
                     this.injectBtn.setStore(store.id);
                     store.injectButton(this.injectBtn.element, target);
@@ -1770,7 +1871,10 @@ ${error.stack || error}`;
                 this.observer.observe(document.body, { childList: true, subtree: true });
                 this.patchPushState();
                 window.addEventListener("popstate", () => this.checkForUrlChange());
-                setInterval(() => this.checkForUrlChange(), 1e3);
+                setInterval(() => {
+                    this.checkForUrlChange();
+                    this.refreshInjection();
+                }, 1e3);
             }
             checkForUrlChange() {
                 if (this.handleUrlChange()) {

@@ -25,6 +25,7 @@ It extracts metadata from the source page, normalizes it to meet Discogs formatt
 | **Juno Download** | `*.junodownload.com/products/*`     |   ❌    |       ✅       |    ✅    |   ❌   |      ❌       |      ❌      |
 | **Beatport**      | `*.beatport.com/release/*`          |   ❌    |       ✅       |    ✅    |   ✅   |      ✅       |      ❌      |
 | **7digital**      | `*.7digital.com/artist/*/release/*` |   ❌    |       ❌       |    ❌    |   ✅   |      ❌       |      ❌      |
+| **Amazon Music**  | `*.amazon.*/*`                      |   ❌    |       ❌       |    ❌    |   ❌   |      ❌       |      ❌      |
 
 <div><sup><strong>Bandcamp</strong>: Catalog number and BPM extraction relies on both the release credits and description. Country is extracted from the publisher location.</sup></div>
 <div><sup><strong>Juno Download</strong>: Cover art maximum size is 700x700.</sup></div>
@@ -67,6 +68,13 @@ It extracts metadata from the source page, normalizes it to meet Discogs formatt
 <summary>7digital</summary>
 
 ![Discogs Submitter - 7digital](https://github.com/denis-g/userscript-discogs-submitter/raw/refs/heads/master/screenshots/7digital.png)
+
+</details>
+
+<details>
+<summary>Amazon Music</summary>
+
+![Discogs Submitter - Amazon Music](https://github.com/denis-g/userscript-discogs-submitter/raw/refs/heads/master/screenshots/amazonmusic.png)
 
 </details>
 

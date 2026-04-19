@@ -41,7 +41,7 @@ export interface StoreAdapter {
    * @param _button - The button element to inject.
    * @param _target - The target element found via the target selector.
    */
-  injectButton: (_button: HTMLElement, _target: Element) => void;
+  injectButton: (_button: HTMLElement, _target: HTMLElement) => void;
   /** The audio formats supported by this store. */
   supports: StoreFormatOptions;
   /**

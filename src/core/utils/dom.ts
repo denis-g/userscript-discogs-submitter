@@ -48,7 +48,7 @@ export function getManyTextFromTags(target: string, parent: HTMLElement | Docume
  * const url = getTextFromTag('meta[property="og:image"]', document, 'content');
  * ```
  */
-export function getTextFromTag(target: string, parent: HTMLElement | Document | Element | null = null, attribute = '', keepNewlines = false): string | null {
+export function getTextFromTag(target: string, parent: HTMLElement | Document | Element | ShadowRoot | null = null, attribute = '', keepNewlines = false): string | null {
   const context = parent || document;
   const result = context.querySelector(target);
 

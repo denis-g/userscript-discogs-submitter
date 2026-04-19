@@ -1,5 +1,6 @@
 import type { StoreAdapter } from '@/types';
 import { sevendigital } from './7digital';
+import { amazonmusic } from './amazonmusic';
 import { bandcamp } from './bandcamp';
 import { beatport } from './beatport';
 import { junodownload } from './junodownload';
@@ -15,6 +16,7 @@ export const DigitalStoreRegistry = {
     junodownload,
     beatport,
     sevendigital,
+    amazonmusic,
   ] as StoreAdapter[],
 
   /**

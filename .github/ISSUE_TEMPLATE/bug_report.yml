@@ -63,6 +63,7 @@ body:
         - Juno Download
         - Beatport
         - 7digital
+        - Amazon Music
     validations:
       required: true
 

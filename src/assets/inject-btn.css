@@ -6,6 +6,7 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
+  white-space: nowrap;
   cursor: pointer;
   user-select: none;
 
@@ -43,6 +44,12 @@
 
   &.is-beatport {
     margin-top: 8px;
+  }
+
+  &.is-amazonmusic {
+    margin-top: 24px;
+    margin-right: 100%;
+    padding: 6px 12px 6px 6px;
   }
 }
 

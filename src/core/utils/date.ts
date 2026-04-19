@@ -60,6 +60,20 @@ export function normalizeReleaseDate(date: string | null | undefined): string | 
     }
   }
 
+  // JUN 17 2021 or June 17, 2021 - Amazon Music
+  const usDateMatch = date.match(/([a-z]{3,})\s+(\d{1,2}),?\s+(\d{4})/i);
+
+  if (usDateMatch) {
+    const monthStr = usDateMatch[1].substring(0, 3).toLowerCase();
+    const day = usDateMatch[2].padStart(2, '0');
+    const year = usDateMatch[3];
+    const monthIndex = MONTHS.findIndex(m => m.toLowerCase() === monthStr);
+
+    if (monthIndex !== -1) {
+      return `${year}-${String(monthIndex + 1).padStart(2, '0')}-${day}`;
+    }
+  }
+
   // 1954, 2009
   const yearOnlyMatch = date.match(/(?<![\d-])\b(19|20)\d{2}\b(?![\d-])/);
 

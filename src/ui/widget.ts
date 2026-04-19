@@ -604,7 +604,13 @@ export class UiWidget {
       }
     }
     catch (error) {
-      this.setStatus(`Failed to create Discogs draft:<br />${(error as Error).message || error}`, 'error');
+      let errMsg = (error as Error).message || String(error);
+
+      if (errMsg.includes('404')) {
+        errMsg = 'This usually means you are not logged in or use Containers, Incognito, or strict tracking protection.';
+      }
+
+      this.setStatus(`Failed to create Discogs draft:<br />${errMsg}`, 'error');
     }
     finally {
       this.setLoader(false);

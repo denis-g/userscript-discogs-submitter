@@ -11,7 +11,7 @@ describe('url utilities', () => {
     });
 
     it('matches multiple patterns', () => {
-      const isStore = matchUrls('https://*.example.com/*', 'https://*.example.щкп/*');
+      const isStore = matchUrls('https://*.example.com/*', 'https://*.example.com/*');
 
       expect(isStore('https://artist.example.com/album')).toBe(true);
       expect(isStore('https://www.example.com/release/title/1')).toBe(true);
@@ -22,12 +22,23 @@ describe('url utilities', () => {
 
       expect(matcher('https://example.com/test')).toBe(true);
     });
+
+    it('matches Amazon Music patterns correctly', () => {
+      const isAmazon = matchUrls(
+        'https://*.amazon.*/*/dp/*',
+        'https://*.amazon.*/music/player/albums/*',
+      );
+
+      expect(isAmazon('https://www.amazon.com/Title/dp/123456')).toBe(true);
+      expect(isAmazon('https://www.amazon.com/music/player/albums/123456')).toBe(true);
+      expect(isAmazon('https://example.amazon.com/other')).toBe(false);
+    });
   });
 
   describe('getReleaseIdFromUrl', () => {
     it('extracts the last segment as ID', () => {
-      expect(getReleaseIdFromUrl('https://example.com/release/12345')).toBe('12345');
-      expect(getReleaseIdFromUrl('https://example.com/release/title/12345/')).toBe('12345');
+      expect(getReleaseIdFromUrl('https://example.com/release/123456')).toBe('123456');
+      expect(getReleaseIdFromUrl('https://example.com/release/title/123456/')).toBe('123456');
     });
   });
 });

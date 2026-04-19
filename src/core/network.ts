@@ -23,6 +23,8 @@ export function networkRequest(options: Tampermonkey.Request, retries = 2, timeo
       const config: Tampermonkey.Request = {
         method: 'GET',
         timeout,
+        anonymous: false,
+        fetch: false,
         ...options,
         onload: (response) => {
           if (response.status >= 200 && response.status < 300) {
