@@ -59,8 +59,6 @@ export const qobuz: StoreAdapter = {
   target: '.album-meta',
 
   injectButton: (button, target) => {
-    button.classList.add('btn-secondary');
-
     target.appendChild(button);
 
     // Qobuz uses infinite scroll for tracks, we need to ensure they are loaded
@@ -74,6 +72,7 @@ export const qobuz: StoreAdapter = {
       }
     }
   },
+
   parse: async () => {
     const data = await getData();
     let albumCover = getTextFromTag('.album-cover__image', null, 'src');

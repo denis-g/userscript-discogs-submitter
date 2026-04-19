@@ -32,8 +32,6 @@ export const amazonmusic: StoreAdapter = {
   target: 'music-detail-header[primary-text-href] div[slot="icons"]',
 
   injectButton: (button, target) => {
-    button.classList.add('a-button', 'a-button-oneclick');
-
     target.style.whiteSpace = 'normal';
 
     target.append(button);

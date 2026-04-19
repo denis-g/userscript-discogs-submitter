@@ -54,8 +54,6 @@ export const junodownload: StoreAdapter = {
   target: '#product-action-btns',
 
   injectButton: (button, target) => {
-    button.classList.add('btn', 'btn-cta');
-
     target.insertAdjacentElement('afterend', button);
   },
 

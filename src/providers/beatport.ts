@@ -72,8 +72,6 @@ export const beatport: StoreAdapter = {
   target: '[class^="ReleaseDetailCard-style__Controls"]',
 
   injectButton: (button, target) => {
-    button.classList.add('gpQPAB', 'primary');
-
     target.appendChild(button);
   },
 

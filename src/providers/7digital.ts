@@ -53,8 +53,6 @@ export const sevendigital: StoreAdapter = {
   target: '.release-purchase',
 
   injectButton: (button, target) => {
-    button.classList.add('btn', 'btn-primary');
-
     target.insertAdjacentElement('afterend', button);
   },
 

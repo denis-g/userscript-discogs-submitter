@@ -141,8 +141,6 @@ export const bandcamp: StoreAdapter = {
   target: '.tralbumCommands',
 
   injectButton: (button, target) => {
-    button.classList.add('follow-unfollow');
-
     target.insertAdjacentElement('afterend', button);
   },
 

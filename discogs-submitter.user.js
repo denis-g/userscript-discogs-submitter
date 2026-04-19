@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discogs Submitter
 // @namespace    discogs-submitter
-// @version      3.0.9
+// @version      3.0.10
 // @author       Denis G. <https://github.com/denis-g>
 // @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital, Amazon Music and submit releases to Discogs.
 // @icon         https://raw.githubusercontent.com/denis-g/userscript-discogs-submitter/master/src/assets/icon-main.svg
@@ -710,7 +710,6 @@
             },
             target: ".release-purchase",
             injectButton: (button, target) => {
-                button.classList.add("btn", "btn-primary");
                 target.insertAdjacentElement("afterend", button);
             },
             parse: async () => {
@@ -758,7 +757,6 @@
             },
             target: 'music-detail-header[primary-text-href] div[slot="icons"]',
             injectButton: (button, target) => {
-                button.classList.add("a-button", "a-button-oneclick");
                 target.style.whiteSpace = "normal";
                 target.append(button);
             },
@@ -889,7 +887,6 @@
             },
             target: ".tralbumCommands",
             injectButton: (button, target) => {
-                button.classList.add("follow-unfollow");
                 target.insertAdjacentElement("afterend", button);
             },
             parse: async () => {
@@ -1004,7 +1001,6 @@
             },
             target: '[class^="ReleaseDetailCard-style__Controls"]',
             injectButton: (button, target) => {
-                button.classList.add("gpQPAB", "primary");
                 target.appendChild(button);
             },
             parse: async () => {
@@ -1066,7 +1062,6 @@
             },
             target: "#product-action-btns",
             injectButton: (button, target) => {
-                button.classList.add("btn", "btn-cta");
                 target.insertAdjacentElement("afterend", button);
             },
             parse: async () => {
@@ -1144,7 +1139,6 @@
             },
             target: ".album-meta",
             injectButton: (button, target) => {
-                button.classList.add("btn-secondary");
                 target.appendChild(button);
                 const win = unsafeWindow;
                 if (typeof win.infiniteScroll === "function") {
@@ -1204,7 +1198,7 @@
             detectByLocation: () => DigitalStoreRegistry.list.find((p) => p.test(window.location.href))
         };
 
-        const injectBtnCss = "/* --- INJECTED BUTTONS --- */\n\n.discogs-submitter__inject__btn {\n  display: inline-flex;\n  vertical-align: middle;\n  align-items: center;\n  justify-content: center;\n  gap: 10px;\n  white-space: nowrap;\n  cursor: pointer;\n  user-select: none;\n\n  &:hover {\n    .discogs-submitter__inject__logo {\n      animation: ds-spinner 1s linear infinite;\n    }\n  }\n\n  &.is-disabled {\n    opacity: 0.5;\n    pointer-events: none;\n  }\n\n  &.is-bandcamp {\n    margin-bottom: 1.5em;\n    padding: 8px 5px;\n    box-sizing: border-box;\n  }\n\n  &.is-qobuz {\n    margin-top: 20px;\n    text-transform: none;\n  }\n\n  &.is-qobuz {\n    .discogs-submitter__inject__logo {\n      margin-top: -4px;\n    }\n  }\n\n  &.is-junodownload {\n    margin-top: 20px;\n  }\n\n  &.is-beatport {\n    margin-top: 8px;\n  }\n\n  &.is-amazonmusic {\n    margin-top: 24px;\n    margin-right: 100%;\n    padding: 6px 12px 6px 6px;\n  }\n}\n\n.discogs-submitter__inject__logo {\n  display: block;\n  width: 1.25em;\n  height: 1.25em;\n}\n";
+        const injectBtnCss = "/* --- INJECTED BUTTONS --- */\n\n.discogs-submitter__inject__btn {\n  display: inline-flex;\n  vertical-align: middle;\n  align-items: center;\n  justify-content: center;\n  gap: 10px;\n  cursor: pointer;\n  user-select: none;\n  padding: calc(var(--ds-gap) / 2);\n  color: var(--ds-color-black);\n  font-family: var(--ds-font-sans) !important;\n  font-size: 14px;\n  font-weight: bold;\n  line-height: 1.2;\n  text-transform: none;\n  text-shadow: none;\n  white-space: nowrap;\n  background: var(--ds-color-white);\n  border: 2px solid var(--ds-color-gray-dark);\n  border-radius: calc(var(--ds-radius) * 2);\n  outline: 1px solid var(--ds-color-gray-dark);\n  transition: outline 0.2s ease;\n\n  &:hover {\n    outline: 2px solid var(--ds-color-white);\n\n    .discogs-submitter__inject__logo {\n      animation: ds-spinner 1s linear infinite;\n    }\n  }\n\n  &.is-disabled {\n    opacity: 0.5;\n    pointer-events: none;\n  }\n\n  /* Site-specific styles */\n\n  &.is-bandcamp {\n    margin-bottom: 1.5em;\n    box-sizing: border-box;\n  }\n\n  &.is-qobuz {\n    margin-top: 20px;\n    text-transform: none;\n  }\n\n  &.is-qobuz {\n    .discogs-submitter__inject__logo {\n      margin-top: -4px;\n    }\n  }\n\n  &.is-junodownload {\n    margin-top: 20px;\n  }\n\n  &.is-beatport {\n    margin-top: 8px;\n  }\n\n  &.is-amazonmusic {\n    margin-top: 24px;\n    margin-right: 100%;\n  }\n}\n\n.discogs-submitter__inject__logo {\n  display: block;\n  width: 1.25em;\n  height: 1.25em;\n}\n";
 
         let btnTemplate = null;
         function getInjectBtnTemplate() {
