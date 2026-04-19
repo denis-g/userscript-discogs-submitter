@@ -1,7 +1,7 @@
 {
   "name": "discogs-submitter",
   "type": "module",
-  "version": "3.0.6",
+  "version": "3.0.7",
   "description": "Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital, Amazon Music and submit releases to Discogs.",
   "author": "Denis G. <https://github.com/denis-g>",
   "homepage": "https://github.com/denis-g/userscript-discogs-submitter",

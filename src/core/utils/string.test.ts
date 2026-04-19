@@ -29,6 +29,13 @@ describe('capitalizeString', () => {
   it('standardizes basic track titles to Title Case', () => {
     expect(capitalizeString('yet another track')).toBe('Yet Another Track');
     expect(capitalizeString('LIVE AT LONDON')).toBe('Live At London');
+    expect(capitalizeString('I AM Emotional')).toBe('I Am Emotional');
+    expect(capitalizeString('AM I Emotional?')).toBe('Am I Emotional?');
+    expect(capitalizeString('A.M. Radio')).toBe('A.M. Radio');
+    expect(capitalizeString('9 AM')).toBe('9 AM');
+    expect(capitalizeString('10:30 PM')).toBe('10:30 PM');
+    expect(capitalizeString('9AM')).toBe('9AM');
+    expect(capitalizeString('10PM')).toBe('10PM');
   });
 
   it('handles abbreviations and preserved words from ignore map', () => {

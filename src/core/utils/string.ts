@@ -61,7 +61,7 @@ export function capitalizeString(str: string | null | undefined): string {
 
   return cleaned
     .split(/(\s+|(?=\/)|(?<=\/))/)
-    .map((word) => {
+    .map((word, index, words) => {
       if (!word || /\s+/.test(word) || word === '/') {
         return word;
       }
@@ -82,6 +82,27 @@ export function capitalizeString(str: string | null | undefined): string {
 
       const upperCore = core.toUpperCase();
       const upperCoreNoDots = upperCore.replace(/\./g, '');
+      // Smart check for AM/PM (time vs word)
+      const isWordAMorPM = upperCoreNoDots === 'AM' || upperCoreNoDots === 'PM';
+      const isFusedTime = /^\d+(?::\d+)?(?:AM|PM)$/.test(upperCoreNoDots);
+
+      if (isWordAMorPM || isFusedTime) {
+        let isTimeContext = isFusedTime;
+
+        if (!isTimeContext) {
+          const prevNonSpace = words
+            .slice(0, index)
+            .reverse()
+            .find(w => /\S/.test(w));
+
+          isTimeContext = !!(prevNonSpace && /\d/.test(prevNonSpace));
+        }
+
+        if (isTimeContext) {
+          return prefix + upperCoreNoDots + suffix;
+        }
+      }
+
       const exception = ignoreCapitalizationMap.get(upperCoreNoDots);
 
       if (exception) {

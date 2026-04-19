@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discogs Submitter
 // @namespace    discogs-submitter
-// @version      3.0.6
+// @version      3.0.7
 // @author       Denis G. <https://github.com/denis-g>
 // @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital, Amazon Music and submit releases to Discogs.
 // @icon         https://raw.githubusercontent.com/denis-g/userscript-discogs-submitter/master/src/assets/icon-main.svg
@@ -242,8 +242,6 @@
             "XVII",
             "XVIII",
             "XIX",
-            "AM",
-            "PM",
             "DJ",
             "MC",
             "EP",
@@ -287,7 +285,7 @@
             let cleaned = String(str).trim();
             cleaned = cleaned.replace(/[’`´]/g, "'");
             cleaned = cleaned.replace(/\(\s+/g, "(").replace(/\s+\)/g, ")");
-            return cleaned.split(/(\s+|(?=\/)|(?<=\/))/).map((word) => {
+            return cleaned.split(/(\s+|(?=\/)|(?<=\/))/).map((word, index, words) => {
                 if (!word || /\s+/.test(word) || word === "/") {
                     return word;
                 }
@@ -303,6 +301,18 @@
                 }
                 const upperCore = core.toUpperCase();
                 const upperCoreNoDots = upperCore.replace(/\./g, "");
+                const isWordAMorPM = upperCoreNoDots === "AM" || upperCoreNoDots === "PM";
+                const isFusedTime = /^\d+(?::\d+)?(?:AM|PM)$/.test(upperCoreNoDots);
+                if (isWordAMorPM || isFusedTime) {
+                    let isTimeContext = isFusedTime;
+                    if (!isTimeContext) {
+                        const prevNonSpace = words.slice(0, index).reverse().find((w) => /\S/.test(w));
+                        isTimeContext = !!(prevNonSpace && /\d/.test(prevNonSpace));
+                    }
+                    if (isTimeContext) {
+                        return prefix + upperCoreNoDots + suffix;
+                    }
+                }
                 const exception = ignoreCapitalizationMap.get(upperCoreNoDots);
                 if (exception) {
                     return prefix + exception + suffix;

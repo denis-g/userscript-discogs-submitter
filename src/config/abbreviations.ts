@@ -35,9 +35,6 @@ const IGNORE_CAPITALIZATION = [
   'XVII',
   'XVIII',
   'XIX',
-  // time
-  'AM',
-  'PM',
   // music
   'DJ',
   'MC',
