@@ -5,7 +5,7 @@ import type {
   DiscogsTrack,
   ReleaseData,
 } from '@/types';
-import { groupExtraArtists } from './utils';
+import { groupExtraArtists, normalizeCountry } from './utils';
 
 /**
  * A shared adapter for transforming various digital store data into the Discogs release schema.
@@ -96,7 +96,7 @@ export const DiscogsAdapter = {
       title: data.title || '',
       artists: finalArtists.length ? finalArtists : [{ name: '', join: ',' }],
       extraartists: groupExtraArtists(data.extraartists || []),
-      country: data.country || 'Worldwide',
+      country: normalizeCountry(data.country || 'Worldwide'),
       released: data.released || '',
       labels: labelName ? [{ name: labelName, catno: data.number || 'none' }] : [{ name: '', catno: '' }],
       format: [{ name: 'File', qty: totalTracks, desc: [format], text: formatText }],
