@@ -48,7 +48,7 @@ export const qobuz: StoreAdapter = {
   id: 'qobuz',
 
   test: matchUrls(
-    'https://*.qobuz.com/*/album/*',
+    'https://*.qobuz.com/*',
   ),
 
   supports: {

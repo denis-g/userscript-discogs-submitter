@@ -28,9 +28,9 @@ export default defineConfig({
         'match': [
           'https://*.bandcamp.com/album/*',
           'https://web.archive.org/web/*/*://*.bandcamp.com/album/*',
-          'https://*.qobuz.com/*/album/*',
+          'https://*.qobuz.com/*',
           'https://*.junodownload.com/products/*',
-          'https://*.beatport.com/release/*',
+          'https://*.beatport.com/*',
           'https://*.7digital.com/artist/*/release/*',
           'https://*.amazon.co.jp/*',
           'https://*.amazon.com/*',

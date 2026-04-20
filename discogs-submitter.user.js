@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discogs Submitter
 // @namespace    discogs-submitter
-// @version      3.0.10
+// @version      3.0.11
 // @author       Denis G. <https://github.com/denis-g>
 // @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital, Amazon Music and submit releases to Discogs.
 // @icon         https://raw.githubusercontent.com/denis-g/userscript-discogs-submitter/master/src/assets/icon-main.svg
@@ -13,9 +13,9 @@
 // @updateURL    https://raw.githubusercontent.com/denis-g/userscript-discogs-submitter/master/discogs-submitter.user.js
 // @match        https://*.bandcamp.com/album/*
 // @match        https://web.archive.org/web/*/*://*.bandcamp.com/album/*
-// @match        https://*.qobuz.com/*/album/*
+// @match        https://*.qobuz.com/*
 // @match        https://*.junodownload.com/products/*
-// @match        https://*.beatport.com/release/*
+// @match        https://*.beatport.com/*
 // @match        https://*.7digital.com/artist/*/release/*
 // @match        https://*.amazon.co.jp/*
 // @match        https://*.amazon.com/*
@@ -993,7 +993,7 @@
         const beatport = {
             id: "beatport",
             test: matchUrls(
-                "https://*.beatport.com/release/*"
+                "https://*.beatport.com/*"
             ),
             supports: {
                 formats: ["WAV", "FLAC", "AIFF", "MP3"],
@@ -1131,7 +1131,7 @@
         const qobuz = {
             id: "qobuz",
             test: matchUrls(
-                "https://*.qobuz.com/*/album/*"
+                "https://*.qobuz.com/*"
             ),
             supports: {
                 formats: ["WAV", "FLAC", "AIFF", "MP3"],
@@ -1573,7 +1573,9 @@ A digital release in ${format} format has been added.`
                     this.state.selectedFormat = this.state.currentDigitalStore.supports?.formats?.[0] || "WAV";
                     this.state.isHdAudio = false;
                     this.renderPayload();
-                    this.setStatus("Parsed successfully! Ready to submit.", "success");
+                    const storeWarning = this.getStoreWarning();
+                    const successMsg = storeWarning ? `Parsed successfully! Ready to submit.<br />${storeWarning}` : "Parsed successfully! Ready to submit.";
+                    this.setStatus(successMsg, "success");
                 } catch (error) {
                     this.state.currentPayload = null;
                     this.state.lastRawData = null;
@@ -1718,6 +1720,14 @@ ${error.stack || error}`;
                 } finally {
                     this.setLoader(false);
                     this.ui.actionsSubmitBtn?.classList.remove("is-disabled");
+                }
+            }
+            getStoreWarning() {
+                const storeId = this.state.currentDigitalStore?.id;
+                if (storeId === "bandcamp") {
+                    return "<small><strong>Be sure to check the metadata, as formatting can vary significantly between labels and artists.</strong></small>";
+                } else {
+                    return "<small><strong>The list of artists is presented in random order, separated by commas (`,`), and may not exactly match the list of authors from the official release source.</strong></small>";
                 }
             }
             bindEvents() {

@@ -21,9 +21,9 @@ It extracts metadata from the source page, normalizes it to meet Discogs formatt
 | Store             | Release page URL pattern            | Country | Catalog Number | BPM info | 24-bit | Hi-Res Cover | Web Archive |
 | ----------------- |-------------------------------------| :-----: | :------------: | :------: | :----: |:------------:|:-----------:|
 | **Bandcamp**      | `*.bandcamp.com/album/*`            |   🟡    |       🟡       |    🟡    |   ✅   |       ✅      |     ✅       |
-| **Qobuz**         | `*.qobuz.com/*/album/*`             |   ❌    |       ❌       |    ❌    |   ✅   |      ✅       |      ❌      |
+| **Qobuz**         | `*.qobuz.com/*`                     |   ❌    |       ❌       |    ❌    |   ✅   |      ✅       |      ❌      |
 | **Juno Download** | `*.junodownload.com/products/*`     |   ❌    |       ✅       |    ✅    |   ❌   |      ❌       |      ❌      |
-| **Beatport**      | `*.beatport.com/release/*`          |   ❌    |       ✅       |    ✅    |   ✅   |      ✅       |      ❌      |
+| **Beatport**      | `*.beatport.com/*`                  |   ❌    |       ✅       |    ✅    |   ✅   |      ✅       |      ❌      |
 | **7digital**      | `*.7digital.com/artist/*/release/*` |   ❌    |       ❌       |    ❌    |   ✅   |      ❌       |      ❌      |
 | **Amazon Music**  | `*.amazon.*/*`                      |   ❌    |       ❌       |    ❌    |   ❌   |      ❌       |      ❌      |
 
@@ -84,11 +84,6 @@ It extracts metadata from the source page, normalizes it to meet Discogs formatt
 - **Credit Extraction:** Automatically identifies and extracts credit roles from titles and descriptions, moving them to the "Extra Artists" section while keeping the original title text clean.
 - **Smart Normalization:** Automatically filters out technical tags, standardizes punctuation, and applies intelligent casing to all fields.
 - **Cover Art & BPM:** Automatically fetches and attaches cover art, ensuring BPM data is included in the Discogs release notes when available.
-
-### Store-Specific Nuances
-
-- **Bandcamp**: Metadata formatting can vary significantly between different labels and artists. Always double-check the parsed data to ensure accuracy.
-- **Qobuz / Beatport / 7digital / Amazon Music**: Artist lists are often comma-separated (`,`) and may not reflect the precise artist credits featured on the official release artwork. Verify these against the label's source if possible.
 
 ## Normalization & Transformations
 

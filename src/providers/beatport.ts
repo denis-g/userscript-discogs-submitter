@@ -61,7 +61,7 @@ export const beatport: StoreAdapter = {
   id: 'beatport',
 
   test: matchUrls(
-    'https://*.beatport.com/release/*',
+    'https://*.beatport.com/*',
   ),
 
   supports: {

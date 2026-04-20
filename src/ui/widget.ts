@@ -407,7 +407,13 @@ export class UiWidget {
       this.state.isHdAudio = false;
 
       this.renderPayload();
-      this.setStatus('Parsed successfully! Ready to submit.', 'success');
+
+      const storeWarning = this.getStoreWarning();
+      const successMsg = storeWarning
+        ? `Parsed successfully! Ready to submit.<br />${storeWarning}`
+        : 'Parsed successfully! Ready to submit.';
+
+      this.setStatus(successMsg, 'success');
     }
     catch (error) {
       this.state.currentPayload = null;
@@ -617,6 +623,24 @@ export class UiWidget {
 
       this.ui.actionsSubmitBtn?.classList.remove('is-disabled');
     }
+  }
+
+  /**
+   * Returns a store-specific warning message if applicable.
+   *
+   * @returns The HTML warning string or null if no specific warning exists for the current store.
+   */
+  private getStoreWarning(): string | null {
+    const storeId = this.state.currentDigitalStore?.id;
+
+    if (storeId === 'bandcamp') {
+      return '<small><strong>Be sure to check the metadata, as formatting can vary significantly between labels and artists.</strong></small>';
+    }
+    else if (storeId === 'qobuz' || 'beatport' || '7digital' || 'amazonmusic') {
+      return '<small><strong>The list of artists is presented in random order, separated by commas (`,`), and may not exactly match the list of authors from the official release source.</strong></small>';
+    }
+
+    return null;
   }
 
   private bindEvents(): void {
