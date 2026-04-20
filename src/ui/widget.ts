@@ -152,6 +152,7 @@ export const Renderer = {
     const { selectedFormat, isHdAudio, supports } = options;
     const availableFormats = supports.formats || [];
     const canHaveHdAudio = selectedFormat !== 'MP3' && !!supports.hdAudio;
+    const coverHtml = release.cover ? `<small><a href="${release.cover}" target="_blank">Preview</a></small>` : '<small>No cover</small>';
     const artists = (release.artists || [])
       .map((artist, i, all) => `<em>${artist.name}</em>${artist.join && i < all.length - 1 ? ` ${artist.join} ` : ''}`)
       .join('') || '⚠️';
@@ -181,6 +182,7 @@ export const Renderer = {
 
     return `
       <div class="discogs-submitter__results">
+        ${Renderer.renderRow('Image', coverHtml)}
         ${Renderer.renderRow('Artist', artists)}
         ${Renderer.renderRow('Title', release.title || '⚠️')}
         ${Renderer.renderRow('Label', release.labels?.[0]?.name || '⚠️')}
@@ -314,6 +316,7 @@ export class UiWidget {
     this.ui.previewContainer = container.querySelector('.discogs-submitter__preview-container');
     this.ui.actionsSubmitBtn = container.querySelector('.discogs-submitter__actions__btn-submit');
     this.ui.loader = container.querySelector('.discogs-submitter__loader');
+    this.ui.artwork = container.querySelector('.discogs-submitter__artwork');
   }
 
   /**
