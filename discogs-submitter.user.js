@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discogs Submitter
 // @namespace    discogs-submitter
-// @version      3.0.11
+// @version      3.0.12
 // @author       Denis G. <https://github.com/denis-g>
 // @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital, Amazon Music and submit releases to Discogs.
 // @icon         https://raw.githubusercontent.com/denis-g/userscript-discogs-submitter/master/src/assets/icon-main.svg
@@ -1416,15 +1416,20 @@ A digital release in ${format} format has been added.`
                 const { selectedFormat, isHdAudio, supports } = options;
                 const availableFormats = supports.formats || [];
                 const canHaveHdAudio = selectedFormat !== "MP3" && !!supports.hdAudio;
-                const artists = (release.artists || []).map((a, i, all) => `<em>${a.name}</em>${a.join && i < all.length - 1 ? ` ${a.join} ` : ""}`).join("") || "⚠️";
-                const extraArtists = (release.extraartists || []).map((a) => `${a.role} – <em>${a.name}</em>`).join("<br />");
-                const formatLabel = (release.format || []).map((f) => `${f.name}, Qty: ${f.qty}`).join(", ") || "⚠️";
-                const formatSelectionHtml = release.format?.some((f) => f.name === "File") ? `, Type: ${availableFormats.map((f) => `
-          <input type="radio" id="ds[format][${f.toLowerCase()}]" name="ds[format]" tabindex="-1" value="${f}" class="is-format" ${selectedFormat === f ? "checked" : ""} />
-          <label for="ds[format][${f.toLowerCase()}]">${f}</label>
-        `).join("")}
-        <input type="checkbox" id="ds[format][hdAudio]" tabindex="-1" class="is-hdaudio" ${isHdAudio ? "checked" : ""} ${!canHaveHdAudio ? "disabled" : ""} />
-        <label for="ds[format][hdAudio]">24-bit</label>` : "";
+                const artists = (release.artists || []).map((artist, i, all) => `<em>${artist.name}</em>${artist.join && i < all.length - 1 ? ` ${artist.join} ` : ""}`).join("") || "⚠️";
+                const extraArtists = (release.extraartists || []).map((artist) => `${artist.role} – <em>${artist.name}</em>`).join("<br />");
+                const formatLabel = (release.format || []).map((format) => `${format.name}, Qty: ${format.qty}`).join(", ") || "⚠️";
+                let formatSelectionHtml = "";
+                if (release.format?.some((format) => format.name === "File")) {
+                    const types = availableFormats.map((format) => `
+          <input type="radio" id="ds[format][${format.toLowerCase()}]" name="ds[format]" tabindex="-1" value="${format}" class="is-format" ${selectedFormat === format ? "checked" : ""} />
+          <label for="ds[format][${format.toLowerCase()}]">${format}</label>
+        `).join("");
+                    const hdAudio = supports.hdAudio ? `
+          <input type="checkbox" id="ds[format][hdAudio]" tabindex="-1" class="is-hdaudio" ${isHdAudio ? "checked" : ""} ${!canHaveHdAudio ? "disabled" : ""} />
+          <label for="ds[format][hdAudio]">24-bit</label>` : "";
+                    formatSelectionHtml = `, Type: ${types}${hdAudio}`;
+                }
                 return `
       <div class="discogs-submitter__results">
         ${Renderer.renderRow("Artist", artists)}
@@ -1436,7 +1441,7 @@ A digital release in ${format} format has been added.`
         ${Renderer.renderRow("Format", `${formatLabel}${formatSelectionHtml}`)}
         ${Renderer.renderTracklist(release.tracks || [])}
         ${extraArtists ? Renderer.renderRow("Credits", extraArtists, "is-notes") : ""}
-        ${Renderer.renderRow("Notes", (release.notes || "–").replace(/\n/g, "<br />"), "is-notes")}
+        ${release.notes ? Renderer.renderRow("Notes", release.notes.replace(/\n/g, "<br />"), "is-notes") : ""}
       </div>
     `;
             }
