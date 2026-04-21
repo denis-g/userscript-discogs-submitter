@@ -3,6 +3,7 @@ import { sevendigital } from './7digital';
 import { amazonmusic } from './amazonmusic';
 import { bandcamp } from './bandcamp';
 import { beatport } from './beatport';
+import { bleep } from './bleep';
 import { junodownload } from './junodownload';
 import { qobuz } from './qobuz';
 
@@ -17,6 +18,7 @@ export const DigitalStoreRegistry = {
     beatport,
     sevendigital,
     amazonmusic,
+    bleep,
   ] as StoreAdapter[],
 
   /**

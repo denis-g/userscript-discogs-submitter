@@ -1,6 +1,7 @@
 /* --- INJECTED BUTTONS --- */
 
 .discogs-submitter__inject__btn {
+  all: unset;
   display: inline-flex;
   vertical-align: middle;
   align-items: center;
@@ -65,6 +66,10 @@
   &.is-amazonmusic {
     margin-top: 24px;
     margin-right: 100%;
+  }
+
+  &.is-bleep {
+    margin: 1.429rem 0 0;
   }
 }
 

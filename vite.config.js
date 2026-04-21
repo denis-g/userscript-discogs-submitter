@@ -32,6 +32,7 @@ export default defineConfig({
           'https://*.junodownload.com/products/*',
           'https://*.beatport.com/*',
           'https://*.7digital.com/artist/*/release/*',
+          'https://bleep.com/*',
           'https://*.amazon.co.jp/*',
           'https://*.amazon.com/*',
           'https://*.amazon.ae/*',
@@ -76,6 +77,8 @@ export default defineConfig({
           'artwork-cdn.7static.com',
           // Amazon Music
           'm.media-amazon.com',
+          // Bleep
+          'cloudfront.net',
         ],
         'grant': [
           'GM_xmlhttpRequest',
