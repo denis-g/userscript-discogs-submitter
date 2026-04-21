@@ -4,6 +4,7 @@
 
 ![Make Draft Great Again](https://img.shields.io/badge/Make_Draft_Great-Again-dc3545.svg?style=for-the-badge&logo=discogs)
 [![Install Discogs Submitter](https://img.shields.io/badge/Install_Script-Now-28a745.svg?style=for-the-badge&logo=tampermonkey)](https://github.com/denis-g/userscript-discogs-submitter/raw/refs/heads/master/discogs-submitter.user.js)
+[![Greasy Fork](https://img.shields.io/badge/Greasy_Fork-View-35b5dc.svg?style=for-the-badge&logo=greasyfork)](https://greasyfork.org/en/scripts/574902-discogs-submitter)
 
 </div>
 
