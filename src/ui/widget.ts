@@ -2,6 +2,7 @@ import type {
   ArtistCredit,
   DiscogsPayload,
   DiscogsPayloadData,
+  DiscogsTrack,
   ReleaseData,
   StoreAdapter,
   StoreFormatOptions,
@@ -88,11 +89,11 @@ export const Renderer = {
    *
    * @example
    * ```typescript
-   * const html = Renderer.renderTracklist([{title: 'Track 1', position: '1', duration: '3:00'}]);
+   * const html = Renderer.renderTracklist([{title: 'Track 1', pos: '1', duration: '3:00'}]);
    * ```
    */
-  renderTracklist: (tracks: any[]): string => {
-    const hasTrackArtists = tracks.some(t => t.artists?.length > 0);
+  renderTracklist: (tracks: DiscogsTrack[]): string => {
+    const hasTrackArtists = tracks.some(track => (track.artists || []).length > 0);
     const rowBaseClass = hasTrackArtists ? '' : 'is-no-artist';
     let html = `
       <div class="discogs-submitter__results__row is-tracklist ${rowBaseClass}">
@@ -114,15 +115,15 @@ export const Renderer = {
 
     tracks.forEach((track) => {
       const trackArtists = (track.artists || [])
-        .map((a: ArtistCredit, i: number, all: ArtistCredit[]) => `<em>${a.name}</em>${a.join && i < all.length - 1 ? ` ${a.join} ` : ''}`)
+        .map((artist: ArtistCredit, index: number, all: ArtistCredit[]) => `<em>${artist.name}</em>${artist.join && index < all.length - 1 ? ` ${artist.join} ` : ''}`)
         .join('');
       const trackExtraArtists = (track.extraartists || [])
-        .map((a: ArtistCredit) => `${a.role} – <em>${a.name}</em>`)
+        .map((artist: ArtistCredit) => `${artist.role} – <em>${artist.name}</em>`)
         .join('<br />');
 
       html += `
         <div class="discogs-submitter__results__row is-tracklist ${rowBaseClass}">
-          <div class="discogs-submitter__results__body">${track.position || track.pos || '⚠️'}</div>
+          <div class="discogs-submitter__results__body">${track.pos || '⚠️'}</div>
           ${hasTrackArtists ? `<div class="discogs-submitter__results__body">${trackArtists}</div>` : ''}
           <div class="discogs-submitter__results__body">
             <div>${track.title || '⚠️'}</div>
@@ -366,12 +367,20 @@ export class UiWidget {
     }
   }
 
+  /**
+   * Toggles the loading indicator state.
+   *
+   * @param isActive - Whether the loader should be visible.
+   */
   private setLoader(isActive: boolean): void {
     this.ui.loader?.classList.toggle('is-loading', isActive);
   }
 
   /**
    * Updates the status message and visual state.
+   *
+   * @param message - The text message to display.
+   * @param status - The semantic status type (info, success, error, warning).
    */
   public setStatus(message: string, status: 'error' | 'success' | 'info' | 'warning' = 'info'): void {
     if (this.ui.statusText) {
@@ -650,7 +659,7 @@ export class UiWidget {
     if (storeId === 'bandcamp') {
       return '<small><strong>Be sure to check the metadata, as formatting can vary significantly between labels and artists.</strong></small>';
     }
-    else if (storeId === 'qobuz' || 'beatport' || '7digital' || 'amazonmusic') {
+    else if (storeId && ['qobuz', 'beatport', '7digital', 'junodownload', 'amazonmusic', 'bleep'].includes(storeId)) {
       return '<small><strong>The list of artists is presented in random order, separated by commas (`,`), and may not exactly match the list of authors from the official release source.</strong></small>';
     }
 

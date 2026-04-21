@@ -41,7 +41,7 @@ function extractCatalogNumber(items: string[]): string | null {
     'Cat No.',
   ];
   const buildPrefixRegex = (prefixes: string[]) => {
-    const escaped = prefixes.map(p => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+'));
+    const escaped = prefixes.map(prefix => prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+'));
 
     return new RegExp(`(?:${escaped.join('|')})[\\s:-]+(\\S.+)`, 'i');
   };
@@ -49,9 +49,9 @@ function extractCatalogNumber(items: string[]): string | null {
   const bracketedCatRegex = /\[([A-Z0-9-]{3,15})\]/;
   let labelNumber: string | null = null;
 
-  items.some((el) => {
+  items.some((element) => {
     // Try standard prefixes
-    const match = el.match(catRegex);
+    const match = element.match(catRegex);
 
     if (match?.[1]) {
       labelNumber = cleanString(match[1]);
@@ -60,7 +60,7 @@ function extractCatalogNumber(items: string[]): string | null {
     }
 
     // Try bracketed format like [CAT001]
-    const bracketMatch = el.match(bracketedCatRegex);
+    const bracketMatch = element.match(bracketedCatRegex);
 
     if (bracketMatch?.[1]) {
       labelNumber = cleanString(bracketMatch[1]);
@@ -73,7 +73,7 @@ function extractCatalogNumber(items: string[]): string | null {
 
   // 3. Fallback: search for something that LOOKS like a catalog number
   if (!labelNumber) {
-    const suspectedCat = items.find(it => /^[A-Z0-9]{3,10}-\d{1,5}$/.test(it) || /^[A-Z]{2,4}\d{3,6}$/.test(it));
+    const suspectedCat = items.find(item => /^[A-Z0-9]{3,10}-\d{1,5}$/.test(item) || /^[A-Z]{2,4}\d{3,6}$/.test(item));
 
     if (suspectedCat && suspectedCat.length < 20) {
       labelNumber = suspectedCat;
@@ -93,16 +93,16 @@ function extractCatalogNumber(items: string[]): string | null {
 function extractLabelName(items: string[], credits: string[]): string | null {
   const labelPrefixes = ['Label', 'Released on', 'Record Label'];
   const buildPrefixRegex = (prefixes: string[]) => {
-    const escaped = prefixes.map(p => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+'));
+    const escaped = prefixes.map(prefix => prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+'));
 
     return new RegExp(`(?:${escaped.join('|')})[\\s:-]+(\\S.+)`, 'i');
   };
   const labelRegex = buildPrefixRegex(labelPrefixes);
   let albumLabel: string | null = null;
 
-  items.some((el) => {
-    if (/label|released\s+on/i.test(el) && el.length < 100) {
-      const match = el.match(labelRegex);
+  items.some((element) => {
+    if (/label|released\s+on/i.test(element) && element.length < 100) {
+      const match = element.match(labelRegex);
 
       if (match?.[1]) {
         albumLabel = cleanString(match[1]);
@@ -115,7 +115,7 @@ function extractLabelName(items: string[], credits: string[]): string | null {
   });
 
   if (!albumLabel && credits.length) {
-    albumLabel = credits.find(it => it.length > 1) || null;
+    albumLabel = credits.find(item => item.length > 1) || null;
   }
 
   return albumLabel;
@@ -150,8 +150,8 @@ export const bandcamp: StoreAdapter = {
     const about = getManyTextFromTags('.tralbum-about', null, true);
     const credits = getManyTextFromTags('.tralbum-credits', null, true);
     const allCreditLines = [
-      ...about.flatMap(c => c.split(/\r?\n/)),
-      ...credits.flatMap(c => c.split(/\r?\n/)),
+      ...about.flatMap(credit => credit.split(/\r?\n/)),
+      ...credits.flatMap(credit => credit.split(/\r?\n/)),
     ];
 
     allCreditLines.forEach((line) => {
@@ -164,13 +164,14 @@ export const bandcamp: StoreAdapter = {
 
     const albumArtists = normalizeMainArtists(getTextFromTag('#name-section h3 span') || getTextFromTag('#band-name-location .title'), albumExtraArtists);
     const albumTitle = normalizeTrackTitle(getTextFromTag('#name-section .trackTitle'), albumExtraArtists);
-    const albumTracks: TrackData[] = Array.from(document.querySelectorAll('#track_table .track_row_view')).map((track, i) => {
+    const albumTracks: TrackData[] = Array.from(document.querySelectorAll('#track_table .track_row_view')).map((track, index) => {
+      const trackPosition = `${index + 1}`;
       const trackExtraArtists: ArtistCredit[] = [];
       const { artists: trackArtists, title: trackTitle, bpm: trackBpm } = splitArtistTitle(getTextFromTag('.track-title', track), albumArtists, trackExtraArtists);
       const trackDuration = normalizeDuration(getTextFromTag('.time, .time.secondaryText', track));
 
       return {
-        position: `${i + 1}`,
+        pos: trackPosition,
         extraartists: trackExtraArtists,
         artists: trackArtists,
         title: trackTitle,
@@ -182,8 +183,8 @@ export const bandcamp: StoreAdapter = {
     let albumLabel = location ? getTextFromTag('.title', location) : null;
     const labelCountry = location ? getTextFromTag('.location', location)?.split(',').pop()?.trim() || null : null;
     let labelNumber = null;
-    const aboutItems = about.flatMap(c => c.split(/\r?\n/).map(line => cleanString(line)).filter(Boolean) as string[]);
-    const creditItems = credits.flatMap(c => c.split(/\r?\n/).map(line => cleanString(line)).filter(Boolean) as string[]);
+    const aboutItems = about.flatMap(credit => credit.split(/\r?\n/).map(line => cleanString(line)).filter(Boolean) as string[]);
+    const creditItems = credits.flatMap(credit => credit.split(/\r?\n/).map(line => cleanString(line)).filter(Boolean) as string[]);
     const combinedItems = [...aboutItems, ...creditItems];
 
     labelNumber = extractCatalogNumber(combinedItems);

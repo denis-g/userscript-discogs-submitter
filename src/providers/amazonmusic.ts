@@ -63,15 +63,15 @@ export const amazonmusic: StoreAdapter = {
     const tracklistRows = (tracklistContainer?.shadowRoot ?? tracklistContainer)?.querySelectorAll('music-text-row') || [];
 
     if (tracklistRows.length) {
-      albumTracks = Array.from(tracklistRows).map((track: Element, i: number) => {
-        const trackPosition = `${i + 1}`;
+      albumTracks = Array.from(tracklistRows).map((track: Element, index: number) => {
+        const trackPosition = `${index + 1}`;
         const trackExtraArtists: ArtistCredit[] = [];
         const trackArtists = normalizeArtists(getTextFromTag('.col3 > music-link', track, 'title') || albumArtists.map(artist => artist.name), trackExtraArtists);
         const trackTitle = normalizeTrackTitle(getTextFromTag('.col1 > music-link', track), trackExtraArtists);
         const trackDuration = normalizeDuration(getTextFromTag('.col4 > music-link', track, 'title'));
 
         return {
-          position: trackPosition,
+          pos: trackPosition,
           extraartists: trackExtraArtists,
           artists: trackArtists,
           title: trackTitle,

@@ -43,7 +43,7 @@ export const junodownload: StoreAdapter = {
   id: 'junodownload',
 
   test: matchUrls(
-    'https://*.junodownload.com/products/*',
+    'https://*.junodownload.com/*',
   ),
 
   supports: {
@@ -67,9 +67,9 @@ export const junodownload: StoreAdapter = {
     const albumReleased = normalizeReleaseDate(getTextFromTag('#product-page-digi [itemprop="datePublished"]'));
     let labelNumber = null;
 
-    Array.from(document.querySelectorAll('#product-page-digi .mb-2')).some((el) => {
+    Array.from(document.querySelectorAll('#product-page-digi .mb-2')).some((element) => {
       // Normalize &nbsp; and other entities to ensure regex match
-      const html = (el.innerHTML || '').replace(/&nbsp;/g, ' ');
+      const html = (element.innerHTML || '').replace(/&nbsp;/g, ' ');
       const match = html.match(/<strong>Cat:<\/strong>([^<]+)<br>/i);
 
       if (match?.[1]) {
@@ -81,8 +81,8 @@ export const junodownload: StoreAdapter = {
       return false;
     });
 
-    const albumTracks = data.map((track: any, i: number) => {
-      const trackPosition = `${i + 1}`;
+    const albumTracks = data.map((track: any, index: number) => {
+      const trackPosition = `${index + 1}`;
       const trackExtraArtists: ArtistCredit[] = [];
       const trackArtists = normalizeArtists(track.artists.map((item: any) => item.name), trackExtraArtists);
       const trackTitle = normalizeTrackTitle(track.version ? `${track.title} (${track.version})` : track.title, trackExtraArtists);
@@ -90,7 +90,7 @@ export const junodownload: StoreAdapter = {
       const trackBpm = track.bpm;
 
       return {
-        position: trackPosition,
+        pos: trackPosition,
         extraartists: trackExtraArtists,
         artists: trackArtists,
         title: trackTitle,

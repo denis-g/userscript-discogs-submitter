@@ -70,7 +70,7 @@ export const bleep: StoreAdapter = {
       }
 
       return {
-        position: trackPosition,
+        pos: trackPosition,
         extraartists: trackExtraArtists,
         artists: trackArtists,
         title: trackTitle,

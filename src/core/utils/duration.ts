@@ -40,7 +40,7 @@ export function normalizeDuration(rawDuration: string | number | null | undefine
   const hmsMatch = trimmed.match(/^(?:\d+:)?\d{1,2}:\d{2}$/);
 
   if (hmsMatch) {
-    const parts = trimmed.split(':').map(p => p.padStart(2, '0'));
+    const parts = trimmed.split(':').map(part => part.padStart(2, '0'));
 
     // If HH is 00, remove it
     if (parts.length === 3 && Number.parseInt(parts[0], 10) === 0) {

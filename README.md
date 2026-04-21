@@ -22,7 +22,7 @@ It extracts metadata from the source page, normalizes it to meet Discogs formatt
 | ----------------- |-------------------------------------| :-----: | :------------: | :------: | :----: |:------------:|:-----------:|
 | **Bandcamp**      | `*.bandcamp.com/album/*`            |   🟡    |       🟡       |    🟡    |   ✅   |       ✅      |     ✅       |
 | **Qobuz**         | `*.qobuz.com/*`                     |   ❌    |       ❌       |    ❌    |   ✅   |      ✅       |      ❌      |
-| **Juno Download** | `*.junodownload.com/products/*`     |   ❌    |       ✅       |    ✅    |   ❌   |      ❌       |      ❌      |
+| **Juno Download** | `*.junodownload.com/*`              |   ❌    |       ✅       |    ✅    |   ❌   |      ❌       |      ❌      |
 | **Beatport**      | `*.beatport.com/*`                  |   ❌    |       ✅       |    ✅    |   ✅   |      ✅       |      ❌      |
 | **7digital**      | `*.7digital.com/artist/*/release/*` |   ❌    |       ❌       |    ❌    |   ✅   |      ❌       |      ❌      |
 | **Amazon Music**  | `*.amazon.*/*`                      |   ❌    |       ❌       |    ❌    |   ❌   |      ❌       |      ❌      |

@@ -332,7 +332,7 @@ export function groupExtraArtists(artists: ArtistCredit[]): ArtistCredit[] {
   });
 
   return Array.from(nameKeys.entries()).map(([key, name]) => {
-    const roles = Array.from(roleGroups.get(key)!).sort((a, b) => a.localeCompare(b));
+    const roles = Array.from(roleGroups.get(key)!).sort((artistA, artistB) => artistA.localeCompare(artistB));
 
     return {
       name,

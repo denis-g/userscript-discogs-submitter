@@ -64,15 +64,15 @@ export const sevendigital: StoreAdapter = {
     const albumTitle = normalizeTrackTitle(data[0].release.title, albumExtraArtists);
     const albumLabel = data[0].release.label.name;
     const albumReleased = normalizeReleaseDate(getTextFromTag('.release-data-label + .release-data-info'));
-    const albumTracks = data.map((track: any, i: number) => {
-      const trackPosition = `${i + 1}`;
+    const albumTracks = data.map((track: any, index: number) => {
+      const trackPosition = `${index + 1}`;
       const trackExtraArtists: ArtistCredit[] = [];
       const trackArtists = normalizeArtists(track.artist.name, trackExtraArtists);
       const trackTitle = normalizeTrackTitle(track.version !== '' ? `${track.title} (${track.version})` : track.title, trackExtraArtists);
       const trackDuration = normalizeDuration(track.duration);
 
       return {
-        position: trackPosition,
+        pos: trackPosition,
         extraartists: trackExtraArtists,
         artists: trackArtists,
         title: trackTitle,

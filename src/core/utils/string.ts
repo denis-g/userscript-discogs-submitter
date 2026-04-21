@@ -93,7 +93,7 @@ export function capitalizeString(str: string | null | undefined): string {
           const prevNonSpace = words
             .slice(0, index)
             .reverse()
-            .find(w => /\S/.test(w));
+            .find(word => /\S/.test(word));
 
           isTimeContext = !!(prevNonSpace && /\d/.test(prevNonSpace));
         }

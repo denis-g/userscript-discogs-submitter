@@ -9,7 +9,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   plugins: [
     monkey({
-      entry: 'src/main.js',
+      entry: 'src/main.ts',
       build: {
         fileName: 'discogs-submitter.user.js',
         autoGrant: false,
@@ -20,6 +20,7 @@ export default defineConfig({
         'version': `${pkg.version}`,
         'description': `${pkg.description}`,
         'author': `${pkg.author}`,
+        'license': `${pkg.license}`,
         'icon': 'https://raw.githubusercontent.com/denis-g/userscript-discogs-submitter/master/src/assets/icon-main.svg',
         'updateURL': 'https://raw.githubusercontent.com/denis-g/userscript-discogs-submitter/master/discogs-submitter.user.js',
         'downloadURL': 'https://raw.githubusercontent.com/denis-g/userscript-discogs-submitter/master/discogs-submitter.user.js',
@@ -29,7 +30,7 @@ export default defineConfig({
           'https://*.bandcamp.com/album/*',
           'https://web.archive.org/web/*/*://*.bandcamp.com/album/*',
           'https://*.qobuz.com/*',
-          'https://*.junodownload.com/products/*',
+          'https://*.junodownload.com/*',
           'https://*.beatport.com/*',
           'https://*.7digital.com/artist/*/release/*',
           'https://bleep.com/*',

@@ -48,16 +48,16 @@ describe('regex utilities', () => {
     it('builds a pattern for standard joiners', () => {
       const regex = buildJoinerPattern(['&', 'and', 'vs']);
 
-      expect('A & B'.split(regex).map(s => s.trim())).toContain('&');
-      expect('A vs B'.split(regex).map(s => s.trim())).toContain('vs');
-      expect('A, B'.split(regex).map(s => s.trim())).toContain(',');
+      expect('A & B'.split(regex).map(segment => segment.trim())).toContain('&');
+      expect('A vs B'.split(regex).map(segment => segment.trim())).toContain('vs');
+      expect('A, B'.split(regex).map(segment => segment.trim())).toContain(',');
     });
 
     it('handles special "x" joiner correctly (only when surrounded by spaces)', () => {
       const regex = buildJoinerPattern(['&', 'x']);
 
-      expect('Artist x Artist'.split(regex).map(s => s.trim())).toContain('x');
-      expect('ArtistxArtist'.split(regex).map(s => s.trim())).not.toContain('x');
+      expect('Artist x Artist'.split(regex).map(segment => segment.trim())).toContain('x');
+      expect('ArtistxArtist'.split(regex).map(segment => segment.trim())).not.toContain('x');
     });
   });
 

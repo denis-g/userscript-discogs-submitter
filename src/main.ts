@@ -64,7 +64,7 @@ class App {
     }
 
     const targets = document.querySelectorAll<HTMLElement>(store.target);
-    const target = Array.from(targets).find(t => t.offsetWidth > 0) || targets[0];
+    const target = Array.from(targets).find(target => target.offsetWidth > 0) || targets[0];
 
     if (target && this.injectBtn.element && !this.injectBtn.element.isConnected) {
       this.injectBtn.setStore(store.id);

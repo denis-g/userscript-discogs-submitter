@@ -79,12 +79,12 @@ export const DiscogsAdapter = {
 
     const totalTracks = data.tracks?.length ? `${data.tracks.length}` : '1';
     const validBpmTracks = (data.tracks || []).filter(track => track.bpm);
-    const infoBpm = validBpmTracks.length > 0 ? `BPM's:\n${validBpmTracks.map(track => `${track.position}: ${track.bpm}`).join('\n')}` : '';
+    const infoBpm = validBpmTracks.length > 0 ? `BPM's:\n${validBpmTracks.map(track => `${track.pos}: ${track.bpm}`).join('\n')}` : '';
     // Smart Various Artists detection: if artists are divergent across tracks and no release-level artist is set
     let finalArtists = finalReleaseArtists;
 
     if ((!finalArtists.length || finalArtists[0]?.name === '') && tracks.length > 1) {
-      const uniqueArtists = new Set(tracks.map(t => (t.artists?.[0]?.name || '').toLowerCase()).filter(Boolean));
+      const uniqueArtists = new Set(tracks.map(track => (track.artists?.[0]?.name || '').toLowerCase()).filter(Boolean));
 
       if (uniqueArtists.size >= 4) {
         finalArtists = [{ name: 'Various', join: ',' }];
@@ -101,7 +101,7 @@ export const DiscogsAdapter = {
       labels: labelName ? [{ name: labelName, catno: data.number || 'none' }] : [{ name: '', catno: '' }],
       format: [{ name: 'File', qty: totalTracks, desc: [format], text: formatText }],
       tracks: (data.tracks || []).map((track): DiscogsTrack => ({
-        pos: track.position || '',
+        pos: track.pos || '',
         artists: allTracksMatchRelease ? [] : track.artists || [],
         extraartists: groupExtraArtists(track.extraartists || []),
         title: track.title || '',

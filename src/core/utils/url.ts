@@ -11,11 +11,11 @@
  * ```
  */
 export function matchUrls(...patterns: string[]): (_url: string) => boolean {
-  const regexes = patterns.map(p =>
-    new RegExp(`^${p.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')}`, 'i'),
+  const regexes = patterns.map(pattern =>
+    new RegExp(`^${pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\\*/g, '.*')}$`, 'i'),
   );
 
-  return (url: string) => regexes.some(re => re.test(url));
+  return (url: string) => regexes.some(regex => regex.test(url));
 }
 
 /**

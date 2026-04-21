@@ -81,16 +81,16 @@ export const qobuz: StoreAdapter = {
     const albumTitle = normalizeTrackTitle(getTextFromTag('.album-meta__title .album-title'), albumExtraArtists);
     const albumLabel = getTextFromTag('.album-meta__item a[href*="/label/"]');
     const albumReleased = data?.releaseDate || null;
-    const albumTracks = Array.from(document.querySelectorAll('#playerTracks > .player__item')).map((track: Element, i: number) => {
+    const albumTracks = Array.from(document.querySelectorAll('#playerTracks > .player__item')).map((track: Element, index: number) => {
       const artistRow = getTextFromTag('.track__item--artist', track);
-      const trackPosition = `${i + 1}`;
+      const trackPosition = `${index + 1}`;
       const trackExtraArtists: ArtistCredit[] = [];
       const trackArtists = artistRow ? normalizeArtists([artistRow], trackExtraArtists) : albumArtists;
       const trackTitle = normalizeTrackTitle(getTextFromTag('.track__item--name', track), trackExtraArtists);
       const trackDuration = normalizeDuration(getTextFromTag('.track__item--duration', track));
 
       return {
-        position: trackPosition,
+        pos: trackPosition,
         extraartists: trackExtraArtists,
         artists: trackArtists,
         title: trackTitle,

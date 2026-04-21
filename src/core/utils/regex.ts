@@ -25,10 +25,10 @@ const JOINER_REPLACE_REGEX = /[.*+?^${}()|[\]\\]/g;
 export function buildCreditRegexes(phrases: string[], templates: string[]): RegExp[] {
   return phrases.flatMap((phrase) => {
     // Escape spaces in phrases to match any whitespace
-    const p = phrase.replace(SPACE_REGEX, '\\s+');
+    const creditPhrase = phrase.replace(SPACE_REGEX, '\\s+');
 
-    return templates.map((t) => {
-      let finalTemplate = t;
+    return templates.map((template) => {
+      let finalTemplate = template;
 
       // If the phrase doesn't end with a word character (like "f/"),
       // we remove the \b boundary to ensure it still matches.
@@ -36,7 +36,7 @@ export function buildCreditRegexes(phrases: string[], templates: string[]): RegE
         finalTemplate = finalTemplate.replace(PLACEHOLDER_BOUNDARY_REGEX, '{{p}}');
       }
 
-      return new RegExp(finalTemplate.replace(PLACEHOLDER_REGEX, p), 'gi');
+      return new RegExp(finalTemplate.replace(PLACEHOLDER_REGEX, creditPhrase), 'gi');
     });
   });
 }
@@ -69,9 +69,9 @@ export function escapeRegExp(text: string): string {
  * ```
  */
 export function buildJoinerPattern(joiners: string[]): RegExp {
-  const escapedJoiners = joiners.map(j => escapeRegExp(j));
-  const strongJoiners = escapedJoiners.filter(j => j.toLowerCase() !== 'x');
-  const xJoiner = escapedJoiners.find(j => j.toLowerCase() === 'x');
+  const escapedJoiners = joiners.map(joiner => escapeRegExp(joiner));
+  const strongJoiners = escapedJoiners.filter(joiner => joiner.toLowerCase() !== 'x');
+  const xJoiner = escapedJoiners.find(joiner => joiner.toLowerCase() === 'x');
   const strongPattern = `(?:\\s+(?:${strongJoiners.join('|')})(?=\\s+)|\\s*,\\s*)`;
 
   if (xJoiner) {
@@ -98,8 +98,8 @@ export function buildJoinerPattern(joiners: string[]): RegExp {
  */
 export function buildOxfordPattern(joiners: string[]): RegExp | null {
   const nonCommaJoiners = joiners
-    .filter(j => j !== ',')
-    .map(j => escapeRegExp(j));
+    .filter(joiner => joiner !== ',')
+    .map(joiner => escapeRegExp(joiner));
 
   return nonCommaJoiners.length > 0
     ? new RegExp(`,\\s*(${nonCommaJoiners.join('|')})(?:\\s+|$)`, 'gi')

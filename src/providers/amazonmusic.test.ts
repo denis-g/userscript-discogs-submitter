@@ -50,7 +50,7 @@ describe('amazonmusic provider', () => {
 
     expect(result.tracks).toHaveLength(2);
 
-    expect(result.tracks[0].position).toBe('1');
+    expect(result.tracks[0].pos).toBe('1');
     expect(result.tracks[0].title).toBe('Track Title 1');
     expect(result.tracks[0].artists[0].name).toBe('Artist Name');
     expect(result.tracks[0].artists[0].join).toBe(',');
@@ -59,7 +59,7 @@ describe('amazonmusic provider', () => {
     expect(result.tracks[0].extraartists[0].role).toBe('Featuring');
     expect(result.tracks[0].duration).toBe('3:48');
 
-    expect(result.tracks[1].position).toBe('2');
+    expect(result.tracks[1].pos).toBe('2');
     expect(result.tracks[1].title).toBe('Track Title 2');
     expect(result.tracks[1].artists[0].name).toBe('Artist Name');
     expect(result.tracks[1].duration).toBe('4:53');

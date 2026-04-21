@@ -18,9 +18,9 @@ export function getManyTextFromTags(target: string, parent: HTMLElement | Docume
   const results = Array.from(context.querySelectorAll(target));
 
   return results
-    .map((el) => {
+    .map((element) => {
       if (keepNewlines) {
-        const clone = el.cloneNode(true) as HTMLElement;
+        const clone = element.cloneNode(true) as HTMLElement;
 
         clone.querySelectorAll('br').forEach((br) => {
           br.replaceWith('\n');
@@ -29,7 +29,7 @@ export function getManyTextFromTags(target: string, parent: HTMLElement | Docume
         return cleanString(clone.textContent, false);
       }
 
-      return cleanString(el.textContent);
+      return cleanString(element.textContent);
     })
     .filter((text): text is string => Boolean(text));
 }

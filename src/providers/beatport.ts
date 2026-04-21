@@ -77,6 +77,7 @@ export const beatport: StoreAdapter = {
 
   parse: async () => {
     const data = await getData();
+    const albumCover = data.image.uri;
     const albumExtraArtists: ArtistCredit[] = [];
     const albumArtists = normalizeMainArtists(data.artists.map((artist: any) => artist.name), albumExtraArtists);
     const albumTitle = normalizeTrackTitle(data.name, albumExtraArtists);
@@ -92,7 +93,7 @@ export const beatport: StoreAdapter = {
       const trackBpm = track.bpm;
 
       return {
-        position: trackPosition,
+        pos: trackPosition,
         extraartists: trackExtraArtists,
         artists: trackArtists,
         title: trackTitle,
@@ -102,7 +103,7 @@ export const beatport: StoreAdapter = {
     });
 
     return {
-      cover: data.image.uri,
+      cover: albumCover,
       extraartists: albumExtraArtists,
       artists: albumArtists,
       title: albumTitle,

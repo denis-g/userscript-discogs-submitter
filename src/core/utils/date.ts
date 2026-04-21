@@ -27,7 +27,7 @@ export function normalizeReleaseDate(date: string | null | undefined): string | 
   if (gmtMatch) {
     const day = gmtMatch[1] ? String(gmtMatch[1]).padStart(2, '0') : '00';
     const monthStr = gmtMatch[2].substring(0, 3).toLowerCase();
-    const monthIndex = MONTHS.findIndex(m => m.toLowerCase() === monthStr);
+    const monthIndex = MONTHS.findIndex(month => month.toLowerCase() === monthStr);
     const year = gmtMatch[3];
 
     if (monthIndex !== -1) {
@@ -52,7 +52,7 @@ export function normalizeReleaseDate(date: string | null | undefined): string | 
   if (dateMatch) {
     const day = dateMatch[1].padStart(2, '0');
     const monthStr = dateMatch[2].substring(0, 3).toLowerCase();
-    const monthIndex = MONTHS.findIndex(m => m.toLowerCase() === monthStr);
+    const monthIndex = MONTHS.findIndex(month => month.toLowerCase() === monthStr);
     const year = dateMatch[3];
 
     if (monthIndex !== -1) {
@@ -67,7 +67,7 @@ export function normalizeReleaseDate(date: string | null | undefined): string | 
     const monthStr = usDateMatch[1].substring(0, 3).toLowerCase();
     const day = usDateMatch[2].padStart(2, '0');
     const year = usDateMatch[3];
-    const monthIndex = MONTHS.findIndex(m => m.toLowerCase() === monthStr);
+    const monthIndex = MONTHS.findIndex(month => month.toLowerCase() === monthStr);
 
     if (monthIndex !== -1) {
       return `${year}-${String(monthIndex + 1).padStart(2, '0')}-${day}`;

@@ -57,7 +57,7 @@ export interface StoreAdapter {
  */
 export interface TrackData {
   /** The track's position (e.g., "1", "A1"). */
-  position: string;
+  pos: string;
   /** The main artists credited for this track. */
   artists: ArtistCredit[];
   /** Additional contributors (e.g., remixers, producers). */
@@ -111,7 +111,7 @@ export interface DiscogsTrack {
 }
 
 /**
- * Represents the structure expected by the Discogs submission payload.
+ * Represents the structure expected by the Discogs submission payload and UI preview.
  */
 export interface DiscogsPayloadData {
   /** The direct URL to the full-resolution cover image. */

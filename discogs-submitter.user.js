@@ -1,9 +1,10 @@
 // ==UserScript==
 // @name         Discogs Submitter
 // @namespace    discogs-submitter
-// @version      3.0.15
+// @version      3.0.16
 // @author       Denis G. <https://github.com/denis-g>
 // @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital, Amazon Music, Bleep and submit releases to Discogs.
+// @license      MIT
 // @icon         https://raw.githubusercontent.com/denis-g/userscript-discogs-submitter/master/src/assets/icon-main.svg
 // @homepage     https://github.com/denis-g/userscript-discogs-submitter
 // @homepageURL  https://github.com/denis-g/userscript-discogs-submitter
@@ -14,7 +15,7 @@
 // @match        https://*.bandcamp.com/album/*
 // @match        https://web.archive.org/web/*/*://*.bandcamp.com/album/*
 // @match        https://*.qobuz.com/*
-// @match        https://*.junodownload.com/products/*
+// @match        https://*.junodownload.com/*
 // @match        https://*.beatport.com/*
 // @match        https://*.7digital.com/artist/*/release/*
 // @match        https://bleep.com/*
@@ -107,13 +108,13 @@
         const JOINER_REPLACE_REGEX = /[.*+?^${}()|[\]\\]/g;
         function buildCreditRegexes(phrases, templates) {
             return phrases.flatMap((phrase) => {
-                const p = phrase.replace(SPACE_REGEX, "\\s+");
-                return templates.map((t) => {
-                    let finalTemplate = t;
+                const creditPhrase = phrase.replace(SPACE_REGEX, "\\s+");
+                return templates.map((template) => {
+                    let finalTemplate = template;
                     if (!WORD_BOUNDARY_END_REGEX.test(phrase)) {
                         finalTemplate = finalTemplate.replace(PLACEHOLDER_BOUNDARY_REGEX, "{{p}}");
                     }
-                    return new RegExp(finalTemplate.replace(PLACEHOLDER_REGEX, p), "gi");
+                    return new RegExp(finalTemplate.replace(PLACEHOLDER_REGEX, creditPhrase), "gi");
                 });
             });
         }
@@ -121,9 +122,9 @@
             return text.replace(JOINER_REPLACE_REGEX, "\\$&");
         }
         function buildJoinerPattern(joiners) {
-            const escapedJoiners = joiners.map((j) => escapeRegExp(j));
-            const strongJoiners = escapedJoiners.filter((j) => j.toLowerCase() !== "x");
-            const xJoiner = escapedJoiners.find((j) => j.toLowerCase() === "x");
+            const escapedJoiners = joiners.map((joiner) => escapeRegExp(joiner));
+            const strongJoiners = escapedJoiners.filter((joiner) => joiner.toLowerCase() !== "x");
+            const xJoiner = escapedJoiners.find((joiner) => joiner.toLowerCase() === "x");
             const strongPattern = `(?:\\s+(?:${strongJoiners.join("|")})(?=\\s+)|\\s*,\\s*)`;
             if (xJoiner) {
                 const xPattern = `\\s+${xJoiner}(?=\\s+(?!${strongJoiners.join("|")}|,))`;
@@ -132,7 +133,7 @@
             return new RegExp(`((?:${strongPattern})+)`, "i");
         }
         function buildOxfordPattern(joiners) {
-            const nonCommaJoiners = joiners.filter((j) => j !== ",").map((j) => escapeRegExp(j));
+            const nonCommaJoiners = joiners.filter((joiner) => joiner !== ",").map((joiner) => escapeRegExp(joiner));
             return nonCommaJoiners.length > 0 ? new RegExp(`,\\s*(${nonCommaJoiners.join("|")})(?:\\s+|$)`, "gi") : null;
         }
 
@@ -308,7 +309,7 @@
                 if (isWordAMorPM || isFusedTime) {
                     let isTimeContext = isFusedTime;
                     if (!isTimeContext) {
-                        const prevNonSpace = words.slice(0, index).reverse().find((w) => /\S/.test(w));
+                        const prevNonSpace = words.slice(0, index).reverse().find((word2) => /\S/.test(word2));
                         isTimeContext = !!(prevNonSpace && /\d/.test(prevNonSpace));
                     }
                     if (isTimeContext) {
@@ -515,7 +516,7 @@
                 roleGroups.get(normalizedName).add(artist.role.trim());
             });
             return Array.from(nameKeys.entries()).map(([key, name]) => {
-                const roles = Array.from(roleGroups.get(key)).sort((a, b) => a.localeCompare(b));
+                const roles = Array.from(roleGroups.get(key)).sort((artistA, artistB) => artistA.localeCompare(artistB));
                 return {
                     name,
                     role: roles.join(", ")
@@ -917,7 +918,7 @@
             if (gmtMatch) {
                 const day = gmtMatch[1] ? String(gmtMatch[1]).padStart(2, "0") : "00";
                 const monthStr = gmtMatch[2].substring(0, 3).toLowerCase();
-                const monthIndex = MONTHS.findIndex((m) => m.toLowerCase() === monthStr);
+                const monthIndex = MONTHS.findIndex((month) => month.toLowerCase() === monthStr);
                 const year = gmtMatch[3];
                 if (monthIndex !== -1) {
                     return `${year}-${String(monthIndex + 1).padStart(2, "0")}-${day}`;
@@ -934,7 +935,7 @@
             if (dateMatch) {
                 const day = dateMatch[1].padStart(2, "0");
                 const monthStr = dateMatch[2].substring(0, 3).toLowerCase();
-                const monthIndex = MONTHS.findIndex((m) => m.toLowerCase() === monthStr);
+                const monthIndex = MONTHS.findIndex((month) => month.toLowerCase() === monthStr);
                 const year = dateMatch[3];
                 if (monthIndex !== -1) {
                     return `${year}-${String(monthIndex + 1).padStart(2, "0")}-${day}`;
@@ -945,7 +946,7 @@
                 const monthStr = usDateMatch[1].substring(0, 3).toLowerCase();
                 const day = usDateMatch[2].padStart(2, "0");
                 const year = usDateMatch[3];
-                const monthIndex = MONTHS.findIndex((m) => m.toLowerCase() === monthStr);
+                const monthIndex = MONTHS.findIndex((month) => month.toLowerCase() === monthStr);
                 if (monthIndex !== -1) {
                     return `${year}-${String(monthIndex + 1).padStart(2, "0")}-${day}`;
                 }
@@ -960,15 +961,15 @@
         function getManyTextFromTags(target, parent = null, keepNewlines = false) {
             const context = parent || document;
             const results = Array.from(context.querySelectorAll(target));
-            return results.map((el) => {
+            return results.map((element) => {
                 if (keepNewlines) {
-                    const clone = el.cloneNode(true);
+                    const clone = element.cloneNode(true);
                     clone.querySelectorAll("br").forEach((br) => {
                         br.replaceWith("\n");
                     });
                     return cleanString(clone.textContent, false);
                 }
-                return cleanString(el.textContent);
+                return cleanString(element.textContent);
             }).filter((text) => Boolean(text));
         }
         function getTextFromTag(target, parent = null, attribute = "", keepNewlines = false) {
@@ -1010,7 +1011,7 @@
             }
             const hmsMatch = trimmed.match(/^(?:\d+:)?\d{1,2}:\d{2}$/);
             if (hmsMatch) {
-                const parts = trimmed.split(":").map((p) => p.padStart(2, "0"));
+                const parts = trimmed.split(":").map((part) => part.padStart(2, "0"));
                 if (parts.length === 3 && Number.parseInt(parts[0], 10) === 0) {
                     parts.shift();
                 }
@@ -1022,9 +1023,9 @@
 
         function matchUrls(...patterns) {
             const regexes = patterns.map(
-                (p) => new RegExp(`^${p.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*")}`, "i")
+                (pattern) => new RegExp(`^${pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\\\*/g, ".*")}$`, "i")
             );
-            return (url) => regexes.some((re) => re.test(url));
+            return (url) => regexes.some((regex) => regex.test(url));
         }
         function getReleaseIdFromUrl(url = window.location.href) {
             try {
@@ -1069,14 +1070,14 @@
                 const albumTitle = normalizeTrackTitle(data[0].release.title, albumExtraArtists);
                 const albumLabel = data[0].release.label.name;
                 const albumReleased = normalizeReleaseDate(getTextFromTag(".release-data-label + .release-data-info"));
-                const albumTracks = data.map((track, i) => {
-                    const trackPosition = `${i + 1}`;
+                const albumTracks = data.map((track, index) => {
+                    const trackPosition = `${index + 1}`;
                     const trackExtraArtists = [];
                     const trackArtists = normalizeArtists(track.artist.name, trackExtraArtists);
                     const trackTitle = normalizeTrackTitle(track.version !== "" ? `${track.title} (${track.version})` : track.title, trackExtraArtists);
                     const trackDuration = normalizeDuration(track.duration);
                     return {
-                        position: trackPosition,
+                        pos: trackPosition,
                         extraartists: trackExtraArtists,
                         artists: trackArtists,
                         title: trackTitle,
@@ -1127,14 +1128,14 @@
                 const tracklistContainer = document.querySelector("#main_content music-container");
                 const tracklistRows = (tracklistContainer?.shadowRoot ?? tracklistContainer)?.querySelectorAll("music-text-row") || [];
                 if (tracklistRows.length) {
-                    albumTracks = Array.from(tracklistRows).map((track, i) => {
-                        const trackPosition = `${i + 1}`;
+                    albumTracks = Array.from(tracklistRows).map((track, index) => {
+                        const trackPosition = `${index + 1}`;
                         const trackExtraArtists = [];
                         const trackArtists = normalizeArtists(getTextFromTag(".col3 > music-link", track, "title") || albumArtists.map((artist) => artist.name), trackExtraArtists);
                         const trackTitle = normalizeTrackTitle(getTextFromTag(".col1 > music-link", track), trackExtraArtists);
                         const trackDuration = normalizeDuration(getTextFromTag(".col4 > music-link", track, "title"));
                         return {
-                            position: trackPosition,
+                            pos: trackPosition,
                             extraartists: trackExtraArtists,
                             artists: trackArtists,
                             title: trackTitle,
@@ -1174,19 +1175,19 @@
                 "Cat No."
             ];
             const buildPrefixRegex = (prefixes) => {
-                const escaped = prefixes.map((p) => p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+"));
+                const escaped = prefixes.map((prefix) => prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+"));
                 return new RegExp(`(?:${escaped.join("|")})[\\s:-]+(\\S.+)`, "i");
             };
             const catRegex = buildPrefixRegex(catPrefixes);
             const bracketedCatRegex = /\[([A-Z0-9-]{3,15})\]/;
             let labelNumber = null;
-            items.some((el) => {
-                const match = el.match(catRegex);
+            items.some((element) => {
+                const match = element.match(catRegex);
                 if (match?.[1]) {
                     labelNumber = cleanString(match[1]);
                     return true;
                 }
-                const bracketMatch = el.match(bracketedCatRegex);
+                const bracketMatch = element.match(bracketedCatRegex);
                 if (bracketMatch?.[1]) {
                     labelNumber = cleanString(bracketMatch[1]);
                     return true;
@@ -1194,7 +1195,7 @@
                 return false;
             });
             if (!labelNumber) {
-                const suspectedCat = items.find((it) => /^[A-Z0-9]{3,10}-\d{1,5}$/.test(it) || /^[A-Z]{2,4}\d{3,6}$/.test(it));
+                const suspectedCat = items.find((item) => /^[A-Z0-9]{3,10}-\d{1,5}$/.test(item) || /^[A-Z]{2,4}\d{3,6}$/.test(item));
                 if (suspectedCat && suspectedCat.length < 20) {
                     labelNumber = suspectedCat;
                 }
@@ -1204,14 +1205,14 @@
         function extractLabelName(items, credits) {
             const labelPrefixes = ["Label", "Released on", "Record Label"];
             const buildPrefixRegex = (prefixes) => {
-                const escaped = prefixes.map((p) => p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+"));
+                const escaped = prefixes.map((prefix) => prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+"));
                 return new RegExp(`(?:${escaped.join("|")})[\\s:-]+(\\S.+)`, "i");
             };
             const labelRegex = buildPrefixRegex(labelPrefixes);
             let albumLabel = null;
-            items.some((el) => {
-                if (/label|released\s+on/i.test(el) && el.length < 100) {
-                    const match = el.match(labelRegex);
+            items.some((element) => {
+                if (/label|released\s+on/i.test(element) && element.length < 100) {
+                    const match = element.match(labelRegex);
                     if (match?.[1]) {
                         albumLabel = cleanString(match[1]);
                         return true;
@@ -1220,7 +1221,7 @@
                 return false;
             });
             if (!albumLabel && credits.length) {
-                albumLabel = credits.find((it) => it.length > 1) || null;
+                albumLabel = credits.find((item) => item.length > 1) || null;
             }
             return albumLabel;
         }
@@ -1244,8 +1245,8 @@
                 const about = getManyTextFromTags(".tralbum-about", null, true);
                 const credits = getManyTextFromTags(".tralbum-credits", null, true);
                 const allCreditLines = [
-                    ...about.flatMap((c) => c.split(/\r?\n/)),
-                    ...credits.flatMap((c) => c.split(/\r?\n/))
+                    ...about.flatMap((credit) => credit.split(/\r?\n/)),
+                    ...credits.flatMap((credit) => credit.split(/\r?\n/))
                 ];
                 allCreditLines.forEach((line) => {
                     const trimmedLine = line.trim();
@@ -1255,12 +1256,13 @@
                 });
                 const albumArtists = normalizeMainArtists(getTextFromTag("#name-section h3 span") || getTextFromTag("#band-name-location .title"), albumExtraArtists);
                 const albumTitle = normalizeTrackTitle(getTextFromTag("#name-section .trackTitle"), albumExtraArtists);
-                const albumTracks = Array.from(document.querySelectorAll("#track_table .track_row_view")).map((track, i) => {
+                const albumTracks = Array.from(document.querySelectorAll("#track_table .track_row_view")).map((track, index) => {
+                    const trackPosition = `${index + 1}`;
                     const trackExtraArtists = [];
                     const { artists: trackArtists, title: trackTitle, bpm: trackBpm } = splitArtistTitle(getTextFromTag(".track-title", track), albumArtists, trackExtraArtists);
                     const trackDuration = normalizeDuration(getTextFromTag(".time, .time.secondaryText", track));
                     return {
-                        position: `${i + 1}`,
+                        pos: trackPosition,
                         extraartists: trackExtraArtists,
                         artists: trackArtists,
                         title: trackTitle,
@@ -1272,8 +1274,8 @@
                 let albumLabel = location ? getTextFromTag(".title", location) : null;
                 const labelCountry = location ? getTextFromTag(".location", location)?.split(",").pop()?.trim() || null : null;
                 let labelNumber = null;
-                const aboutItems = about.flatMap((c) => c.split(/\r?\n/).map((line) => cleanString(line)).filter(Boolean));
-                const creditItems = credits.flatMap((c) => c.split(/\r?\n/).map((line) => cleanString(line)).filter(Boolean));
+                const aboutItems = about.flatMap((credit) => credit.split(/\r?\n/).map((line) => cleanString(line)).filter(Boolean));
+                const creditItems = credits.flatMap((credit) => credit.split(/\r?\n/).map((line) => cleanString(line)).filter(Boolean));
                 const combinedItems = [...aboutItems, ...creditItems];
                 labelNumber = extractCatalogNumber(combinedItems);
                 if (!albumLabel) {
@@ -1354,6 +1356,7 @@
             },
             parse: async () => {
                 const data = await getData$2();
+                const albumCover = data.image.uri;
                 const albumExtraArtists = [];
                 const albumArtists = normalizeMainArtists(data.artists.map((artist) => artist.name), albumExtraArtists);
                 const albumTitle = normalizeTrackTitle(data.name, albumExtraArtists);
@@ -1368,7 +1371,7 @@
                     const trackDuration = track.length;
                     const trackBpm = track.bpm;
                     return {
-                        position: trackPosition,
+                        pos: trackPosition,
                         extraartists: trackExtraArtists,
                         artists: trackArtists,
                         title: trackTitle,
@@ -1377,7 +1380,7 @@
                     };
                 });
                 return {
-                    cover: data.image.uri,
+                    cover: albumCover,
                     extraartists: albumExtraArtists,
                     artists: albumArtists,
                     title: albumTitle,
@@ -1428,7 +1431,7 @@
                         });
                     }
                     return {
-                        position: trackPosition,
+                        pos: trackPosition,
                         extraartists: trackExtraArtists,
                         artists: trackArtists,
                         title: trackTitle,
@@ -1470,7 +1473,7 @@
         const junodownload = {
             id: "junodownload",
             test: matchUrls(
-                "https://*.junodownload.com/products/*"
+                "https://*.junodownload.com/*"
             ),
             supports: {
                 formats: ["WAV", "FLAC", "AIFF", "MP3"],
@@ -1489,8 +1492,8 @@
                 const albumLabel = data[0].label.name;
                 const albumReleased = normalizeReleaseDate(getTextFromTag('#product-page-digi [itemprop="datePublished"]'));
                 let labelNumber = null;
-                Array.from(document.querySelectorAll("#product-page-digi .mb-2")).some((el) => {
-                    const html = (el.innerHTML || "").replace(/&nbsp;/g, " ");
+                Array.from(document.querySelectorAll("#product-page-digi .mb-2")).some((element) => {
+                    const html = (element.innerHTML || "").replace(/&nbsp;/g, " ");
                     const match = html.match(/<strong>Cat:<\/strong>([^<]+)<br>/i);
                     if (match?.[1]) {
                         labelNumber = cleanString(match[1]);
@@ -1498,15 +1501,15 @@
                     }
                     return false;
                 });
-                const albumTracks = data.map((track, i) => {
-                    const trackPosition = `${i + 1}`;
+                const albumTracks = data.map((track, index) => {
+                    const trackPosition = `${index + 1}`;
                     const trackExtraArtists = [];
                     const trackArtists = normalizeArtists(track.artists.map((item) => item.name), trackExtraArtists);
                     const trackTitle = normalizeTrackTitle(track.version ? `${track.title} (${track.version})` : track.title, trackExtraArtists);
                     const trackDuration = normalizeDuration(track.length);
                     const trackBpm = track.bpm;
                     return {
-                        position: trackPosition,
+                        pos: trackPosition,
                         extraartists: trackExtraArtists,
                         artists: trackArtists,
                         title: trackTitle,
@@ -1572,15 +1575,15 @@
                 const albumTitle = normalizeTrackTitle(getTextFromTag(".album-meta__title .album-title"), albumExtraArtists);
                 const albumLabel = getTextFromTag('.album-meta__item a[href*="/label/"]');
                 const albumReleased = data?.releaseDate || null;
-                const albumTracks = Array.from(document.querySelectorAll("#playerTracks > .player__item")).map((track, i) => {
+                const albumTracks = Array.from(document.querySelectorAll("#playerTracks > .player__item")).map((track, index) => {
                     const artistRow = getTextFromTag(".track__item--artist", track);
-                    const trackPosition = `${i + 1}`;
+                    const trackPosition = `${index + 1}`;
                     const trackExtraArtists = [];
                     const trackArtists = artistRow ? normalizeArtists([artistRow], trackExtraArtists) : albumArtists;
                     const trackTitle = normalizeTrackTitle(getTextFromTag(".track__item--name", track), trackExtraArtists);
                     const trackDuration = normalizeDuration(getTextFromTag(".track__item--duration", track));
                     return {
-                        position: trackPosition,
+                        pos: trackPosition,
                         extraartists: trackExtraArtists,
                         artists: trackArtists,
                         title: trackTitle,
@@ -1612,7 +1615,7 @@
                 amazonmusic,
                 bleep
             ],
-            detectByLocation: () => DigitalStoreRegistry.list.find((p) => p.test(window.location.href))
+            detectByLocation: () => DigitalStoreRegistry.list.find((provider) => provider.test(window.location.href))
         };
 
         const injectBtnCss = "/* --- INJECTED BUTTONS --- */\n\n.discogs-submitter__inject__btn {\n  all: unset;\n  display: inline-flex;\n  vertical-align: middle;\n  align-items: center;\n  justify-content: center;\n  gap: 10px;\n  cursor: pointer;\n  user-select: none;\n  padding: calc(var(--ds-gap) / 2);\n  color: var(--ds-color-black);\n  font-family: var(--ds-font-sans) !important;\n  font-size: 14px;\n  font-weight: bold;\n  line-height: 1.2;\n  text-transform: none;\n  text-shadow: none;\n  white-space: nowrap;\n  background: var(--ds-color-white);\n  border: 2px solid var(--ds-color-gray-dark);\n  border-radius: calc(var(--ds-radius) * 2);\n  outline: 1px solid var(--ds-color-gray-dark);\n  transition: outline 0.2s ease;\n\n  &:hover {\n    outline: 2px solid var(--ds-color-white);\n\n    .discogs-submitter__inject__logo {\n      animation: ds-spinner 1s linear infinite;\n    }\n  }\n\n  &.is-disabled {\n    opacity: 0.5;\n    pointer-events: none;\n  }\n\n  /* Site-specific styles */\n\n  &.is-bandcamp {\n    margin-bottom: 1.5em;\n    box-sizing: border-box;\n  }\n\n  &.is-qobuz {\n    margin-top: 20px;\n    text-transform: none;\n  }\n\n  &.is-qobuz {\n    .discogs-submitter__inject__logo {\n      margin-top: -4px;\n    }\n  }\n\n  &.is-junodownload {\n    margin-top: 20px;\n  }\n\n  &.is-beatport {\n    margin-top: 8px;\n  }\n\n  &.is-amazonmusic {\n    margin-top: 24px;\n    margin-right: 100%;\n  }\n\n  &.is-bleep {\n    margin: 1.429rem 0 0;\n  }\n}\n\n.discogs-submitter__inject__logo {\n  display: block;\n  width: 1.25em;\n  height: 1.25em;\n}\n";
@@ -1715,10 +1718,10 @@
                 const totalTracks = data.tracks?.length ? `${data.tracks.length}` : "1";
                 const validBpmTracks = (data.tracks || []).filter((track) => track.bpm);
                 const infoBpm = validBpmTracks.length > 0 ? `BPM's:
-${validBpmTracks.map((track) => `${track.position}: ${track.bpm}`).join("\n")}` : "";
+${validBpmTracks.map((track) => `${track.pos}: ${track.bpm}`).join("\n")}` : "";
                 let finalArtists = finalReleaseArtists;
                 if ((!finalArtists.length || finalArtists[0]?.name === "") && tracks.length > 1) {
-                    const uniqueArtists = new Set(tracks.map((t) => (t.artists?.[0]?.name || "").toLowerCase()).filter(Boolean));
+                    const uniqueArtists = new Set(tracks.map((track) => (track.artists?.[0]?.name || "").toLowerCase()).filter(Boolean));
                     if (uniqueArtists.size >= 4) {
                         finalArtists = [{ name: "Various", join: "," }];
                     }
@@ -1733,7 +1736,7 @@ ${validBpmTracks.map((track) => `${track.position}: ${track.bpm}`).join("\n")}` 
                     labels: labelName ? [{ name: labelName, catno: data.number || "none" }] : [{ name: "", catno: "" }],
                     format: [{ name: "File", qty: totalTracks, desc: [format], text: formatText }],
                     tracks: (data.tracks || []).map((track) => ({
-                        pos: track.position || "",
+                        pos: track.pos || "",
                         artists: allTracksMatchRelease ? [] : track.artists || [],
                         extraartists: groupExtraArtists(track.extraartists || []),
                         title: track.title || "",
@@ -1794,7 +1797,7 @@ A digital release in ${format} format has been added.`
     </div>
   `,
             renderTracklist: (tracks) => {
-                const hasTrackArtists = tracks.some((t) => t.artists?.length > 0);
+                const hasTrackArtists = tracks.some((track) => (track.artists || []).length > 0);
                 const rowBaseClass = hasTrackArtists ? "" : "is-no-artist";
                 let html = `
       <div class="discogs-submitter__results__row is-tracklist ${rowBaseClass}">
@@ -1813,11 +1816,11 @@ A digital release in ${format} format has been added.`
       `;
                 }
                 tracks.forEach((track) => {
-                    const trackArtists = (track.artists || []).map((a, i, all) => `<em>${a.name}</em>${a.join && i < all.length - 1 ? ` ${a.join} ` : ""}`).join("");
-                    const trackExtraArtists = (track.extraartists || []).map((a) => `${a.role} – <em>${a.name}</em>`).join("<br />");
+                    const trackArtists = (track.artists || []).map((artist, index, all) => `<em>${artist.name}</em>${artist.join && index < all.length - 1 ? ` ${artist.join} ` : ""}`).join("");
+                    const trackExtraArtists = (track.extraartists || []).map((artist) => `${artist.role} – <em>${artist.name}</em>`).join("<br />");
                     html += `
         <div class="discogs-submitter__results__row is-tracklist ${rowBaseClass}">
-          <div class="discogs-submitter__results__body">${track.position || track.pos || "⚠️"}</div>
+          <div class="discogs-submitter__results__body">${track.pos || "⚠️"}</div>
           ${hasTrackArtists ? `<div class="discogs-submitter__results__body">${trackArtists}</div>` : ""}
           <div class="discogs-submitter__results__body">
             <div>${track.title || "⚠️"}</div>
@@ -2151,9 +2154,10 @@ ${error.stack || error}`;
                 const storeId = this.state.currentDigitalStore?.id;
                 if (storeId === "bandcamp") {
                     return "<small><strong>Be sure to check the metadata, as formatting can vary significantly between labels and artists.</strong></small>";
-                } else {
+                } else if (storeId && ["qobuz", "beatport", "7digital", "junodownload", "amazonmusic", "bleep"].includes(storeId)) {
                     return "<small><strong>The list of artists is presented in random order, separated by commas (`,`), and may not exactly match the list of authors from the official release source.</strong></small>";
                 }
+                return null;
             }
             bindEvents() {
                 this.ui.headerCloseBtn?.addEventListener("click", () => this.ui.widget?.classList.remove("is-open"));
@@ -2274,7 +2278,7 @@ ${error.stack || error}`;
                     return;
                 }
                 const targets = document.querySelectorAll(store.target);
-                const target = Array.from(targets).find((t) => t.offsetWidth > 0) || targets[0];
+                const target = Array.from(targets).find((target2) => target2.offsetWidth > 0) || targets[0];
                 if (target && this.injectBtn.element && !this.injectBtn.element.isConnected) {
                     this.injectBtn.setStore(store.id);
                     store.injectButton(this.injectBtn.element, target);
