@@ -64,6 +64,7 @@ body:
         - Beatport
         - 7digital
         - Amazon Music
+        - Bleep
     validations:
       required: true
 
