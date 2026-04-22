@@ -80,6 +80,15 @@ body:
       required: true
 
   - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal Reproducible Example
+      description: |
+        Can you provide a small test case or a steps to reproduce? Please include any parsing issues in detail.
+    validations:
+      required: true
+
+  - type: textarea
     id: actual
     attributes:
       label: Actual Behavior
