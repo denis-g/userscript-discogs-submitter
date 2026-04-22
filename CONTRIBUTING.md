@@ -13,10 +13,15 @@ Thank you for your interest in contributing! This project follows strict enginee
     ```bash
     npm install
     ```
-3.  **Build userscript:**
+3.  **Install Userscript Manager:**
+    - Ensure you have [Tampermonkey](https://www.tampermonkey.net/) or [Violentmonkey](https://violentmonkey.github.io/) installed in your browser.
+4.  **Build userscript:**
     ```bash
     npm run build
     ```
+5.  **Install userscript:**
+    - Copy the contents of `discogs-submitter.user.js` into a new user script in your userscript manager.
+
 
 ## Adding a New Provider
 
