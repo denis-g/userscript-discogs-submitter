@@ -296,7 +296,8 @@ export class UiWidget {
     }
 
     const container = document.createElement('aside');
-    const isWebArchive = window.location.href.includes('https://web.archive.org/web/');
+    const currentUrl = new URL(window.location.href);
+    const isWebArchive = currentUrl.hostname === 'web.archive.org' && currentUrl.pathname.startsWith('/web/');
 
     container.id = this.WIDGET_ID;
     container.className = `${container.id} ${isWebArchive ? 'is-webarchive' : ''}`;

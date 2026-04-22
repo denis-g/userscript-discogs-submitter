@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discogs Submitter
 // @namespace    discogs-submitter
-// @version      3.0.16
+// @version      3.0.17
 // @author       Denis G. <https://github.com/denis-g>
 // @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital, Amazon Music, Bleep and submit releases to Discogs.
 // @license      MIT
@@ -1924,7 +1924,8 @@ A digital release in ${format} format has been added.`
                     return;
                 }
                 const container = document.createElement("aside");
-                const isWebArchive = window.location.href.includes("https://web.archive.org/web/");
+                const currentUrl = new URL(window.location.href);
+                const isWebArchive = currentUrl.hostname === "web.archive.org" && currentUrl.pathname.startsWith("/web/");
                 container.id = this.WIDGET_ID;
                 container.className = `${container.id} ${isWebArchive ? "is-webarchive" : ""}`;
                 const template = getWidgetTemplate();
