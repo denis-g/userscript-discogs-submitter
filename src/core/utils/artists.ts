@@ -20,6 +20,7 @@ export function isValidCreditPhrase(text: string | null | undefined): boolean {
     return false;
   }
 
+  // Remove common promotional words
   const promoBlacklist = /\b(?:tracks?|music|album|exclusive|material|songs?|ep|lp|release|available|digital|vinyl|download|stream|out\s+now|listen|debut|compilation|collection)\b/i;
 
   if (promoBlacklist.test(text)) {
@@ -45,8 +46,8 @@ export function isValidCreditPhrase(text: string | null | undefined): boolean {
  *
  * @example
  * ```typescript
- * const credits = parseArtists('Artist A & Artist B feat. Artist C');
- * // [{name: "Artist A", join: "&"}, {name: "Artist B", join: "feat."}, {name: "Artist C", join: ","}]
+ * const credits = parseArtists('Artist One & Artist Two feat. Artist Three');
+ * // [{name: "Artist One", join: "&"}, {name: "Artist Two", join: "feat."}, {name: "Artist Three", join: ","}]
  * ```
  */
 export function parseArtists(artistString: string | null | undefined, extraArtists: ArtistCredit[] | null = null): ArtistCredit[] {
@@ -63,9 +64,9 @@ export function parseArtists(artistString: string | null | undefined, extraArtis
   const parts = processedString.split(joinerPattern);
   const artists: ArtistCredit[] = [];
 
-  for (let i = 0; i < parts.length; i += 2) {
-    const rawName = parts[i].trim();
-    const join = parts[i + 1] || null;
+  for (let index = 0; index < parts.length; index += 2) {
+    const rawName = parts[index].trim();
+    const join = parts[index + 1] || null;
 
     if (rawName) {
       const normalized = normalizeArtists(rawName, extraArtists, true);
@@ -102,9 +103,9 @@ export function parseArtists(artistString: string | null | undefined, extraArtis
  * @example
  * ```typescript
  * const extra = [];
- * const clean = extractExtraArtists('Track Title (Remix by Artist A)', extra);
+ * const clean = extractExtraArtists('Track Title (Remix by Artist One)', extra);
  * // clean: "Track Title"
- * // extra: [{name: "Artist A", role: "Remix"}]
+ * // extra: [{name: "Artist Name", role: "Remix"}]
  * ```
  */
 export function extractExtraArtists(text: string, extraArtists: ArtistCredit[], preserveRoles: string[] = []): string {
@@ -116,25 +117,25 @@ export function extractExtraArtists(text: string, extraArtists: ArtistCredit[], 
 
   for (const [role, patterns] of Object.entries(PATTERNS.artistCredit)) {
     for (const pattern of patterns) {
-      processedText = processedText.replace(pattern, (fullMatch, p1) => {
-        if (typeof p1 !== 'string') {
+      processedText = processedText.replace(pattern, (fullMatch, capturedName) => {
+        if (typeof capturedName !== 'string') {
           return fullMatch;
         }
 
-        let cleanCapture = p1.replace(/[.:,;\s]+$/, '').trim();
+        let cleanCapture = capturedName.replace(/[.:,;\s]+$/, '').trim();
         const chunks = cleanCapture.split(/\.\s+/);
 
         if (chunks.length > 1) {
           let validName = chunks[0];
           const namePrefixes = new Set(['mr', 'mrs', 'dr', 'st', 'vs', 'feat', 'ft', 'prof', 'bros', 'inc', 'ltd', 'vol']);
 
-          for (let i = 1; i < chunks.length; i++) {
-            const prevChunk = chunks[i - 1];
+          for (let chunkIndex = 1; chunkIndex < chunks.length; chunkIndex++) {
+            const prevChunk = chunks[chunkIndex - 1];
             const words = prevChunk.split(/\s+/);
             const lastWord = words.at(-1)?.toLowerCase() || '';
 
             if (lastWord.length === 1 || namePrefixes.has(lastWord)) {
-              validName += `. ${chunks[i]}`;
+              validName += `. ${chunks[chunkIndex]}`;
             }
             else {
               break;
@@ -192,12 +193,12 @@ export function normalizeArtists(artists: string | string[] | null | undefined, 
 
   const artistList = Array.isArray(artists) ? artists : [artists];
   const normalizedNames = artistList
-    .map((raw) => {
-      if (!raw) {
+    .map((rawArtist) => {
+      if (!rawArtist) {
         return null;
       }
 
-      let cleaned = cleanString(raw);
+      let cleaned = cleanString(rawArtist);
 
       if (!cleaned) {
         return null;
@@ -276,6 +277,7 @@ export function normalizeMainArtists(rawArtists: string | string[] | null | unde
     }
   }
 
+  // If there are too many artists, default to "Various"
   if (normalized.length >= 4) {
     return [{ name: 'Various', join: ',' }];
   }
@@ -301,8 +303,8 @@ export function normalizeMainArtists(rawArtists: string | string[] | null | unde
  *
  * @example
  * ```typescript
- * const grouped = groupExtraArtists([{name: "A", role: "Producer"}, {name: "A", role: "Mixer"}]);
- * // [{name: "A", role: "Producer, Mixer"}]
+ * const grouped = groupExtraArtists([{name: "Artist Name", role: "Producer"}, {name: "Artist Name", role: "Mixer"}]);
+ * // [{name: "Artist Name", role: "Producer, Mixer"}]
  * ```
  */
 export function groupExtraArtists(artists: ArtistCredit[]): ArtistCredit[] {
@@ -332,7 +334,7 @@ export function groupExtraArtists(artists: ArtistCredit[]): ArtistCredit[] {
   });
 
   return Array.from(nameKeys.entries()).map(([key, name]) => {
-    const roles = Array.from(roleGroups.get(key)!).sort((artistA, artistB) => artistA.localeCompare(artistB));
+    const roles = Array.from(roleGroups.get(key)!).sort((roleA, roleB) => roleA.localeCompare(roleB));
 
     return {
       name,
@@ -342,18 +344,18 @@ export function groupExtraArtists(artists: ArtistCredit[]): ArtistCredit[] {
 }
 
 /**
- * Cleans track titles, standardizes casing, and extracts side-effect artist credits.
+ * Cleans titles (tracks or albums), standardizes casing, and extracts side-effect artist credits.
  *
- * @param rawTitle - The original track title string.
- * @param extraArtists - Array to collect associated track credits (e.g. remixers).
- * @returns Cleaned and formatted track title.
+ * @param rawTitle - The original title string.
+ * @param extraArtists - Array to collect associated credits (e.g. remixers).
+ * @returns Cleaned and formatted title.
  *
  * @example
  * ```typescript
- * const title = normalizeTrackTitle('Song (Remix by A)', []);
+ * const title = normalizeTitle('Track Title (Remix by Artist Name)', []);
  * ```
  */
-export function normalizeTrackTitle(rawTitle: string | null | undefined, extraArtists: ArtistCredit[] | null = null): string {
+export function normalizeTitle(rawTitle: string | null | undefined, extraArtists: ArtistCredit[] | null = null): string {
   if (!rawTitle) {
     return '';
   }
@@ -384,7 +386,7 @@ export function normalizeTrackTitle(rawTitle: string | null | undefined, extraAr
  *
  * @example
  * ```typescript
- * const split = splitArtistTitle('Aphex Twin - Xtal', [], []);
+ * const split = splitArtistTitle('Artist Name - Track Title', [], []);
  * ```
  */
 export function splitArtistTitle(rawTitle: string | null | undefined, defaultArtists: ArtistCredit[], extraArtists: ArtistCredit[]) {
@@ -394,6 +396,7 @@ export function splitArtistTitle(rawTitle: string | null | undefined, defaultArt
     cleanTitleForSplit = cleanTitleForSplit.replace(pattern, '').trim();
   });
 
+  // Try to split by em dash, en dash, or hyphen
   const splitMatch = cleanTitleForSplit.match(/^(\S(?:.*?\S)?)\s+[-\u2013\u2014]\s*(\S.*)$/) || cleanTitleForSplit.match(/^(\S(?:.*?\S)?)[-\u2013\u2014]\s+(\S.*)$/);
 
   if (splitMatch) {
@@ -405,7 +408,7 @@ export function splitArtistTitle(rawTitle: string | null | undefined, defaultArt
     if (!technicalParts.test(artistPart) && !technicalParts.test(titlePart)) {
       return {
         artists: normalizeArtists(artistPart, extraArtists),
-        title: normalizeTrackTitle(titlePart, extraArtists),
+        title: normalizeTitle(titlePart, extraArtists),
         bpm: extractBpm(rawTitle),
       };
     }
@@ -413,7 +416,7 @@ export function splitArtistTitle(rawTitle: string | null | undefined, defaultArt
 
   return {
     artists: defaultArtists,
-    title: normalizeTrackTitle(rawTitle || '', extraArtists),
+    title: normalizeTitle(rawTitle || '', extraArtists),
     bpm: extractBpm(rawTitle),
   };
 }

@@ -21,7 +21,7 @@ export default defineConfig({
         'description': `${pkg.description}`,
         'author': `${pkg.author}`,
         'license': `${pkg.license}`,
-        'icon': 'https://raw.githubusercontent.com/denis-g/userscript-discogs-submitter/master/src/assets/icon-main.svg',
+        'icon': 'https://raw.githubusercontent.com/denis-g/userscript-discogs-submitter/master/src/assets/images/logo.svg',
         'updateURL': 'https://raw.githubusercontent.com/denis-g/userscript-discogs-submitter/master/discogs-submitter.user.js',
         'downloadURL': 'https://raw.githubusercontent.com/denis-g/userscript-discogs-submitter/master/discogs-submitter.user.js',
         'supportURL': `${pkg.bugs.url}`,
@@ -99,7 +99,7 @@ export default defineConfig({
     outDir: './',
     emptyOutDir: false,
     minify: false,
-    cssMinify: false,
+    cssMinify: true,
     rollupOptions: {
       output: {
         format: 'iife',
@@ -111,6 +111,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      '~': path.resolve(__dirname, './'),
       '@': path.resolve(__dirname, './src'),
     },
   },

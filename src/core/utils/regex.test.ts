@@ -24,7 +24,7 @@ describe('regex utilities', () => {
       const result = buildCreditRegexes(phrases, templates);
 
       expect(result[0].source).toBe('\\boriginal\\s+mix\\b');
-      expect('Track original  mix'.match(result[0])).not.toBeNull();
+      expect('Track Original Mix'.match(result[0])).not.toBeNull();
     });
 
     it('removes word boundaries for phrases ending in non-word characters (e.g. f/)', () => {
@@ -34,13 +34,13 @@ describe('regex utilities', () => {
 
       // The boundary \b after {{p}} should be removed because "/" is not a word character
       expect(result[0].source).toBe('\\bf\\/');
-      expect('ft. Artist f/ Other'.match(result[0])).not.toBeNull();
+      expect('ft. Artist One f/ Artist Two'.match(result[0])).not.toBeNull();
     });
   });
 
   describe('escapeRegExp', () => {
     it('escapes special regex characters', () => {
-      expect(escapeRegExp('artist (feat. remix) [edit]')).toBe('artist \\(feat\\. remix\\) \\[edit\\]');
+      expect(escapeRegExp('Artist One (feat. Artist Two) [Edit]')).toBe('Artist One \\(feat\\. Artist Two\\) \\[Edit\\]');
     });
   });
 
@@ -48,15 +48,16 @@ describe('regex utilities', () => {
     it('builds a pattern for standard joiners', () => {
       const regex = buildJoinerPattern(['&', 'and', 'vs']);
 
-      expect('A & B'.split(regex).map(segment => segment.trim())).toContain('&');
-      expect('A vs B'.split(regex).map(segment => segment.trim())).toContain('vs');
-      expect('A, B'.split(regex).map(segment => segment.trim())).toContain(',');
+      expect('Artist One & Artist Two'.split(regex).map(segment => segment.trim())).toContain('&');
+      expect('Artist One and Artist Two'.split(regex).map(segment => segment.trim())).toContain('and');
+      expect('Artist One vs Artist Two'.split(regex).map(segment => segment.trim())).toContain('vs');
+      expect('Artist One, Artist Two'.split(regex).map(segment => segment.trim())).toContain(',');
     });
 
     it('handles special "x" joiner correctly (only when surrounded by spaces)', () => {
       const regex = buildJoinerPattern(['&', 'x']);
 
-      expect('Artist x Artist'.split(regex).map(segment => segment.trim())).toContain('x');
+      expect('Artist One x Artist Two'.split(regex).map(segment => segment.trim())).toContain('x');
       expect('ArtistxArtist'.split(regex).map(segment => segment.trim())).not.toContain('x');
     });
   });
@@ -67,8 +68,8 @@ describe('regex utilities', () => {
 
       expect(regex).not.toBeNull();
       if (regex) {
-        expect('A, B, & C'.replace(regex, ' $1 ')).toBe('A, B & C');
-        expect('A, B, and C'.replace(regex, ' $1 ')).toBe('A, B and C');
+        expect('Artist One, Artist Two, & Artist Three'.replace(regex, ' $1 ')).toBe('Artist One, Artist Two & Artist Three');
+        expect('Artist One, Artist Two, and Artist Three'.replace(regex, ' $1 ')).toBe('Artist One, Artist Two and Artist Three');
       }
     });
 

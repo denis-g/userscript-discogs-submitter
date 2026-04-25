@@ -21,13 +21,13 @@ describe('normalizeReleaseDate', () => {
     expect(normalizeReleaseDate('14 April 2011')).toBe('2011-04-14');
   });
 
+  it('normalizes HDtracks date formats (Released YYYY-MM-DD)', () => {
+    expect(normalizeReleaseDate('Released 2021-11-12')).toBe('2021-11-12');
+  });
+
   it('extracts year from strings containing year-only info', () => {
     expect(normalizeReleaseDate('2009')).toBe('2009');
     expect(normalizeReleaseDate('Published in 1954')).toBe('1954');
-  });
-
-  it('normalizes HDtracks date formats (Released YYYY-MM-DD)', () => {
-    expect(normalizeReleaseDate('Released 2021-11-12')).toBe('2021-11-12');
   });
 
   it('returns null for empty or invalid input', () => {

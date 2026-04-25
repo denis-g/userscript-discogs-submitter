@@ -8,7 +8,7 @@ import {
   matchUrls,
   normalizeArtists,
   normalizeMainArtists,
-  normalizeTrackTitle,
+  normalizeTitle,
 } from '@/core/utils';
 
 /**
@@ -80,7 +80,7 @@ export const beatport: StoreAdapter = {
     const albumCover = data.image.uri;
     const albumExtraArtists: ArtistCredit[] = [];
     const albumArtists = normalizeMainArtists(data.artists.map((artist: any) => artist.name), albumExtraArtists);
-    const albumTitle = normalizeTrackTitle(data.name, albumExtraArtists);
+    const albumTitle = normalizeTitle(data.name, albumExtraArtists);
     const albumLabel = data.label.name || null;
     const labelNumber = data.catalog_number || null;
     const albumReleased = data.publish_date;
@@ -88,7 +88,7 @@ export const beatport: StoreAdapter = {
       const trackPosition = `${index + 1}`;
       const trackExtraArtists: ArtistCredit[] = [];
       const trackArtists = normalizeArtists(track.artists.map((artist: any) => artist.name), trackExtraArtists);
-      const trackTitle = normalizeTrackTitle(track.mix_name !== '' ? `${track.name} (${track.mix_name})` : track.name, trackExtraArtists);
+      const trackTitle = normalizeTitle(track.mix_name !== '' ? `${track.name} (${track.mix_name})` : track.name, trackExtraArtists);
       const trackDuration = track.length;
       const trackBpm = track.bpm;
 

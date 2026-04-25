@@ -7,6 +7,7 @@ export default defineConfig({
     globals: true,
     include: ['src/**/*.{test,spec}.{js,ts}'],
     alias: {
+      '~': path.resolve(__dirname, './'),
       '@': path.resolve(__dirname, './src'),
     },
   },

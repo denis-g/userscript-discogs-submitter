@@ -12,7 +12,7 @@ import {
   normalizeDuration,
   normalizeMainArtists,
   normalizeReleaseDate,
-  normalizeTrackTitle,
+  normalizeTitle,
 } from '@/core/utils';
 
 /**
@@ -62,7 +62,7 @@ export const junodownload: StoreAdapter = {
     const albumCover = getTextFromTag('.product-image-for-modal', null, 'data-src-full');
     const albumExtraArtists: ArtistCredit[] = [];
     const albumArtists = normalizeMainArtists(data[0].releaseArtists.map((item: any) => item.name), albumExtraArtists);
-    const albumTitle = normalizeTrackTitle(data[0].releaseTitle, albumExtraArtists);
+    const albumTitle = normalizeTitle(data[0].releaseTitle, albumExtraArtists);
     const albumLabel = data[0].label.name;
     const albumReleased = normalizeReleaseDate(getTextFromTag('#product-page-digi [itemprop="datePublished"]'));
     let labelNumber = null;
@@ -85,7 +85,7 @@ export const junodownload: StoreAdapter = {
       const trackPosition = `${index + 1}`;
       const trackExtraArtists: ArtistCredit[] = [];
       const trackArtists = normalizeArtists(track.artists.map((item: any) => item.name), trackExtraArtists);
-      const trackTitle = normalizeTrackTitle(track.version ? `${track.title} (${track.version})` : track.title, trackExtraArtists);
+      const trackTitle = normalizeTitle(track.version ? `${track.title} (${track.version})` : track.title, trackExtraArtists);
       const trackDuration = normalizeDuration(track.length);
       const trackBpm = track.bpm;
 

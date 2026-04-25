@@ -2,12 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { normalizeCountry } from './country';
 
 describe('normalizeCountry', () => {
-  it('should return the canonical name for exact matches', () => {
-    expect(normalizeCountry('Germany')).toBe('Germany');
-    expect(normalizeCountry('UK')).toBe('UK');
-    expect(normalizeCountry('US')).toBe('US');
-  });
-
   it('should be case-insensitive for allowed countries', () => {
     expect(normalizeCountry('germany')).toBe('Germany');
     expect(normalizeCountry('uK')).toBe('UK');

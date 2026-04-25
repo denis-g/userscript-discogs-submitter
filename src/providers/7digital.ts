@@ -10,7 +10,7 @@ import {
   normalizeDuration,
   normalizeMainArtists,
   normalizeReleaseDate,
-  normalizeTrackTitle,
+  normalizeTitle,
 } from '@/core/utils';
 
 /**
@@ -61,14 +61,14 @@ export const sevendigital: StoreAdapter = {
     const albumCover = data[0].release.image;
     const albumExtraArtists: ArtistCredit[] = [];
     const albumArtists = normalizeMainArtists([data[0].release.artist.name], albumExtraArtists);
-    const albumTitle = normalizeTrackTitle(data[0].release.title, albumExtraArtists);
+    const albumTitle = normalizeTitle(data[0].release.title, albumExtraArtists);
     const albumLabel = data[0].release.label.name;
     const albumReleased = normalizeReleaseDate(getTextFromTag('.release-data-label + .release-data-info'));
     const albumTracks = data.map((track: any, index: number) => {
       const trackPosition = `${index + 1}`;
       const trackExtraArtists: ArtistCredit[] = [];
       const trackArtists = normalizeArtists(track.artist.name, trackExtraArtists);
-      const trackTitle = normalizeTrackTitle(track.version !== '' ? `${track.title} (${track.version})` : track.title, trackExtraArtists);
+      const trackTitle = normalizeTitle(track.version !== '' ? `${track.title} (${track.version})` : track.title, trackExtraArtists);
       const trackDuration = normalizeDuration(track.duration);
 
       return {

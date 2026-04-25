@@ -108,10 +108,10 @@ It extracts metadata from the source page, normalizes it to meet Discogs formatt
 
 The script applies a Unicode-aware Title Case to all fields, ensuring consistent formatting regardless of the source. It preserves stylistic casing (e.g., `Sci-Fi`, `iPhone`) and handles common abbreviations.
 
-- **Standardization:** `yet another track (super mix)` → `Yet Another Track (Super Mix)`, `LIVE AT LONDON` → `Live At London`.
+- **Standardization:** `yEt AnOtHeR tRaCk (sUpEr MiX)` → `Yet Another Track (Super Mix)`, `LIVE AT LONDON` → `Live At London`.
 - **Preserved Abbreviations:** `DJ`, `VIP`, `EP`, `UK`, `I`, `II`, `III`, etc.
 - **Dotted Abbreviations:** `A.I.`, `U.S.A.` are preserved in uppercase.
-- **Mixed Case:** `McDonalds`, `bOOm` are preserved exactly as written.
+- **Mixed Case:** `McDonald's`, `bOOm` are preserved exactly as written.
 - **Punctuation:** Normalizes apostrophes (`’`, `` ` ``, `´` → `'`) and cleans whitespace around parentheses.
 
 ### Title Cleaning
@@ -129,18 +129,18 @@ And more...
 
 The script scans track titles and release descriptions for artist credits. When found, it creates a `Credit` entry and (in most cases) removes the credit from the title to keep it clean.
 
-- **Features:** `Track Title (feat. Artist B)` → Title: `Track Title`, Featuring: `Artist B`.
-- **Remixes (Type A):** `Track Title (Remix By Artist C)` → Title: `Track Title (Remix By Artist C)`, Remix: `Artist C`.
-- **Remixes (Type B):** `Track Title (Artist D Remix)` → Title: `Track Title (Artist D Remix)`, Remix: `Artist D`.
-- **Multiple Remixers:** `Track Title (Artist E & Artist F Remix)` → Title: `Track Title (Artist E & Artist F Remix)`, Remix: `Artist E` & `Artist F`.
-- **Production:** `Track Title (prod. by Artist G)` → Title: `Track Title`, Producer: `Artist G`.
+- **Features:** `Track Title (feat. Artist Name)` → Title: `Track Title`, Featuring: `Artist Name`.
+- **Remixes (Type A):** `Track Title (Remix By Artist One)` → Title: `Track Title (Remix By Artist One)`, Remix: `Artist One`.
+- **Remixes (Type B):** `Track Title (Artist One Remix)` → Title: `Track Title (Artist One Remix)`, Remix: `Artist One`.
+- **Multiple Remixers:** `Track Title (Artist One & Artist Two Remix)` → Title: `Track Title (Artist One & Artist Two Remix)`, Remix: `Artist One` & `Artist Two`.
+- **Production:** `Track Title (prod. by Artist One)` → Title: `Track Title`, Producer: `Artist One`.
 
 And more...
 
 ### Artist Joiner Parsing
 
 Artist strings are automatically split into individual artists using common joiners:
-- `Artist A, Artist B & Artist C` → `Artist A` (join: `,`), `Artist B` (join: `&`), `Artist C`.
+- `Artist One, Artist Two & Artist Three` → `Artist One` (join: `,`), `Artist Two` (join: `&`), `Artist Three`.
 
 ## Supported Credit Roles
 

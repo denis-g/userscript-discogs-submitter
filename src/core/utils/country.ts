@@ -368,14 +368,14 @@ export function normalizeCountry(country: string | null | undefined): string {
 
   // Remove dots and trim for broader matching (e.g. "U.S.A." -> "usa")
   const cleaned = country.replace(/\./g, '').trim().toLowerCase();
-  // 1. Try common mappings
+  // Try common mappings
   const mapped = COUNTRY_MAP.get(cleaned);
 
   if (mapped) {
     return mapped;
   }
 
-  // 2. Try case-insensitive lookup in allowed list
+  // Try case-insensitive lookup in allowed list
   const canonical = LOWERCASE_ALLOWED_COUNTRIES.get(cleaned);
 
   return canonical || '';

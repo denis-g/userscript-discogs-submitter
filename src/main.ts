@@ -1,25 +1,25 @@
 import { DigitalStoreRegistry } from '@/providers';
-import { InjectButton } from '@/ui/inject-btn';
+import { InjectButton } from '@/ui/inject-button';
 import { UiWidget } from '@/ui/widget';
 
 /**
- * The core application controller for the Discogs Submitter userscript.
+ * The core widget controller for the Discogs Submitter userscript.
  * Coordinates UI injection, SPA navigation detection, and data parsing triggers.
  */
-class App {
+class Widget {
   private widget: UiWidget;
-  private injectBtn: InjectButton;
+  private injectButton: InjectButton;
   private currentUrl: string;
   private observer: MutationObserver | null = null;
 
   constructor() {
     this.widget = new UiWidget();
-    this.injectBtn = new InjectButton();
+    this.injectButton = new InjectButton();
     this.currentUrl = window.location.href;
   }
 
   /**
-   * Bootstraps the application, mounts the UI, and starts DOM observation.
+   * Bootstraps the widget, mounts the UI, and starts DOM observation.
    */
   public init(): void {
     this.widget.init();
@@ -33,9 +33,9 @@ class App {
    * Binds UI events, specifically the injection button click handler.
    */
   private bindEvents(): void {
-    if (this.injectBtn.element) {
-      this.injectBtn.element.addEventListener('click', () => {
-        if (this.injectBtn.element?.classList.contains('is-disabled')) {
+    if (this.injectButton.element) {
+      this.injectButton.element.addEventListener('click', () => {
+        if (this.injectButton.element?.classList.contains('is-disabled')) {
           return;
         }
 
@@ -56,20 +56,20 @@ class App {
     const store = DigitalStoreRegistry.detectByLocation();
 
     if (!store) {
-      if (this.injectBtn.element?.parentElement) {
-        this.injectBtn.element.remove();
+      if (this.injectButton.element?.parentElement) {
+        this.injectButton.element.remove();
       }
 
       return;
     }
 
-    const targets = document.querySelectorAll<HTMLElement>(store.target);
+    const targets = document.querySelectorAll(store.target) as NodeListOf<HTMLElement>;
     const target = Array.from(targets).find(target => target.offsetWidth > 0) || targets[0];
 
-    if (target && this.injectBtn.element && !this.injectBtn.element.isConnected) {
-      this.injectBtn.setStore(store.id);
+    if (target && this.injectButton.element && !this.injectButton.element.isConnected) {
+      this.injectButton.setStore(store.id);
 
-      store.injectButton(this.injectBtn.element, target);
+      store.injectButton(this.injectButton.element, target);
     }
   }
 
@@ -89,8 +89,8 @@ class App {
 
     this.widget.reset();
 
-    if (this.injectBtn.element?.parentElement) {
-      this.injectBtn.element.remove();
+    if (this.injectButton.element?.parentElement) {
+      this.injectButton.element.remove();
     }
 
     return true;
@@ -111,7 +111,10 @@ class App {
 
     this.observer = new MutationObserver(debouncedRefresh);
 
-    this.observer.observe(document.body, { childList: true, subtree: true });
+    this.observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
 
     this.patchPushState();
 
@@ -147,14 +150,14 @@ class App {
   private patchPushState(): void {
     const originalPushState = history.pushState;
 
-    history.pushState = (...args: [any, string, string | URL | null | undefined]) => {
-      originalPushState.apply(history, args);
+    history.pushState = (...callArguments: [any, string, string | URL | null | undefined]) => {
+      originalPushState.apply(history, callArguments);
 
       this.checkForUrlChange();
     };
   }
 }
 
-const app = new App();
+const discogsSubmitter = new Widget();
 
-app.init();
+discogsSubmitter.init();

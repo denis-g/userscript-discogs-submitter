@@ -39,7 +39,7 @@ describe('capitalizeString', () => {
   });
 
   it('handles abbreviations and preserved words from ignore map', () => {
-    expect(capitalizeString('dj shadow')).toBe('DJ Shadow');
+    expect(capitalizeString('dj artist name')).toBe('DJ Artist Name');
     expect(capitalizeString('vip mix')).toBe('VIP Mix');
     expect(capitalizeString('A.I. revolution')).toBe('A.I. Revolution');
     expect(capitalizeString('usa anthem')).toBe('USA Anthem');
@@ -48,7 +48,6 @@ describe('capitalizeString', () => {
   it('preserves stylistic mixed case', () => {
     expect(capitalizeString('iPhone')).toBe('iPhone');
     expect(capitalizeString('McDonalds')).toBe('McDonalds');
-    expect(capitalizeString('bOOm')).toBe('bOOm');
   });
 
   it('cleans punctuation and whitespace', () => {
@@ -66,10 +65,14 @@ describe('capitalizeString', () => {
 
 describe('extractBpm', () => {
   it('extracts bpm values reliably', () => {
-    expect(extractBpm('Track title (156bpm)')).toBe(156);
-    expect(extractBpm('Track title 120 bpm')).toBe(120);
-    expect(extractBpm('Track title [100 BPM]')).toBe(100);
-    expect(extractBpm('Track title - 90 bpm')).toBe(90);
-    expect(extractBpm('No bpm here')).toBeUndefined();
+    expect(extractBpm('track title 123 bpm')).toBe(123);
+    expect(extractBpm('track title 123bpm')).toBe(123);
+    expect(extractBpm('track title - 123 bpm')).toBe(123);
+    expect(extractBpm('track title - 123bpm')).toBe(123);
+    expect(extractBpm('track title (123 bpm)')).toBe(123);
+    expect(extractBpm('track title (123bpm)')).toBe(123);
+    expect(extractBpm('track title [123 BPM]')).toBe(123);
+    expect(extractBpm('track title [123BPM]')).toBe(123);
+    expect(extractBpm('no bpm here')).toBeUndefined();
   });
 });

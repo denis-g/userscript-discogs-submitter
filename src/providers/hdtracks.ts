@@ -9,7 +9,7 @@ import {
   normalizeDuration,
   normalizeMainArtists,
   normalizeReleaseDate,
-  normalizeTrackTitle,
+  normalizeTitle,
 } from '@/core/utils';
 
 /**
@@ -44,14 +44,14 @@ export const hdtracks: StoreAdapter = {
     const albumCover = getTextFromTag('.list-info .list-cover', context, 'style')?.match(/background-image:\s*url\("?(.*?)"?\)/)?.[1] ?? null;
     const albumExtraArtists: ArtistCredit[] = [];
     const albumArtists = normalizeMainArtists(getTextFromTag('.list-info .list-artist', context), albumExtraArtists);
-    const albumTitle = normalizeTrackTitle(getTextFromTag('.list-info .list-title h2', context));
+    const albumTitle = normalizeTitle(getTextFromTag('.list-info .list-title h2', context));
     const albumLabel = getTextFromTag('.list-info .list-artist + p', context);
     const albumReleased = normalizeReleaseDate(getTextFromTag('.list-content .list-footer p:first-child', context));
     const albumTracks = Array.from((context || document).querySelectorAll('.tracks-table .list:not(.tracks-table-header) > ul > li')).map((track: Element, index: number) => {
       const trackPosition = `${index + 1}`;
       const trackExtraArtists: ArtistCredit[] = [];
       const trackArtists = normalizeArtists(getTextFromTag('.item-cell.artist', track, '', false, true), trackExtraArtists);
-      const trackTitle = normalizeTrackTitle(getTextFromTag('.item-cell.title', track, '', false, true), trackExtraArtists);
+      const trackTitle = normalizeTitle(getTextFromTag('.item-cell.title', track, '', false, true), trackExtraArtists);
       const trackDuration = normalizeDuration(getTextFromTag('.item-cell.duration .duration-container', track));
 
       return {

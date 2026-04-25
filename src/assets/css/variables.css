@@ -1,0 +1,16 @@
+:root {
+  --ds-gap: 20px;
+  --ds-radius: 12px;
+  --ds-color-white: #fafafa;
+  --ds-color-black: #212121;
+  --ds-color-gray: #666;
+  --ds-color-gray-dark: #333;
+  --ds-color-gray-light: #eee;
+  --ds-color-primary: #148a66;
+  --ds-color-success: #28a745;
+  --ds-color-error: #dc3545;
+  --ds-color-warning: #ffc107;
+  --ds-color-info: #17a2b8;
+  --ds-font-sans: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --ds-font-monospace: 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+}

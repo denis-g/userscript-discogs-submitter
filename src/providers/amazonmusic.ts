@@ -10,7 +10,7 @@ import {
   normalizeDuration,
   normalizeMainArtists,
   normalizeReleaseDate,
-  normalizeTrackTitle,
+  normalizeTitle,
 } from '@/core/utils';
 
 /**
@@ -41,7 +41,7 @@ export const amazonmusic: StoreAdapter = {
     const albumCover = getTextFromTag('#main_content music-detail-header', null, 'image-src');
     const albumExtraArtists: ArtistCredit[] = [];
     const albumArtists = normalizeMainArtists(getTextFromTag('#main_content music-detail-header', null, 'primary-text'), albumExtraArtists);
-    const albumTitle = normalizeTrackTitle(getTextFromTag('#main_content music-detail-header', null, 'headline'), albumExtraArtists);
+    const albumTitle = normalizeTitle(getTextFromTag('#main_content music-detail-header', null, 'headline'), albumExtraArtists);
     let albumLabel = getTextFromTag('#main_content .music-tertiary-text');
     let albumTracks: TrackData[] = [];
 
@@ -67,7 +67,7 @@ export const amazonmusic: StoreAdapter = {
         const trackPosition = `${index + 1}`;
         const trackExtraArtists: ArtistCredit[] = [];
         const trackArtists = normalizeArtists(getTextFromTag('.col3 > music-link', track, 'title') || albumArtists.map(artist => artist.name), trackExtraArtists);
-        const trackTitle = normalizeTrackTitle(getTextFromTag('.col1 > music-link', track), trackExtraArtists);
+        const trackTitle = normalizeTitle(getTextFromTag('.col1 > music-link', track), trackExtraArtists);
         const trackDuration = normalizeDuration(getTextFromTag('.col4 > music-link', track, 'title'));
 
         return {

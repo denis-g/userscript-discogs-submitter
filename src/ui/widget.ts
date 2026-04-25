@@ -7,10 +7,16 @@ import type {
   StoreAdapter,
   StoreFormatOptions,
 } from '@/types';
-import iconMain from '@/assets/icon-main.svg?raw';
-import widgetCss from '@/assets/widget.css?raw';
+import resetCss from '@/assets/css/reset.css?inline';
+import variablesCss from '@/assets/css/variables.css?inline';
+import widgetCss from '@/assets/css/widget.css?inline';
+import iconBug from '@/assets/images/icons/bug.svg?raw';
+import iconClose from '@/assets/images/icons/close.svg?raw';
+import iconMove from '@/assets/images/icons/move.svg?raw';
+import imageLogo from '@/assets/images/logo.svg?raw';
 import { DiscogsAdapter } from '@/core/adapter';
 import { networkRequest } from '@/core/network';
+import pkg from '~/package.json' with { type: 'json' };
 
 let widgetTemplate: HTMLTemplateElement | null = null;
 
@@ -19,30 +25,30 @@ function getWidgetTemplate(): HTMLTemplateElement {
     widgetTemplate = document.createElement('template');
     widgetTemplate.innerHTML = `
       <div class="discogs-submitter__header">
-        <svg class="discogs-submitter__header__logo" aria-hidden="true"><use href="#icon-logo"></use></svg>
+        <svg class="discogs-submitter__header__logo" aria-hidden="true"><use href="#ds-logo"></use></svg>
         <span class="discogs-submitter__header__title">${GM_info?.script?.name || ''} <small>v${GM_info?.script?.version || ''}</small></span>
-        <div class="discogs-submitter__header__drag-btn" title="Grab to move" role="button"></div>
-        <div class="discogs-submitter__header__close-btn" title="Close widget" role="button"></div>
+        <svg class="discogs-submitter__header__button is-move" title="Grab to move" role="button"><use href="#ds-icon-move"></use></svg>
+        <svg class="discogs-submitter__header__button is-close" title="Close widget" role="button"><use href="#ds-icon-close"></use></svg>
       </div>
       <div class="discogs-submitter__content">
-        <div class="discogs-submitter__preview-container"></div>
+        <div class="discogs-submitter__preview"></div>
       </div>
       <div class="discogs-submitter__footer">
-        <div class="discogs-submitter__status-container">
-          <div class="discogs-submitter__status-text">Waiting...</div>
-          <div class="discogs-submitter__status-debug-btn" role="button" title="Copy debug" hidden>🐞</div>
+        <div class="discogs-submitter__status__container">
+          <div class="discogs-submitter__status__text">Waiting...</div>
+          <svg class="discogs-submitter__status__button is-debug" title="Copy debug" hidden role="button"><use href="#ds-icon-bug"></use></svg>
         </div>
         <div class="discogs-submitter__actions">
-          <div class="discogs-submitter__actions__btn-submit" role="button" hidden>Submit to Discogs</div>
+          <div class="discogs-submitter__actions__button is-submit" role="button" hidden>Submit to Discogs</div>
         </div>
         <div class="discogs-submitter__copyright">
-          <a href="${GM_info?.script?.homepage || ''}" target="_blank">Homepage</a>
-          <a href="${GM_info?.script?.supportURL || ''}" target="_blank">Report Bug</a>
-          <a href="https://buymeacoffee.com/denis_g" target="_blank">Made with <span>♥</span> for music</a>
+          <a class="discogs-submitter__copyright__link" href="${GM_info?.script?.homepage || ''}" target="_blank">Homepage</a>
+          <a class="discogs-submitter__copyright__link" href="${GM_info?.script?.supportURL || ''}" target="_blank">Report Bug</a>
+          <a class="discogs-submitter__copyright__link" href="${pkg?.funding || ''}" target="_blank">Made with <span>♥</span> for music</a>
         </div>
       </div>
       <div class="discogs-submitter__loader">
-        <svg class="discogs-submitter__loader__logo" aria-hidden="true"><use href="#icon-logo"></use></svg>
+        <svg class="discogs-submitter__loader__icon" aria-hidden="true"><use href="#ds-logo"></use></svg>
       </div>
     `.trim();
   }
@@ -71,7 +77,7 @@ export const Renderer = {
    *
    * @example
    * ```typescript
-   * const html = Renderer.renderRow('Artist', 'Aphex Twin', 'is-highlighted');
+   * const html = Renderer.renderRow('Artist', 'Artist Name', 'is-highlighted');
    * ```
    */
   renderRow: (label: string, value: string, extraClass = ''): string => `
@@ -115,7 +121,7 @@ export const Renderer = {
 
     tracks.forEach((track) => {
       const trackArtists = (track.artists || [])
-        .map((artist: ArtistCredit, index: number, all: ArtistCredit[]) => `<em>${artist.name}</em>${artist.join && index < all.length - 1 ? ` ${artist.join} ` : ''}`)
+        .map((artist: ArtistCredit, index: number, allArtists: ArtistCredit[]) => `<em>${artist.name}</em>${artist.join && index < allArtists.length - 1 ? ` ${artist.join} ` : ''}`)
         .join('');
       const trackExtraArtists = (track.extraartists || [])
         .map((artist: ArtistCredit) => `${artist.role} – <em>${artist.name}</em>`)
@@ -155,7 +161,7 @@ export const Renderer = {
     const canHaveHdAudio = selectedFormat !== 'MP3' && !!supports.hdAudio;
     const coverHtml = release.cover ? `<small><a href="${release.cover}" target="_blank">Preview</a></small>` : '<small>No cover</small>';
     const artists = (release.artists || [])
-      .map((artist, i, all) => `<em>${artist.name}</em>${artist.join && i < all.length - 1 ? ` ${artist.join} ` : ''}`)
+      .map((artist, index, allArtists) => `<em>${artist.name}</em>${artist.join && index < allArtists.length - 1 ? ` ${artist.join} ` : ''}`)
       .join('') || '⚠️';
     const extraArtists = (release.extraartists || [])
       .map(artist => `${artist.role} – <em>${artist.name}</em>`)
@@ -192,12 +198,8 @@ export const Renderer = {
         ${Renderer.renderRow('Country', release.country || '–', 'is-half')}
         ${Renderer.renderRow('Format', `${formatLabel}${formatSelectionHtml}`)}
         ${Renderer.renderTracklist(release.tracks || [])}
-        ${extraArtists
-          ? Renderer.renderRow('Credits', extraArtists, 'is-notes')
-          : ''}
-        ${release.notes
-          ? Renderer.renderRow('Notes', release.notes.replace(/\n/g, '<br />'), 'is-notes')
-          : ''}
+        ${extraArtists ? Renderer.renderRow('Credits', extraArtists, 'is-notes') : ''}
+        ${release.notes ? Renderer.renderRow('Notes', release.notes.replace(/\n/g, '<br />'), 'is-notes') : ''}
       </div>
     `;
   },
@@ -228,7 +230,7 @@ export class UiWidget {
   };
 
   constructor() {
-    this.WIDGET_ID = GM_info.script.namespace || 'discogs-submitter';
+    this.WIDGET_ID = GM_info?.script?.namespace || '';
 
     this.handleMouseMove = this.handleMouseMove.bind(this);
     this.handleMouseUp = this.handleMouseUp.bind(this);
@@ -242,7 +244,7 @@ export class UiWidget {
       const style = document.createElement('style');
 
       style.id = `${this.WIDGET_ID}-styles`;
-      style.textContent = widgetCss;
+      style.textContent = variablesCss + resetCss + widgetCss;
 
       document.head.appendChild(style);
     }
@@ -262,7 +264,10 @@ export class UiWidget {
     svgSprite.style.display = 'none';
 
     const rawIcons = {
-      'icon-logo': iconMain,
+      'ds-logo': imageLogo,
+      'ds-icon-move': iconMove,
+      'ds-icon-close': iconClose,
+      'ds-icon-bug': iconBug,
     };
     let symbolsHtml = '';
 
@@ -303,22 +308,21 @@ export class UiWidget {
     container.className = `${container.id} ${isWebArchive ? 'is-webarchive' : ''}`;
 
     const template = getWidgetTemplate();
+    const clone = template.content.cloneNode(true);
 
-    container.appendChild(template.content.cloneNode(true));
-
+    container.appendChild(clone);
     document.body.appendChild(container);
 
     this.ui.widget = container;
     this.ui.header = container.querySelector('.discogs-submitter__header');
-    this.ui.headerDragBtn = container.querySelector('.discogs-submitter__header__drag-btn');
-    this.ui.headerCloseBtn = container.querySelector('.discogs-submitter__header__close-btn');
-    this.ui.statusContainer = container.querySelector('.discogs-submitter__status-container');
-    this.ui.statusText = container.querySelector('.discogs-submitter__status-text');
-    this.ui.statusDebugCopyBtn = container.querySelector('.discogs-submitter__status-debug-btn');
-    this.ui.previewContainer = container.querySelector('.discogs-submitter__preview-container');
-    this.ui.actionsSubmitBtn = container.querySelector('.discogs-submitter__actions__btn-submit');
+    this.ui.headerButtonMove = container.querySelector('.discogs-submitter__header__button.is-move');
+    this.ui.headerButtonClose = container.querySelector('.discogs-submitter__header__button.is-close');
+    this.ui.statusContainer = container.querySelector('.discogs-submitter__status__container');
+    this.ui.statusText = container.querySelector('.discogs-submitter__status__text');
+    this.ui.statusButtonDebug = container.querySelector('.discogs-submitter__status__button.is-debug');
+    this.ui.preview = container.querySelector('.discogs-submitter__preview');
+    this.ui.actionsButtonSubmit = container.querySelector('.discogs-submitter__actions__button.is-submit');
     this.ui.loader = container.querySelector('.discogs-submitter__loader');
-    this.ui.artwork = container.querySelector('.discogs-submitter__artwork');
   }
 
   /**
@@ -353,18 +357,18 @@ export class UiWidget {
     this.state.currentPayload = null;
     this.state.lastRawData = null;
 
-    if (this.ui.previewContainer) {
-      this.ui.previewContainer.innerHTML = '';
+    if (this.ui.preview) {
+      this.ui.preview.innerHTML = '';
     }
 
     this.setStatus('Ready to parse...', 'info');
 
-    if (this.ui.actionsSubmitBtn) {
-      this.ui.actionsSubmitBtn.hidden = true;
+    if (this.ui.actionsButtonSubmit) {
+      this.ui.actionsButtonSubmit.setAttribute('hidden', 'true');
     }
 
-    if (this.ui.statusDebugCopyBtn) {
-      this.ui.statusDebugCopyBtn.hidden = true;
+    if (this.ui.statusButtonDebug) {
+      this.ui.statusButtonDebug.setAttribute('hidden', 'true');
     }
   }
 
@@ -374,7 +378,9 @@ export class UiWidget {
    * @param isActive - Whether the loader should be visible.
    */
   private setLoader(isActive: boolean): void {
-    this.ui.loader?.classList.toggle('is-loading', isActive);
+    if (this.ui.loader) {
+      this.ui.loader.classList.toggle('is-loading', isActive);
+    }
   }
 
   /**
@@ -407,16 +413,16 @@ export class UiWidget {
     this.setStatus('Parsing current release...', 'info');
     this.setLoader(true);
 
-    if (this.ui.statusDebugCopyBtn) {
-      this.ui.statusDebugCopyBtn.hidden = true;
+    if (this.ui.statusButtonDebug) {
+      this.ui.statusButtonDebug.setAttribute('hidden', 'true');
     }
 
-    if (this.ui.actionsSubmitBtn) {
-      this.ui.actionsSubmitBtn.hidden = true;
+    if (this.ui.actionsButtonSubmit) {
+      this.ui.actionsButtonSubmit.setAttribute('hidden', 'true');
     }
 
-    if (this.ui.previewContainer) {
-      this.ui.previewContainer.innerHTML = '';
+    if (this.ui.preview) {
+      this.ui.preview.innerHTML = '';
     }
 
     if (this.ui.statusContainer) {
@@ -448,11 +454,11 @@ export class UiWidget {
       this.setStatus(errMsg, 'error');
 
       if (this.ui.statusContainer) {
-        this.ui.statusContainer.dataset.rawJson = `URL: ${window.location.href}\nVersion: ${GM_info.script.version}\nError Trace:\n${(error as Error).stack || error}`;
+        this.ui.statusContainer.dataset.rawJson = `URL: ${window.location.href}\nVersion: ${GM_info?.script?.version || ''}\nError Trace:\n${(error as Error).stack || error}`;
       }
 
-      if (this.ui.statusDebugCopyBtn) {
-        this.ui.statusDebugCopyBtn.hidden = false;
+      if (this.ui.statusButtonDebug) {
+        this.ui.statusButtonDebug.removeAttribute('hidden');
       }
     }
     finally {
@@ -479,8 +485,8 @@ export class UiWidget {
     const previewObj = this.state.currentPayload._previewObject;
     const rawJsonString = JSON.stringify(previewObj, null, 2);
 
-    if (this.ui.previewContainer) {
-      this.ui.previewContainer.innerHTML = Renderer.releasePreview(previewObj, {
+    if (this.ui.preview) {
+      this.ui.preview.innerHTML = Renderer.releasePreview(previewObj, {
         selectedFormat: this.state.selectedFormat || 'WAV',
         isHdAudio: effectiveHdAudio,
         supports: this.state.currentDigitalStore.supports || { formats: [], hdAudio: false },
@@ -491,12 +497,12 @@ export class UiWidget {
       this.ui.statusContainer.dataset.rawJson = rawJsonString;
     }
 
-    if (this.ui.actionsSubmitBtn) {
-      this.ui.actionsSubmitBtn.hidden = false;
+    if (this.ui.actionsButtonSubmit) {
+      this.ui.actionsButtonSubmit.removeAttribute('hidden');
     }
 
-    if (this.ui.statusDebugCopyBtn) {
-      this.ui.statusDebugCopyBtn.hidden = false;
+    if (this.ui.statusButtonDebug) {
+      this.ui.statusButtonDebug.removeAttribute('hidden');
     }
   }
 
@@ -514,31 +520,29 @@ export class UiWidget {
 
     this.setLoader(true);
 
-    const btnOriginalText = this.ui.statusDebugCopyBtn?.textContent || '';
-
     try {
       await GM_setClipboard(textToCopy, 'text');
 
-      if (this.ui.statusDebugCopyBtn) {
-        this.ui.statusDebugCopyBtn.textContent = '✅';
+      if (this.ui.statusButtonDebug) {
+        this.ui.statusButtonDebug.classList.add('is-success');
       }
 
       setTimeout(() => {
-        if (this.ui.statusDebugCopyBtn) {
-          this.ui.statusDebugCopyBtn.textContent = btnOriginalText;
+        if (this.ui.statusButtonDebug) {
+          this.ui.statusButtonDebug.classList.remove('is-success');
         }
 
         this.setLoader(false);
       }, 2000);
     }
     catch {
-      if (this.ui.statusDebugCopyBtn) {
-        this.ui.statusDebugCopyBtn.textContent = '⛔';
+      if (this.ui.statusButtonDebug) {
+        this.ui.statusButtonDebug.classList.add('is-error');
       }
 
       setTimeout(() => {
-        if (this.ui.statusDebugCopyBtn) {
-          this.ui.statusDebugCopyBtn.textContent = btnOriginalText;
+        if (this.ui.statusButtonDebug) {
+          this.ui.statusButtonDebug.classList.remove('is-error');
         }
 
         this.setLoader(false);
@@ -559,7 +563,7 @@ export class UiWidget {
     this.setLoader(true);
     this.setStatus('Sending to Discogs...', 'info');
 
-    this.ui.actionsSubmitBtn?.classList.add('is-disabled');
+    this.ui.actionsButtonSubmit?.classList.add('is-disabled');
 
     try {
       const formData = new FormData();
@@ -597,8 +601,8 @@ export class UiWidget {
 
             this.setStatus('Draft and cover uploaded successfully!<br /><strong><em>Please review your draft before publishing on Discogs!</em></strong>', 'success');
 
-            if (this.ui.actionsSubmitBtn) {
-              this.ui.actionsSubmitBtn.hidden = true;
+            if (this.ui.actionsButtonSubmit) {
+              this.ui.actionsButtonSubmit.setAttribute('hidden', 'true');
             }
 
             GM_openInTab(`https://www.discogs.com/release/edit/${jsonData.id}`, true);
@@ -610,8 +614,8 @@ export class UiWidget {
 
             this.setStatus(`Draft created, but cover upload failed!<br /><strong><em>Please review your draft before publishing on Discogs!</em></strong>`, 'warning');
 
-            if (this.ui.actionsSubmitBtn) {
-              this.ui.actionsSubmitBtn.hidden = true;
+            if (this.ui.actionsButtonSubmit) {
+              this.ui.actionsButtonSubmit.setAttribute('hidden', 'true');
             }
 
             GM_openInTab(`https://www.discogs.com/release/edit/${jsonData.id}`, true);
@@ -620,8 +624,8 @@ export class UiWidget {
         else {
           this.setStatus(`Draft successfully created! ID: ${jsonData.id}.<br /><strong><em>Please review your draft before publishing on Discogs!</em></strong>`, 'success');
 
-          if (this.ui.actionsSubmitBtn) {
-            this.ui.actionsSubmitBtn.hidden = true;
+          if (this.ui.actionsButtonSubmit) {
+            this.ui.actionsButtonSubmit.setAttribute('hidden', 'true');
           }
 
           GM_openInTab(`https://www.discogs.com/release/edit/${jsonData.id}`, true);
@@ -645,7 +649,7 @@ export class UiWidget {
     finally {
       this.setLoader(false);
 
-      this.ui.actionsSubmitBtn?.classList.remove('is-disabled');
+      this.ui.actionsButtonSubmit?.classList.remove('is-disabled');
     }
   }
 
@@ -665,10 +669,10 @@ export class UiWidget {
   }
 
   private bindEvents(): void {
-    this.ui.headerCloseBtn?.addEventListener('click', () => this.ui.widget?.classList.remove('is-open'));
+    this.ui.headerButtonClose?.addEventListener('click', () => this.ui.widget?.classList.remove('is-open'));
 
-    this.ui.previewContainer?.addEventListener('change', (e) => {
-      const target = e.target as HTMLInputElement;
+    this.ui.preview?.addEventListener('change', (event) => {
+      const target = event.target as HTMLInputElement;
 
       if (target.classList.contains('is-format')) {
         this.state.selectedFormat = target.value;
@@ -682,30 +686,30 @@ export class UiWidget {
       }
     });
 
-    this.ui.statusDebugCopyBtn?.addEventListener('click', () => this.handleDebugCopy());
-    this.ui.actionsSubmitBtn?.addEventListener('click', () => this.handleSubmit());
+    this.ui.statusButtonDebug?.addEventListener('click', () => this.handleDebugCopy());
+    this.ui.actionsButtonSubmit?.addEventListener('click', () => this.handleSubmit());
   }
 
-  private getCoords(e: MouseEvent | TouchEvent): { x: number; y: number } {
-    if ('touches' in e && e.touches.length > 0) {
+  private getCoords(event: MouseEvent | TouchEvent): { x: number; y: number } {
+    if ('touches' in event && event.touches.length > 0) {
       return {
-        x: (e as TouchEvent).touches[0].pageX,
-        y: (e as TouchEvent).touches[0].pageY,
+        x: (event as TouchEvent).touches[0].pageX,
+        y: (event as TouchEvent).touches[0].pageY,
       };
     }
 
     return {
-      x: (e as MouseEvent).pageX,
-      y: (e as MouseEvent).pageY,
+      x: (event as MouseEvent).pageX,
+      y: (event as MouseEvent).pageY,
     };
   }
 
-  private handleMouseMove(e: MouseEvent | TouchEvent): void {
+  private handleMouseMove(event: MouseEvent | TouchEvent): void {
     if (!this.state.isDragging || !this.ui.widget) {
       return;
     }
 
-    const coords = this.getCoords(e);
+    const coords = this.getCoords(event);
     const rootRect = this.ui.widget.getBoundingClientRect();
     const left = Math.min(Math.max(0, coords.x - this.state.offset.x), window.innerWidth - rootRect.width);
     const top = Math.min(Math.max(0, coords.y - this.state.offset.y), window.innerHeight - rootRect.height);
@@ -721,7 +725,7 @@ export class UiWidget {
 
     this.state.isDragging = false;
 
-    this.ui.headerDragBtn?.classList.remove('is-draggable');
+    this.ui.headerButtonMove?.classList.remove('is-draggable');
 
     document.removeEventListener('mousemove', this.handleMouseMove);
     document.removeEventListener('touchmove', this.handleMouseMove);
@@ -730,9 +734,9 @@ export class UiWidget {
   }
 
   private bindDraggableEvent(): void {
-    const handleDown = (e: MouseEvent | TouchEvent) => {
+    const handleDown = (event: MouseEvent | TouchEvent) => {
       // Ignore right-click
-      if ('button' in e && e.button !== 0) {
+      if ('button' in event && event.button !== 0) {
         return;
       }
 
@@ -740,17 +744,17 @@ export class UiWidget {
         return;
       }
 
-      e.preventDefault();
+      event.preventDefault();
 
       this.state.isDragging = true;
 
-      const coords = this.getCoords(e);
+      const coords = this.getCoords(event);
       const rect = this.ui.widget.getBoundingClientRect();
 
       this.state.offset.x = coords.x - rect.left;
       this.state.offset.y = coords.y - rect.top;
 
-      this.ui.headerDragBtn?.classList.add('is-draggable');
+      this.ui.headerButtonMove?.classList.add('is-draggable');
 
       document.addEventListener('mousemove', this.handleMouseMove);
       document.addEventListener('touchmove', this.handleMouseMove, { passive: false });
@@ -758,8 +762,8 @@ export class UiWidget {
       document.addEventListener('touchend', this.handleMouseUp);
     };
 
-    this.ui.headerDragBtn?.addEventListener('mousedown', e => handleDown(e));
-    this.ui.headerDragBtn?.addEventListener('touchstart', e => handleDown(e), { passive: false });
+    this.ui.headerButtonMove?.addEventListener('mousedown', event => handleDown(event));
+    this.ui.headerButtonMove?.addEventListener('touchstart', event => handleDown(event), { passive: false });
   }
 
   public init(): void {

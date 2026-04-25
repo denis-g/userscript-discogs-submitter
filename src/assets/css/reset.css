@@ -1,0 +1,27 @@
+.discogs-submitter {
+  *,
+  *::after,
+  *::before {
+    color-scheme: light;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    box-sizing: border-box;
+  }
+
+  a {
+    text-decoration: none;
+  }
+
+  em {
+    font-style: oblique;
+  }
+
+  strong {
+    font-weight: bold;
+  }
+
+  [hidden] {
+    display: none !important;
+  }
+}

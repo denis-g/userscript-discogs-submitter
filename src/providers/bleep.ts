@@ -10,7 +10,7 @@ import {
   normalizeDuration,
   normalizeMainArtists,
   normalizeReleaseDate,
-  normalizeTrackTitle,
+  normalizeTitle,
 } from '@/core/utils';
 
 /**
@@ -48,7 +48,7 @@ export const bleep: StoreAdapter = {
     const albumCover = getTextFromTag('.product-page .main-product-image img', null, 'src');
     const albumExtraArtists: ArtistCredit[] = [];
     const albumArtists = normalizeMainArtists(albumMainArtistsSource, albumExtraArtists);
-    const albumTitle = normalizeTrackTitle(getTextFromTag('.product-page .product-details .release-title'));
+    const albumTitle = normalizeTitle(getTextFromTag('.product-page .product-details .release-title'));
     const albumLabel = getTextFromTag('.product-page .product-details .label');
     const labelNumber = getTextFromTag('.product-page .product-details .catalogue-number');
     const albumReleased = normalizeReleaseDate(getTextFromTag('.product-page .product-details .product-release-date'));
@@ -58,7 +58,7 @@ export const bleep: StoreAdapter = {
       const trackPosition = `${index + 1}`;
       const trackExtraArtists: ArtistCredit[] = [];
       const trackArtists = trackMainArtists.length > 0 ? normalizeArtists(trackMainArtists, trackExtraArtists) : albumArtists;
-      const trackTitle = normalizeTrackTitle(getTextFromTag('.track-name [itemprop="name"]', track), trackExtraArtists);
+      const trackTitle = normalizeTitle(getTextFromTag('.track-name [itemprop="name"]', track), trackExtraArtists);
       const trackDuration = normalizeDuration(getTextFromTag('.track-duration', track));
 
       // Handle featured artists

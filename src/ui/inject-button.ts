@@ -1,20 +1,20 @@
-import injectBtnCss from '@/assets/inject-btn.css?raw';
+import cssInjectButton from '@/assets/css/inject-button.css?inline';
 
-let btnTemplate: HTMLTemplateElement | null = null;
+let buttonTemplate: HTMLTemplateElement | null = null;
 
-function getInjectBtnTemplate(): HTMLTemplateElement {
-  if (!btnTemplate) {
-    btnTemplate = document.createElement('template');
+function getInjectButtonTemplate(): HTMLTemplateElement {
+  if (!buttonTemplate) {
+    buttonTemplate = document.createElement('template');
 
-    btnTemplate.innerHTML = `
-      <div class="discogs-submitter__inject__btn" role="button">
-        <svg class="discogs-submitter__inject__logo" aria-hidden="true"><use href="#icon-logo"></use></svg>
-        <span class="discogs-submitter__inject__name">${GM_info?.script?.name || 'Discogs Submitter'}</span>
+    buttonTemplate.innerHTML = `
+      <div class="discogs-submitter__inject__button" role="button">
+        <svg class="discogs-submitter__inject__button__icon" aria-hidden="true"><use href="#ds-logo"></use></svg>
+        <span class="discogs-submitter__inject__button__label">${GM_info?.script?.name || ''}</span>
       </div>
     `.trim();
   }
 
-  return btnTemplate;
+  return buttonTemplate;
 }
 
 /**
@@ -25,7 +25,7 @@ export class InjectButton {
   private readonly WIDGET_ID: string;
 
   constructor() {
-    this.WIDGET_ID = GM_info.script.namespace || 'discogs-submitter';
+    this.WIDGET_ID = GM_info?.script?.namespace || '';
 
     this.build();
     this.injectStyles();
@@ -36,14 +36,14 @@ export class InjectButton {
       const style = document.createElement('style');
 
       style.id = `${this.WIDGET_ID}-inject-styles`;
-      style.textContent = injectBtnCss;
+      style.textContent = cssInjectButton;
 
       document.head.appendChild(style);
     }
   }
 
   private build(): void {
-    const template = getInjectBtnTemplate();
+    const template = getInjectButtonTemplate();
     const clone = template.content.cloneNode(true) as DocumentFragment;
 
     this.element = clone.firstElementChild as HTMLElement;
@@ -57,8 +57,8 @@ export class InjectButton {
    *
    * @example
    * ```typescript
-   * const btn = new InjectButton();
-   * btn.setStore('beatport');
+   * const button = new InjectButton();
+   * button.setStore('bandcamp');
    * ```
    */
   public setStore(storeId: string): void {

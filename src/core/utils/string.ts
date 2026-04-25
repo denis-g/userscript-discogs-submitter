@@ -4,7 +4,7 @@ import { ignoreCapitalizationMap } from '@/config/abbreviations';
  * Trims whitespace, optionally collapses multiple spaces/newlines/tabs into a single space,
  * and replaces HTML non-breaking space entities (`&nbsp;`).
  *
- * @param str - The sequence of characters to clean.
+ * @param text - The sequence of characters to clean.
  * @param collapseWhitespace - Whether to collapse multiple whitespace characters into one (default: true).
  * @returns The cleaned string, or null if the input is empty or invalid.
  *
@@ -14,12 +14,12 @@ import { ignoreCapitalizationMap } from '@/config/abbreviations';
  * console.log(clean); // 'Hello World'
  * ```
  */
-export function cleanString(str: string | null | undefined, collapseWhitespace = true): string | null {
-  if (typeof str !== 'string') {
+export function cleanString(text: string | null | undefined, collapseWhitespace = true): string | null {
+  if (typeof text !== 'string') {
     return null;
   }
 
-  let cleaned = str.replace(/&nbsp;/gi, ' ');
+  let cleaned = text.replace(/&nbsp;/gi, ' ');
 
   if (collapseWhitespace) {
     cleaned = cleaned.replace(/\s+/g, ' ');
@@ -33,30 +33,32 @@ export function cleanString(str: string | null | undefined, collapseWhitespace =
 /**
  * Standardizes casing to Title Case, cleans whitespace, and handles stylistic abbreviations.
  *
- * @param str - The sequence of characters to capitalize.
+ * @param text - The sequence of characters to capitalize.
  * @returns The capitalized and cleaned string, or an empty string if input is falsy.
  *
  * @example
  * ```typescript
  * // Standard casing
- * console.log(capitalizeString("yet another track (super mix)")); // "Yet Another Track (Super Mix)"
+ * console.log(capitalizeString("track name (mix)")); // "Track Name (Mix)"
  *
  * // Preserves stylistic casing
  * console.log(capitalizeString("LIVE AT LONDON")); // "Live At London"
- * console.log(capitalizeString("McDonalds")); // "McDonalds"
+ * console.log(capitalizeString("McDonald's")); // "McDonald's"
  *
  * // Handles abbreviations via ignore map
  * console.log(capitalizeString("It's an EP")); // "It's An EP"
  * ```
  */
-export function capitalizeString(str: string | null | undefined): string {
-  if (!str) {
+export function capitalizeString(text: string | null | undefined): string {
+  if (!text) {
     return '';
   }
 
-  let cleaned = String(str).trim();
+  let cleaned = String(text).trim();
 
+  // Replace various quote types with apostrophes
   cleaned = cleaned.replace(/[’`´]/g, '\'');
+  // Replace parentheses with extra spaces with normal parentheses
   cleaned = cleaned.replace(/\(\s+/g, '(').replace(/\s+\)/g, ')');
 
   return cleaned
@@ -66,6 +68,8 @@ export function capitalizeString(str: string | null | undefined): string {
         return word;
       }
 
+      // Match non-letter/non-number at the start and end of the word
+      // and the core word in the middle
       const match = word.match(/^([^\p{L}\p{N}]*)([\p{L}\p{N}](?:.*?[\p{L}\p{N}])?)([^\p{L}\p{N}]*)$/iu);
 
       if (!match) {
@@ -76,6 +80,7 @@ export function capitalizeString(str: string | null | undefined): string {
       const core = match[2];
       const suffix = match[3];
 
+      // Check if the core or suffix is an acronym (e.g., "U.S.A.")
       if (/^[A-Z](?:\.[A-Z])+\.?$/i.test(core + suffix)) {
         return prefix + (core + suffix).toUpperCase();
       }
@@ -130,20 +135,20 @@ export function capitalizeString(str: string | null | undefined): string {
 /**
  * Extracts a BPM value from a string.
  *
- * @param str - The string to search.
+ * @param text - The string to search.
  * @returns The extracted BPM number, or undefined if none found.
  *
  * @example
  * ```typescript
- * console.log(extractBpm("Song name (156bpm)")); // 156
+ * console.log(extractBpm("Track Title (156bpm)")); // 156
  * ```
  */
-export function extractBpm(str: string | null | undefined): number | undefined {
-  if (!str) {
+export function extractBpm(text: string | null | undefined): number | undefined {
+  if (!text) {
     return undefined;
   }
 
-  const match = str.match(/[([-]?\s*\b(\d{2,3})\s*bpm\b\s*[)\]]?/i);
+  const match = text.match(/[([-]?\s*\b(\d{2,3})\s*bpm\b\s*[)\]]?/i);
 
   return match ? Number.parseInt(match[1], 10) : undefined;
 }

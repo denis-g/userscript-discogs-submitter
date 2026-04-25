@@ -7,7 +7,7 @@
  * @example
  * ```typescript
  * console.log(normalizeDuration(326)); // "05:26"
- * console.log(normalizeDuration("00:01:23")); // "1:23"
+ * console.log(normalizeDuration("00:01:01")); // "1:01"
  * ```
  */
 export function normalizeDuration(rawDuration: string | number | null | undefined): string {
@@ -23,7 +23,7 @@ export function normalizeDuration(rawDuration: string | number | null | undefine
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
-    const timeParts = [minutes, seconds].map(val => String(val).padStart(2, '0'));
+    const timeParts = [minutes, seconds].map(value => String(value).padStart(2, '0'));
 
     if (hours > 0) {
       timeParts.unshift(String(hours));

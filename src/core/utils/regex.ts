@@ -65,7 +65,7 @@ export function escapeRegExp(text: string): string {
  * @example
  * ```typescript
  * const regex = buildJoinerPattern(['&', 'vs']);
- * const parts = 'Artist A & Artist B'.split(regex);
+ * const parts = 'Artist One & Artist Two'.split(regex);
  * ```
  */
 export function buildJoinerPattern(joiners: string[]): RegExp {
@@ -78,9 +78,11 @@ export function buildJoinerPattern(joiners: string[]): RegExp {
     // Only match "x" as a joiner if it's surrounded by spaces and NOT followed by another joiner
     const xPattern = `\\s+${xJoiner}(?=\\s+(?!${strongJoiners.join('|')}|,))`;
 
+    // Combine strong joiners pattern with x joiner pattern
     return new RegExp(`((?:${strongPattern})+|${xPattern})`, 'i');
   }
 
+  // Return only strong joiners pattern
   return new RegExp(`((?:${strongPattern})+)`, 'i');
 }
 
@@ -93,14 +95,16 @@ export function buildJoinerPattern(joiners: string[]): RegExp {
  * @example
  * ```typescript
  * const regex = buildOxfordPattern(['&']);
- * const result = 'A, B, & C'.replace(regex, ' $1 '); // 'A, B & C'
+ * const result = 'Artist One, Artist Two, & Artist Three'.replace(regex, ' $1 '); // 'Artist One, Artist Two & Artist Three'
  * ```
  */
 export function buildOxfordPattern(joiners: string[]): RegExp | null {
+  // Filter out commas and escape special characters
   const nonCommaJoiners = joiners
     .filter(joiner => joiner !== ',')
     .map(joiner => escapeRegExp(joiner));
 
+  // Build Oxford comma pattern if there are non-comma joiners
   return nonCommaJoiners.length > 0
     ? new RegExp(`,\\s*(${nonCommaJoiners.join('|')})(?:\\s+|$)`, 'gi')
     : null;

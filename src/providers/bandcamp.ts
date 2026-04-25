@@ -11,7 +11,7 @@ import {
   normalizeDuration,
   normalizeMainArtists,
   normalizeReleaseDate,
-  normalizeTrackTitle,
+  normalizeTitle,
   splitArtistTitle,
 } from '@/core/utils';
 
@@ -158,12 +158,12 @@ export const bandcamp: StoreAdapter = {
       const trimmedLine = line.trim();
 
       if (trimmedLine) {
-        normalizeTrackTitle(trimmedLine, albumExtraArtists);
+        normalizeTitle(trimmedLine, albumExtraArtists);
       }
     });
 
     const albumArtists = normalizeMainArtists(getTextFromTag('#name-section h3 span') || getTextFromTag('#band-name-location .title'), albumExtraArtists);
-    const albumTitle = normalizeTrackTitle(getTextFromTag('#name-section .trackTitle'), albumExtraArtists);
+    const albumTitle = normalizeTitle(getTextFromTag('#name-section .trackTitle'), albumExtraArtists);
     const albumTracks: TrackData[] = Array.from(document.querySelectorAll('#track_table .track_row_view')).map((track, index) => {
       const trackPosition = `${index + 1}`;
       const trackExtraArtists: ArtistCredit[] = [];

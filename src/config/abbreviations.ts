@@ -65,6 +65,6 @@ const IGNORE_CAPITALIZATION = [
  */
 export const ignoreCapitalizationMap = new Map<string, string>();
 
-IGNORE_CAPITALIZATION.forEach((ex) => {
-  ignoreCapitalizationMap.set(ex.replace(/\./g, '').toUpperCase(), ex);
+IGNORE_CAPITALIZATION.forEach((word) => {
+  ignoreCapitalizationMap.set(word.replace(/\./g, '').toUpperCase(), word);
 });

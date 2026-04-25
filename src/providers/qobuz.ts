@@ -8,7 +8,7 @@ import {
   normalizeArtists,
   normalizeDuration,
   normalizeMainArtists,
-  normalizeTrackTitle,
+  normalizeTitle,
 } from '@/core/utils';
 
 /**
@@ -78,7 +78,7 @@ export const qobuz: StoreAdapter = {
     let albumCover = getTextFromTag('.album-cover__image', null, 'src');
     const albumExtraArtists: ArtistCredit[] = [];
     const albumArtists = normalizeMainArtists(getTextFromTag('.album-meta__title .artist-name'), albumExtraArtists);
-    const albumTitle = normalizeTrackTitle(getTextFromTag('.album-meta__title .album-title'), albumExtraArtists);
+    const albumTitle = normalizeTitle(getTextFromTag('.album-meta__title .album-title'), albumExtraArtists);
     const albumLabel = getTextFromTag('.album-meta__item a[href*="/label/"]');
     const albumReleased = data?.releaseDate || null;
     const albumTracks = Array.from(document.querySelectorAll('#playerTracks > .player__item')).map((track: Element, index: number) => {
@@ -86,7 +86,7 @@ export const qobuz: StoreAdapter = {
       const trackPosition = `${index + 1}`;
       const trackExtraArtists: ArtistCredit[] = [];
       const trackArtists = artistRow ? normalizeArtists([artistRow], trackExtraArtists) : albumArtists;
-      const trackTitle = normalizeTrackTitle(getTextFromTag('.track__item--name', track), trackExtraArtists);
+      const trackTitle = normalizeTitle(getTextFromTag('.track__item--name', track), trackExtraArtists);
       const trackDuration = normalizeDuration(getTextFromTag('.track__item--duration', track));
 
       return {
