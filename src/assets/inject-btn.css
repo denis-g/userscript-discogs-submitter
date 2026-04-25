@@ -71,6 +71,10 @@
   &.is-bleep {
     margin: 1.429rem 0 0;
   }
+
+  &.is-hdtracks {
+    margin: 15px 0 0;
+  }
 }
 
 .discogs-submitter__inject__logo {

@@ -74,6 +74,13 @@ export function normalizeReleaseDate(date: string | null | undefined): string | 
     }
   }
 
+  // Released 2021-11-12 - HDtracks
+  const releasedMatch = date.match(/^(?:Released )?(\d{4}-\d{2}-\d{2})/);
+
+  if (releasedMatch) {
+    return releasedMatch[1];
+  }
+
   // 1954, 2009
   const yearOnlyMatch = date.match(/(?<![\d-])\b(19|20)\d{2}\b(?![\d-])/);
 

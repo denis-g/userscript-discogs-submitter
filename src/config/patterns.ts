@@ -88,7 +88,12 @@ export const PATTERNS = {
       GLOBAL_CREDIT_REGEX,
     ),
     'Mastered By': buildCreditRegexes(
-      ['mastered', 'mastering', 'master'],
+      ['mastered', 'mastering', 'master', 'mastering engineer'],
+      // default
+      GLOBAL_CREDIT_REGEX,
+    ),
+    'Performer': buildCreditRegexes(
+      ['performer', 'performed', 'performing'],
       // default
       GLOBAL_CREDIT_REGEX,
     ),

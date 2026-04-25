@@ -1,8 +1,8 @@
 {
   "name": "discogs-submitter",
   "type": "module",
-  "version": "3.0.17",
-  "description": "Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital, Amazon Music, Bleep and submit releases to Discogs.",
+  "version": "3.0.18",
+  "description": "Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital, Amazon Music, Bleep, HDtracks and submit releases to Discogs.",
   "author": "Denis G. <https://github.com/denis-g>",
   "license": "MIT",
   "homepage": "https://github.com/denis-g/userscript-discogs-submitter",
@@ -24,7 +24,8 @@
     "beatport",
     "7digital",
     "amazonmusic",
-    "bleep"
+    "bleep",
+    "hdtracks"
   ],
   "main": "discogs-submitter.user.js",
   "engines": {

@@ -26,6 +26,10 @@ describe('normalizeReleaseDate', () => {
     expect(normalizeReleaseDate('Published in 1954')).toBe('1954');
   });
 
+  it('normalizes HDtracks date formats (Released YYYY-MM-DD)', () => {
+    expect(normalizeReleaseDate('Released 2021-11-12')).toBe('2021-11-12');
+  });
+
   it('returns null for empty or invalid input', () => {
     expect(normalizeReleaseDate('')).toBeNull();
     expect(normalizeReleaseDate(null)).toBeNull();

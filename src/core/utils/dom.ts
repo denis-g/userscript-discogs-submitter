@@ -41,6 +41,7 @@ export function getManyTextFromTags(target: string, parent: HTMLElement | Docume
  * @param parent - The contextual node to query inside. Defaults to `document`.
  * @param attribute - Specific attribute to extract instead of text content (e.g. `href`, `content`).
  * @param keepNewlines - Preserves `<br>` tags by replacing them with `\n` before extracting (default: false).
+ * @param visible - Whether to only extract visible elements (default: false).
  * @returns The extracted and cleaned string, or null if the element is missing or empty.
  *
  * @example
@@ -48,17 +49,22 @@ export function getManyTextFromTags(target: string, parent: HTMLElement | Docume
  * const url = getTextFromTag('meta[property="og:image"]', document, 'content');
  * ```
  */
-export function getTextFromTag(target: string, parent: HTMLElement | Document | Element | ShadowRoot | null = null, attribute = '', keepNewlines = false): string | null {
+export function getTextFromTag(target: string, parent: HTMLElement | Document | Element | ShadowRoot | null = null, attribute = '', keepNewlines = false, visible = false): string | null {
   const context = parent || document;
   const result = context.querySelector(target);
+  let output = null;
 
   if (!result) {
     return null;
   }
 
   if (attribute) {
-    return cleanString(result.getAttribute(attribute));
+    output = cleanString(result.getAttribute(attribute));
+
+    return output;
   }
+
+  let elementToProcess: Element = result;
 
   if (keepNewlines) {
     const clone = result.cloneNode(true) as HTMLElement;
@@ -67,8 +73,41 @@ export function getTextFromTag(target: string, parent: HTMLElement | Document | 
       br.replaceWith('\n');
     });
 
-    return cleanString(clone.textContent, false);
+    elementToProcess = clone;
   }
 
-  return cleanString(result.textContent);
+  if (visible) {
+    output = getVisibleText(elementToProcess);
+  }
+  else {
+    output = elementToProcess.textContent;
+  }
+
+  return cleanString(output, !keepNewlines);
+}
+
+/**
+ * Extracts text only from immediate text nodes of a DOM element, ignoring text within nested child elements.
+ *
+ * @param element - The DOM element to extract text from.
+ * @returns The joined text from direct text nodes, or null if the element is missing or contains no child nodes.
+ *
+ * @example
+ * ```typescript
+ * // HTML: <div id="visible">Text visible<span>Text hidden</span></div>
+ * const text = getVisibleText(document.querySelector('#visible'));
+ * console.log(text); // 'Text visible'
+ * ```
+ */
+export function getVisibleText(element: HTMLElement | Element | null): string | null {
+  if (element && element.childNodes.length > 0) {
+    const text = Array.from(element.childNodes)
+      .filter(node => node.nodeType === Node.TEXT_NODE)
+      .map(node => node.textContent || '')
+      .join('');
+
+    return text;
+  }
+
+  return null;
 }

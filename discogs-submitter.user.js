@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         Discogs Submitter
 // @namespace    discogs-submitter
-// @version      3.0.17
+// @version      3.0.18
 // @author       Denis G. <https://github.com/denis-g>
-// @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital, Amazon Music, Bleep and submit releases to Discogs.
+// @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital, Amazon Music, Bleep, HDtracks and submit releases to Discogs.
 // @license      MIT
 // @icon         https://raw.githubusercontent.com/denis-g/userscript-discogs-submitter/master/src/assets/icon-main.svg
 // @homepage     https://github.com/denis-g/userscript-discogs-submitter
@@ -19,6 +19,7 @@
 // @match        https://*.beatport.com/*
 // @match        https://*.7digital.com/artist/*/release/*
 // @match        https://bleep.com/*
+// @match        https://*.hdtracks.com/*
 // @match        https://*.amazon.co.jp/*
 // @match        https://*.amazon.com/*
 // @match        https://*.amazon.ae/*
@@ -56,6 +57,7 @@
 // @connect      artwork-cdn.7static.com
 // @connect      m.media-amazon.com
 // @connect      cloudfront.net
+// @connect      cdn.hdtracks.com
 // @grant        GM_info
 // @grant        GM_openInTab
 // @grant        GM_setClipboard
@@ -205,7 +207,11 @@
                     GLOBAL_CREDIT_REGEX
                 ),
                 "Mastered By": buildCreditRegexes(
-                    ["mastered", "mastering", "master"],
+                    ["mastered", "mastering", "master", "mastering engineer"],
+                    GLOBAL_CREDIT_REGEX
+                ),
+                "Performer": buildCreditRegexes(
+                    ["performer", "performed", "performing"],
                     GLOBAL_CREDIT_REGEX
                 )
             }
@@ -951,6 +957,10 @@
                     return `${year}-${String(monthIndex + 1).padStart(2, "0")}-${day}`;
                 }
             }
+            const releasedMatch = date.match(/^(?:Released )?(\d{4}-\d{2}-\d{2})/);
+            if (releasedMatch) {
+                return releasedMatch[1];
+            }
             const yearOnlyMatch = date.match(/(?<![\d-])\b(19|20)\d{2}\b(?![\d-])/);
             if (yearOnlyMatch) {
                 return yearOnlyMatch[0];
@@ -972,23 +982,38 @@
                 return cleanString(element.textContent);
             }).filter((text) => Boolean(text));
         }
-        function getTextFromTag(target, parent = null, attribute = "", keepNewlines = false) {
+        function getTextFromTag(target, parent = null, attribute = "", keepNewlines = false, visible = false) {
             const context = parent || document;
             const result = context.querySelector(target);
+            let output = null;
             if (!result) {
                 return null;
             }
             if (attribute) {
-                return cleanString(result.getAttribute(attribute));
+                output = cleanString(result.getAttribute(attribute));
+                return output;
             }
+            let elementToProcess = result;
             if (keepNewlines) {
                 const clone = result.cloneNode(true);
                 clone.querySelectorAll("br").forEach((br) => {
                     br.replaceWith("\n");
                 });
-                return cleanString(clone.textContent, false);
+                elementToProcess = clone;
             }
-            return cleanString(result.textContent);
+            if (visible) {
+                output = getVisibleText(elementToProcess);
+            } else {
+                output = elementToProcess.textContent;
+            }
+            return cleanString(output, !keepNewlines);
+        }
+        function getVisibleText(element) {
+            if (element && element.childNodes.length > 0) {
+                const text = Array.from(element.childNodes).filter((node) => node.nodeType === Node.TEXT_NODE).map((node) => node.textContent || "").join("");
+                return text;
+            }
+            return null;
         }
 
         function normalizeDuration(rawDuration) {
@@ -1422,7 +1447,7 @@
                     const trackExtraArtists = [];
                     const trackArtists = trackMainArtists.length > 0 ? normalizeArtists(trackMainArtists, trackExtraArtists) : albumArtists;
                     const trackTitle = normalizeTrackTitle(getTextFromTag('.track-name [itemprop="name"]', track), trackExtraArtists);
-                    const trackDuration = getTextFromTag(".track-duration", track) || "";
+                    const trackDuration = normalizeDuration(getTextFromTag(".track-duration", track));
                     if (trackFeaturedArtists.length > 0) {
                         normalizeArtists(trackFeaturedArtists).forEach((artist) => {
                             if (!trackExtraArtists.some((ea) => ea.name === artist.name && ea.role === "Featuring")) {
@@ -1454,6 +1479,53 @@
                     label: albumLabel,
                     released: albumReleased,
                     number: labelNumber,
+                    tracks: albumTracks
+                };
+            }
+        };
+
+        const hdtracks = {
+            id: "hdtracks",
+            test: matchUrls(
+                "https://*.hdtracks.com/*"
+            ),
+            supports: {
+                formats: ["WAV", "DSD"],
+                hdAudio: true
+            },
+            target: ".list-page.page-current .list-info .list-title",
+            injectButton: (button, target) => {
+                target.appendChild(button);
+            },
+            parse: async () => {
+                const context = document.querySelector(".list-page.page-current:not(.page-swipeback-active)") || document.querySelector(".list-page.page-current");
+                const albumCover = getTextFromTag(".list-info .list-cover", context, "style")?.match(/background-image:\s*url\("?(.*?)"?\)/)?.[1] ?? null;
+                const albumExtraArtists = [];
+                const albumArtists = normalizeMainArtists(getTextFromTag(".list-info .list-artist", context), albumExtraArtists);
+                const albumTitle = normalizeTrackTitle(getTextFromTag(".list-info .list-title h2", context));
+                const albumLabel = getTextFromTag(".list-info .list-artist + p", context);
+                const albumReleased = normalizeReleaseDate(getTextFromTag(".list-content .list-footer p:first-child", context));
+                const albumTracks = Array.from((context || document).querySelectorAll(".tracks-table .list:not(.tracks-table-header) > ul > li")).map((track, index) => {
+                    const trackPosition = `${index + 1}`;
+                    const trackExtraArtists = [];
+                    const trackArtists = normalizeArtists(getTextFromTag(".item-cell.artist", track, "", false, true), trackExtraArtists);
+                    const trackTitle = normalizeTrackTitle(getTextFromTag(".item-cell.title", track, "", false, true), trackExtraArtists);
+                    const trackDuration = normalizeDuration(getTextFromTag(".item-cell.duration .duration-container", track));
+                    return {
+                        pos: trackPosition,
+                        extraartists: trackExtraArtists,
+                        artists: trackArtists,
+                        title: trackTitle,
+                        duration: trackDuration
+                    };
+                });
+                return {
+                    cover: albumCover,
+                    extraartists: albumExtraArtists,
+                    artists: albumArtists,
+                    title: albumTitle,
+                    label: albumLabel,
+                    released: albumReleased,
                     tracks: albumTracks
                 };
             }
@@ -1613,12 +1685,13 @@
                 beatport,
                 sevendigital,
                 amazonmusic,
-                bleep
+                bleep,
+                hdtracks
             ],
             detectByLocation: () => DigitalStoreRegistry.list.find((provider) => provider.test(window.location.href))
         };
 
-        const injectBtnCss = "/* --- INJECTED BUTTONS --- */\n\n.discogs-submitter__inject__btn {\n  all: unset;\n  display: inline-flex;\n  vertical-align: middle;\n  align-items: center;\n  justify-content: center;\n  gap: 10px;\n  cursor: pointer;\n  user-select: none;\n  padding: calc(var(--ds-gap) / 2);\n  color: var(--ds-color-black);\n  font-family: var(--ds-font-sans) !important;\n  font-size: 14px;\n  font-weight: bold;\n  line-height: 1.2;\n  text-transform: none;\n  text-shadow: none;\n  white-space: nowrap;\n  background: var(--ds-color-white);\n  border: 2px solid var(--ds-color-gray-dark);\n  border-radius: calc(var(--ds-radius) * 2);\n  outline: 1px solid var(--ds-color-gray-dark);\n  transition: outline 0.2s ease;\n\n  &:hover {\n    outline: 2px solid var(--ds-color-white);\n\n    .discogs-submitter__inject__logo {\n      animation: ds-spinner 1s linear infinite;\n    }\n  }\n\n  &.is-disabled {\n    opacity: 0.5;\n    pointer-events: none;\n  }\n\n  /* Site-specific styles */\n\n  &.is-bandcamp {\n    margin-bottom: 1.5em;\n    box-sizing: border-box;\n  }\n\n  &.is-qobuz {\n    margin-top: 20px;\n    text-transform: none;\n  }\n\n  &.is-qobuz {\n    .discogs-submitter__inject__logo {\n      margin-top: -4px;\n    }\n  }\n\n  &.is-junodownload {\n    margin-top: 20px;\n  }\n\n  &.is-beatport {\n    margin-top: 8px;\n  }\n\n  &.is-amazonmusic {\n    margin-top: 24px;\n    margin-right: 100%;\n  }\n\n  &.is-bleep {\n    margin: 1.429rem 0 0;\n  }\n}\n\n.discogs-submitter__inject__logo {\n  display: block;\n  width: 1.25em;\n  height: 1.25em;\n}\n";
+        const injectBtnCss = "/* --- INJECTED BUTTONS --- */\n\n.discogs-submitter__inject__btn {\n  all: unset;\n  display: inline-flex;\n  vertical-align: middle;\n  align-items: center;\n  justify-content: center;\n  gap: 10px;\n  cursor: pointer;\n  user-select: none;\n  padding: calc(var(--ds-gap) / 2);\n  color: var(--ds-color-black);\n  font-family: var(--ds-font-sans) !important;\n  font-size: 14px;\n  font-weight: bold;\n  line-height: 1.2;\n  text-transform: none;\n  text-shadow: none;\n  white-space: nowrap;\n  background: var(--ds-color-white);\n  border: 2px solid var(--ds-color-gray-dark);\n  border-radius: calc(var(--ds-radius) * 2);\n  outline: 1px solid var(--ds-color-gray-dark);\n  transition: outline 0.2s ease;\n\n  &:hover {\n    outline: 2px solid var(--ds-color-white);\n\n    .discogs-submitter__inject__logo {\n      animation: ds-spinner 1s linear infinite;\n    }\n  }\n\n  &.is-disabled {\n    opacity: 0.5;\n    pointer-events: none;\n  }\n\n  /* Site-specific styles */\n\n  &.is-bandcamp {\n    margin-bottom: 1.5em;\n    box-sizing: border-box;\n  }\n\n  &.is-qobuz {\n    margin-top: 20px;\n    text-transform: none;\n  }\n\n  &.is-qobuz {\n    .discogs-submitter__inject__logo {\n      margin-top: -4px;\n    }\n  }\n\n  &.is-junodownload {\n    margin-top: 20px;\n  }\n\n  &.is-beatport {\n    margin-top: 8px;\n  }\n\n  &.is-amazonmusic {\n    margin-top: 24px;\n    margin-right: 100%;\n  }\n\n  &.is-bleep {\n    margin: 1.429rem 0 0;\n  }\n\n  &.is-hdtracks {\n    margin: 15px 0 0;\n  }\n}\n\n.discogs-submitter__inject__logo {\n  display: block;\n  width: 1.25em;\n  height: 1.25em;\n}\n";
 
         let btnTemplate = null;
         function getInjectBtnTemplate() {
@@ -1681,6 +1754,9 @@
 
         const widgetCss = "/* --- VARIABLES --- */\n\n:root {\n  --ds-gap: 20px;\n  --ds-radius: 12px;\n  --ds-color-white: #fafafa;\n  --ds-color-black: #212121;\n  --ds-color-gray: #666;\n  --ds-color-gray-dark: #333;\n  --ds-color-gray-light: #eee;\n  --ds-color-primary: #148a66;\n  --ds-color-success: #28a745;\n  --ds-color-error: #dc3545;\n  --ds-color-warning: #ffc107;\n  --ds-color-info: #17a2b8;\n  --ds-font-sans: 'Helvetica Neue', Helvetica, Arial, sans-serif;\n  --ds-font-monospace: 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;\n}\n\n/* --- RESET --- */\n\n.discogs-submitter {\n  *,\n  *::after,\n  *::before {\n    color-scheme: light;\n    -webkit-font-smoothing: antialiased;\n    -moz-osx-font-smoothing: grayscale;\n    text-rendering: optimizeLegibility;\n    box-sizing: border-box;\n  }\n\n  em {\n    font-style: oblique;\n  }\n\n  strong {\n    font-weight: bold;\n  }\n\n  [hidden] {\n    display: none !important;\n  }\n}\n\n/* --- WIDGET --- */\n\n.discogs-submitter {\n  contain: layout;\n  overflow: hidden;\n  display: none;\n  flex-direction: column;\n  justify-content: start;\n  gap: var(--ds-gap);\n  position: fixed;\n  z-index: 999999;\n  top: var(--ds-gap);\n  right: var(--ds-gap);\n  width: calc(100% - (var(--ds-gap) * 2));\n  max-width: 500px;\n  padding: var(--ds-gap);\n  color: var(--ds-color-black);\n  font-family: var(--ds-font-sans) !important;\n  font-size: 14px;\n  font-weight: normal;\n  line-height: 1.2;\n  text-transform: none;\n  text-shadow: none;\n  background: var(--ds-color-white);\n  border: 2px solid var(--ds-color-gray-dark);\n  border-radius: var(--ds-radius);\n  outline: 2px solid var(--ds-color-white);\n  opacity: 0;\n  transition:\n    opacity 0.3s ease,\n    box-shadow 0.6s ease;\n\n  &.is-open {\n    display: flex;\n    opacity: 1;\n    box-shadow:\n      0 0 10px rgba(0, 0, 0, 0.6),\n      0 0 30px rgba(0, 0, 0, 0.8);\n  }\n\n  &.is-webarchive {\n    top: calc(var(--wm-toolbar-height) + var(--ds-gap));\n  }\n}\n\n.discogs-submitter__loader {\n  position: absolute;\n  z-index: -1;\n  top: 0;\n  left: 0;\n  width: 100%;\n  height: 100%;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  opacity: 0;\n  transition: opacity 0.8s ease;\n\n  &.is-loading {\n    z-index: 10;\n    opacity: 1;\n  }\n\n  &::before {\n    content: '';\n    position: absolute;\n    top: 0;\n    left: 0;\n    width: 100%;\n    height: 100%;\n    background: var(--ds-color-white);\n    opacity: 0.75;\n  }\n\n  svg {\n    width: 70px;\n    height: 70px;\n    animation: ds-spinner 0.5s linear infinite;\n  }\n}\n\n.discogs-submitter__content {\n  max-height: 60vh;\n  overflow: auto;\n  -webkit-overflow-scrolling: touch;\n}\n\n.discogs-submitter__header {\n  --icon-size: 24px;\n  display: flex;\n  align-items: center;\n  gap: calc(var(--ds-gap) / 2);\n  font-size: 20px;\n  font-weight: 600;\n}\n\n.discogs-submitter__header__logo {\n  flex: 0 0 auto;\n  width: 1.25em;\n  height: 1.25em;\n}\n\n.discogs-submitter__header__title {\n  small {\n    font-size: 8px;\n  }\n}\n\n.discogs-submitter__header__drag-btn,\n.discogs-submitter__header__close-btn {\n  width: var(--icon-size);\n  height: var(--icon-size);\n}\n\n.discogs-submitter__header__drag-btn {\n  margin-left: auto;\n  display: flex;\n  align-items: center;\n  justify-content: space-evenly;\n  flex-direction: column;\n  cursor: grab;\n}\n\n.discogs-submitter__header__drag-btn {\n  &::before,\n  &::after {\n    content: '';\n    width: 6px;\n    height: 6px;\n    background-color: currentColor;\n    border-radius: 100%;\n    transition: background-color 0.3s ease;\n  }\n\n  &:hover::before,\n  &:hover::after {\n    background-color: var(--ds-color-info);\n  }\n\n  &.is-draggable {\n    cursor: grabbing;\n  }\n}\n\n.discogs-submitter__header__close-btn {\n  position: relative;\n  z-index: 1;\n  cursor: pointer;\n\n  &::before,\n  &::after {\n    position: absolute;\n    z-index: 1;\n    left: calc(var(--icon-size) / 2 - 1px);\n    content: ' ';\n    height: var(--icon-size);\n    width: 3px;\n    background-color: currentColor;\n    transition: background-color 0.3s ease;\n  }\n\n  &::before {\n    transform: rotate(45deg);\n  }\n\n  &::after {\n    transform: rotate(-45deg);\n  }\n\n  &:hover::before,\n  &:hover::after {\n    background-color: var(--ds-color-error);\n  }\n}\n\n.discogs-submitter__preview-container {\n  overflow: auto;\n  max-height: 330px;\n  background:\n    linear-gradient(var(--ds-color-white) 30%, rgba(0, 0, 0, 0)),\n    linear-gradient(rgba(0, 0, 0, 0), var(--ds-color-white) 70%) 0 100%,\n    radial-gradient(farthest-side at 50% 0, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0)),\n    radial-gradient(farthest-side at 50% 100%, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0)) 0 100%;\n  background-repeat: no-repeat;\n  background-size:\n    100% 40px,\n    100% 40px,\n    100% 20px,\n    100% 20px;\n  background-attachment: local, local, scroll, scroll;\n  scrollbar-width: thin;\n  scrollbar-color: var(--ds-color-gray-dark) transparent;\n\n  &::-webkit-scrollbar {\n    width: 6px;\n  }\n}\n\n.discogs-submitter__results {\n  display: flex;\n  flex-wrap: wrap;\n  font-family: var(--ds-font-monospace);\n  font-size: 10px;\n  line-height: normal;\n}\n\n.discogs-submitter__results__row {\n  width: 100%;\n  display: grid;\n  gap: calc(var(--ds-gap) / 4);\n  grid-template-columns: 60px 1fr;\n  padding: 2px 0;\n  border-bottom: 1px dotted rgba(0, 0, 0, 0.2);\n\n  &:hover {\n    background: rgba(0, 0, 0, 0.05);\n  }\n\n  &.is-half {\n    width: 50%;\n  }\n\n  &.is-tracklist {\n    grid-template-columns: 20px 1fr 1fr 50px;\n\n    &.is-no-artist {\n      grid-template-columns: 20px 1fr 50px;\n    }\n\n    > .discogs-submitter__results__body:last-child {\n      text-align: right;\n    }\n  }\n\n  &.is-notes {\n    grid-template-columns: 1fr;\n  }\n}\n\n.discogs-submitter__results__head {\n  font-weight: bold;\n}\n\n.discogs-submitter__results__body {\n  a {\n    color: var(--ds-color-primary);\n  }\n\n  em {\n    font-style: normal;\n    padding: 2px 4px;\n    display: inline-block;\n    vertical-align: baseline;\n    background: var(--ds-color-gray-light);\n    border-radius: calc(var(--ds-radius) / 4);\n    outline: 0.1px solid var(--ds-color-gray);\n  }\n\n  small {\n    font-size: 9px;\n  }\n\n  input[type='radio'],\n  input[type='checkbox'] {\n    position: absolute;\n    z-index: -1;\n    width: 1px;\n    height: 1px;\n    opacity: 0;\n    /* bleep override */\n    display: unset;\n    height: unset;\n    width: unset;\n    margin-bottom: unset;\n    vertical-align: unset;\n  }\n\n  input[type='radio'] + label,\n  input[type='checkbox'] + label {\n    display: inline-flex;\n    align-items: center;\n    gap: calc(var(--ds-gap) / 4);\n    vertical-align: middle;\n    color: var(--ds-color-white);\n    margin: 0;\n    padding: 2px 5px;\n    background: var(--ds-color-gray-dark);\n    border-radius: calc(var(--ds-radius) / 2);\n    cursor: pointer;\n    transition: background 0.3s ease;\n    /* bleep override */\n    margin-right: unset;\n  }\n\n  input[type='radio']:checked + label,\n  input[type='checkbox']:checked + label {\n    background: var(--ds-color-primary);\n  }\n\n  input[type='radio']:checked + label::before,\n  input[type='checkbox']:checked + label::before {\n    content: '';\n    width: 8px;\n    height: 5px;\n    margin-top: -2px;\n    border: solid currentColor;\n    border-width: 0 0 2px 2px;\n    transform: rotate(-45deg);\n  }\n\n  input[type=\"radio\"]:disabled + label,\n  input[type=\"checkbox\"]:disabled + label {\n    opacity: 0.5;\n    cursor: not-allowed;\n  }\n}\n\n.discogs-submitter__status-container {\n  --status-color: var(--ds-color-gray-dark);\n  position: relative;\n  z-index: 1;\n  display: flex;\n  justify-content: space-between;\n  align-items: start;\n  gap: var(--ds-gap);\n  margin-bottom: var(--ds-gap);\n  padding: calc(var(--ds-gap) / 2);\n  border-left: 4px solid var(--status-color);\n  border-radius: calc(var(--ds-radius) / 2);\n  transition: border-color 0.3s ease;\n\n  &::after {\n    content: '';\n    position: absolute;\n    z-index: -1;\n    top: 0;\n    left: 0;\n    width: 100%;\n    height: 100%;\n    background: var(--status-color);\n    opacity: 0.1;\n    transition: background 0.3s ease;\n  }\n\n  &.is-success {\n    --status-color: var(--ds-color-success);\n  }\n\n  &.is-error {\n    --status-color: var(--ds-color-error);\n  }\n\n  &.is-info {\n    --status-color: var(--ds-color-info);\n  }\n\n  &.is-warning {\n    --status-color: var(--ds-color-warning);\n  }\n}\n\n.discogs-submitter__status-debug-btn {\n  font-size: 18px;\n  cursor: pointer;\n}\n\n.discogs-submitter__actions {\n  display: flex;\n  flex-wrap: nowrap;\n  gap: var(--ds-gap);\n}\n\n.discogs-submitter__actions__btn-submit {\n  display: block;\n  width: 100%;\n  color: var(--ds-color-white);\n  font-size: 16px;\n  font-weight: bold;\n  text-align: center;\n  padding: calc(var(--ds-gap) / 2) calc(var(--ds-gap) / 4);\n  background: var(--ds-color-primary);\n  border-radius: calc(var(--ds-radius) / 2);\n  cursor: pointer;\n  transition:\n    background 0.3s ease,\n    opacity 0.3s ease;\n  user-select: none;\n\n  &:hover {\n    background: var(--ds-color-black);\n  }\n\n  &.is-disabled {\n    opacity: 0.5;\n    pointer-events: none;\n  }\n}\n\n.discogs-submitter__copyright {\n  display: flex;\n  justify-content: center;\n  gap: var(--ds-gap);\n  font-size: 10px;\n  margin: var(--ds-gap) 0 0;\n\n  a {\n    color: currentColor;\n    text-decoration: none;\n\n    &:hover {\n      text-decoration: underline;\n    }\n  }\n\n  span {\n    display: inline-block;\n    vertical-align: middle;\n    font-family: var(--ds-font-monospace);\n    color: var(--ds-color-error);\n    animation: ds-pulse 1s ease-in-out infinite;\n  }\n}\n\n@keyframes ds-spinner {\n  0% {\n    transform: rotate(0);\n  }\n\n  100% {\n    transform: rotate(360deg);\n  }\n}\n\n@keyframes ds-pulse {\n  0% {\n    transform: scale(1);\n  }\n\n  50% {\n    transform: scale(1.2);\n  }\n\n  100% {\n    transform: scale(1);\n  }\n}\n";
 
+        const DISCOGS_FORMAT_MAPPING = {
+            DSD: "DSF"
+        };
         const DiscogsAdapter = {
             buildPayload: (data, sourceUrl, options) => {
                 const { format = "WAV", isHdAudio = false } = options || {};
@@ -1734,7 +1810,7 @@ ${validBpmTracks.map((track) => `${track.pos}: ${track.bpm}`).join("\n")}` : "";
                     country: normalizeCountry(data.country || "Worldwide"),
                     released: data.released || "",
                     labels: labelName ? [{ name: labelName, catno: data.number || "none" }] : [{ name: "", catno: "" }],
-                    format: [{ name: "File", qty: totalTracks, desc: [format], text: formatText }],
+                    format: [{ name: "File", qty: totalTracks, desc: [DISCOGS_FORMAT_MAPPING[format] || format], text: formatText }],
                     tracks: (data.tracks || []).map((track) => ({
                         pos: track.pos || "",
                         artists: allTracksMatchRelease ? [] : track.artists || [],
@@ -2155,10 +2231,8 @@ ${error.stack || error}`;
                 const storeId = this.state.currentDigitalStore?.id;
                 if (storeId === "bandcamp") {
                     return "<small><strong>Be sure to check the metadata, as formatting can vary significantly between labels and artists.</strong></small>";
-                } else if (storeId && ["qobuz", "beatport", "7digital", "junodownload", "amazonmusic", "bleep"].includes(storeId)) {
-                    return "<small><strong>The list of artists is presented in random order, separated by commas (`,`), and may not exactly match the list of authors from the official release source.</strong></small>";
                 }
-                return null;
+                return "<small><strong>The list of artists is presented in random order, separated by commas (`,`), and may not exactly match the list of authors from the official release source.</strong></small>";
             }
             bindEvents() {
                 this.ui.headerCloseBtn?.addEventListener("click", () => this.ui.widget?.classList.remove("is-open"));

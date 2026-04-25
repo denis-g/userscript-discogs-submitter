@@ -65,6 +65,7 @@ body:
         - 7digital
         - Amazon Music
         - Bleep
+        - HDtracks
     validations:
       required: true
 

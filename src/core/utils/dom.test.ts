@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getManyTextFromTags, getTextFromTag } from './dom';
+import { getManyTextFromTags, getTextFromTag, getVisibleText } from './dom';
 
 describe('dom utilities', () => {
   describe('getTextFromTag', () => {
@@ -35,6 +35,11 @@ describe('dom utilities', () => {
       expect(getTextFromTag('.c', p1)).toBe('V1');
       expect(getTextFromTag('.c', p2)).toBe('V2');
     });
+
+    it('handles keepNewlines and visible together', () => {
+      document.body.innerHTML = '<div id="combined">Line 1<br><span style="display: none;">Hidden</span>Line 2</div>';
+      expect(getTextFromTag('#combined', document, '', true, true)).toBe('Line 1\nLine 2');
+    });
   });
 
   describe('getManyTextFromTags', () => {
@@ -58,6 +63,24 @@ describe('dom utilities', () => {
     it('returns empty array if no matches found', () => {
       document.body.innerHTML = '<div></div>';
       expect(getManyTextFromTags('.missing')).toEqual([]);
+    });
+  });
+
+  describe('getVisibleText', () => {
+    it('returns all text', () => {
+      document.body.innerHTML = '<div id="visible">Text visible<span>Text hidden</span></div>';
+
+      const test = document.querySelector('#visible');
+
+      expect(getVisibleText(test)).toBe('Text visible');
+    });
+
+    it('returns visible text ignoring hidden elements', () => {
+      document.body.innerHTML = '<div id="hidden">Text<span style="display: none;">Hidden</span></div>';
+
+      const test = document.querySelector('#hidden');
+
+      expect(getVisibleText(test)).toBe('Text');
     });
   });
 });

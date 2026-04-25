@@ -34,6 +34,7 @@ export default defineConfig({
           'https://*.beatport.com/*',
           'https://*.7digital.com/artist/*/release/*',
           'https://bleep.com/*',
+          'https://*.hdtracks.com/*',
           'https://*.amazon.co.jp/*',
           'https://*.amazon.com/*',
           'https://*.amazon.ae/*',
@@ -80,6 +81,8 @@ export default defineConfig({
           'm.media-amazon.com',
           // Bleep
           'cloudfront.net',
+          // HDtracks
+          'cdn.hdtracks.com',
         ],
         'grant': [
           'GM_xmlhttpRequest',

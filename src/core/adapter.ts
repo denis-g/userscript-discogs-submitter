@@ -8,6 +8,13 @@ import type {
 import { groupExtraArtists, normalizeCountry } from './utils';
 
 /**
+ * Map Discogs formats to store formats
+ */
+export const DISCOGS_FORMAT_MAPPING: Record<string, string> = {
+  DSD: 'DSF',
+};
+
+/**
  * A shared adapter for transforming various digital store data into the Discogs release schema.
  * Handles the normalization and deduplication of artists, labels, and tracklists.
  */
@@ -99,7 +106,7 @@ export const DiscogsAdapter = {
       country: normalizeCountry(data.country || 'Worldwide'),
       released: data.released || '',
       labels: labelName ? [{ name: labelName, catno: data.number || 'none' }] : [{ name: '', catno: '' }],
-      format: [{ name: 'File', qty: totalTracks, desc: [format], text: formatText }],
+      format: [{ name: 'File', qty: totalTracks, desc: [DISCOGS_FORMAT_MAPPING[format] || format], text: formatText }],
       tracks: (data.tracks || []).map((track): DiscogsTrack => ({
         pos: track.pos || '',
         artists: allTracksMatchRelease ? [] : track.artists || [],

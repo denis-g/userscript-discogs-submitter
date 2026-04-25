@@ -28,6 +28,7 @@ It extracts metadata from the source page, normalizes it to meet Discogs formatt
 | **7digital**      | `*.7digital.com/artist/*/release/*` |   ❌    |       ❌       |    ❌    |   ✅   |      ❌       |      ❌      |
 | **Amazon Music**  | `*.amazon.*/*`                      |   ❌    |       ❌       |    ❌    |   ❌   |      ❌       |      ❌      |
 | **Bleep**         | `bleep.com/*`                       |   ❌    |       ✅       |    ❌    |   ✅   |      ❌       |      ❌      |
+| **HDtracks**      | `*.hdtracks.com/*`                  |   ❌    |       ❌       |    ❌    |   ✅   |      ✅       |      ❌      |
 
 <div><sup><strong>Bandcamp</strong>: Catalog number and BPM extraction relies on both the release credits and description. Country is extracted from the publisher location.</sup></div>
 <div><sup><strong>Juno Download</strong>: Cover art maximum size is 700x700.</sup></div>
@@ -84,6 +85,13 @@ It extracts metadata from the source page, normalizes it to meet Discogs formatt
 <summary>Bleep</summary>
 
 ![Discogs Submitter - Bleep](https://github.com/denis-g/userscript-discogs-submitter/raw/refs/heads/master/screenshots/bleep.png)
+
+</details>
+
+<details>
+<summary>HDtracks</summary>
+
+![Discogs Submitter - HDtracks](https://github.com/denis-g/userscript-discogs-submitter/raw/refs/heads/master/screenshots/hdtracks.png)
 
 </details>
 

@@ -660,11 +660,8 @@ export class UiWidget {
     if (storeId === 'bandcamp') {
       return '<small><strong>Be sure to check the metadata, as formatting can vary significantly between labels and artists.</strong></small>';
     }
-    else if (storeId && ['qobuz', 'beatport', '7digital', 'junodownload', 'amazonmusic', 'bleep'].includes(storeId)) {
-      return '<small><strong>The list of artists is presented in random order, separated by commas (`,`), and may not exactly match the list of authors from the official release source.</strong></small>';
-    }
 
-    return null;
+    return '<small><strong>The list of artists is presented in random order, separated by commas (`,`), and may not exactly match the list of authors from the official release source.</strong></small>';
   }
 
   private bindEvents(): void {

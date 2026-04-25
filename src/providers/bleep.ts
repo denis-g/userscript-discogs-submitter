@@ -7,6 +7,7 @@ import {
   getTextFromTag,
   matchUrls,
   normalizeArtists,
+  normalizeDuration,
   normalizeMainArtists,
   normalizeReleaseDate,
   normalizeTrackTitle,
@@ -58,7 +59,7 @@ export const bleep: StoreAdapter = {
       const trackExtraArtists: ArtistCredit[] = [];
       const trackArtists = trackMainArtists.length > 0 ? normalizeArtists(trackMainArtists, trackExtraArtists) : albumArtists;
       const trackTitle = normalizeTrackTitle(getTextFromTag('.track-name [itemprop="name"]', track), trackExtraArtists);
-      const trackDuration = getTextFromTag('.track-duration', track) || '';
+      const trackDuration = normalizeDuration(getTextFromTag('.track-duration', track));
 
       // Handle featured artists
       if (trackFeaturedArtists.length > 0) {
