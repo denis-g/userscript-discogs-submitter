@@ -188,4 +188,17 @@ describe('normalizeTitle with Credits', () => {
     expect(title).toBe('Track Title (Remix) (Instrumental)');
     expect(extra).toHaveLength(0);
   });
+
+  it('extracts artist from possessive remix patterns (Artist\'s Remix)', () => {
+    const extra: any[] = [];
+    const title = normalizeTitle('Track Title (Artist Name\'s Title Remix)', extra);
+
+    expect(title).toBe('Track Title (Artist Name\'s Title Remix)');
+    expect(extra).toContainEqual({ name: 'Artist Name', role: 'Remix' });
+
+    const extra2: any[] = [];
+
+    expect(normalizeTitle('Track Title (Artist Name\'s Re-Mix)', extra2)).toBe('Track Title (Artist Name\'s Re-Mix)');
+    expect(extra2).toContainEqual({ name: 'Artist Name', role: 'Remix' });
+  });
 });

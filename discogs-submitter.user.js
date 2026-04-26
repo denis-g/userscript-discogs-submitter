@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discogs Submitter
 // @namespace    discogs-submitter
-// @version      3.0.20
+// @version      3.0.21
 // @author       Denis G. <https://github.com/denis-g>
 // @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital, Amazon Music, Bleep, HDtracks and submit releases to Discogs.
 // @license      MIT
@@ -231,6 +231,12 @@
                     ["remix", "rmx", "re-mix"],
                     [
                         "(?:\\(|\\[)\\s*([^()[\\]]+)\\s+{{p}}\\b\\s*(?:\\)|\\])"
+                    ]
+                ),
+                ...buildCreditRegexes(
+                    ["remix", "rmx", "remixed", "mix", "mixed", "re-mix", "re-mixed", "version", "edit", "edited", "re-edit", "re-edited", "rework", "reworked", "rebuild", "rebuilt"],
+                    [
+                        "(?:\\(|\\[)\\s*([^()[\\]]+)'s(?:\\s+.*?)?\\s+{{p}}\\b\\s*(?:\\)|\\])"
                     ]
                 )
             ],

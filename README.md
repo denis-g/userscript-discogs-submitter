@@ -130,10 +130,11 @@ And more...
 The script scans track titles and release descriptions for artist credits. When found, it creates a `Credit` entry and (in most cases) removes the credit from the title to keep it clean.
 
 - **Features:** `Track Title (feat. Artist Name)` → Title: `Track Title`, Featuring: `Artist Name`.
-- **Remixes (Type A):** `Track Title (Remix By Artist One)` → Title: `Track Title (Remix By Artist One)`, Remix: `Artist One`.
-- **Remixes (Type B):** `Track Title (Artist One Remix)` → Title: `Track Title (Artist One Remix)`, Remix: `Artist One`.
+- **Remixes (Type A):** `Track Title (Remix By Artist Name)` → Title: `Track Title (Remix By Artist Name)`, Remix: `Artist Name`.
+- **Remixes (Type B):** `Track Title (Artist Name Remix)` → Title: `Track Title (Artist Name Remix)`, Remix: `Artist Name`.
+- **Remixes (Type C):** `Track Title (Artist Name's Remix)` → Title: `Track Title (Artist Name's Remix)`, Remix: `Artist Name`.
 - **Multiple Remixers:** `Track Title (Artist One & Artist Two Remix)` → Title: `Track Title (Artist One & Artist Two Remix)`, Remix: `Artist One` & `Artist Two`.
-- **Production:** `Track Title (prod. by Artist One)` → Title: `Track Title`, Producer: `Artist One`.
+- **Production:** `Track Title (prod. by Artist Name)` → Title: `Track Title`, Producer: `Artist Name`.
 
 And more...
 

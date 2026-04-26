@@ -44,6 +44,13 @@ export const ARTIST_CREDIT_ROLES: Record<string, RegExp[]> = {
         '(?:\\(|\\[)\\s*([^()[\\]]+)\\s+{{p}}\\b\\s*(?:\\)|\\])',
       ],
     ),
+    // (Artist's Remix)
+    ...buildCreditRegexes(
+      ['remix', 'rmx', 'remixed', 'mix', 'mixed', 're-mix', 're-mixed', 'version', 'edit', 'edited', 're-edit', 're-edited', 'rework', 'reworked', 'rebuild', 'rebuilt'],
+      [
+        '(?:\\(|\\[)\\s*([^()[\\]]+)\'s(?:\\s+.*?)?\\s+{{p}}\\b\\s*(?:\\)|\\])',
+      ],
+    ),
   ],
   'DJ Mix': buildCreditRegexes(
     ['dj mix', 'dj-mix'],
