@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discogs Submitter
 // @namespace    discogs-submitter
-// @version      3.0.19
+// @version      3.0.20
 // @author       Denis G. <https://github.com/denis-g>
 // @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital, Amazon Music, Bleep, HDtracks and submit releases to Discogs.
 // @license      MIT
@@ -103,122 +103,6 @@
             return attempt(0);
         }
 
-        const SPACE_REGEX = /\s+/g;
-        const WORD_BOUNDARY_END_REGEX = /\w$/;
-        const PLACEHOLDER_REGEX = /\{\{p\}\}/g;
-        const PLACEHOLDER_BOUNDARY_REGEX = /\{\{p\}\}\\b/g;
-        const JOINER_REPLACE_REGEX = /[.*+?^${}()|[\]\\]/g;
-        function buildCreditRegexes(phrases, templates) {
-            return phrases.flatMap((phrase) => {
-                const creditPhrase = phrase.replace(SPACE_REGEX, "\\s+");
-                return templates.map((template) => {
-                    let finalTemplate = template;
-                    if (!WORD_BOUNDARY_END_REGEX.test(phrase)) {
-                        finalTemplate = finalTemplate.replace(PLACEHOLDER_BOUNDARY_REGEX, "{{p}}");
-                    }
-                    return new RegExp(finalTemplate.replace(PLACEHOLDER_REGEX, creditPhrase), "gi");
-                });
-            });
-        }
-        function escapeRegExp(text) {
-            return text.replace(JOINER_REPLACE_REGEX, "\\$&");
-        }
-        function buildJoinerPattern(joiners) {
-            const escapedJoiners = joiners.map((joiner) => escapeRegExp(joiner));
-            const strongJoiners = escapedJoiners.filter((joiner) => joiner.toLowerCase() !== "x");
-            const xJoiner = escapedJoiners.find((joiner) => joiner.toLowerCase() === "x");
-            const strongPattern = `(?:\\s+(?:${strongJoiners.join("|")})(?=\\s+)|\\s*,\\s*)`;
-            if (xJoiner) {
-                const xPattern = `\\s+${xJoiner}(?=\\s+(?!${strongJoiners.join("|")}|,))`;
-                return new RegExp(`((?:${strongPattern})+|${xPattern})`, "i");
-            }
-            return new RegExp(`((?:${strongPattern})+)`, "i");
-        }
-        function buildOxfordPattern(joiners) {
-            const nonCommaJoiners = joiners.filter((joiner) => joiner !== ",").map((joiner) => escapeRegExp(joiner));
-            return nonCommaJoiners.length > 0 ? new RegExp(`,\\s*(${nonCommaJoiners.join("|")})(?:\\s+|$)`, "gi") : null;
-        }
-
-        const GLOBAL_CREDIT_REGEX = [
-            "(?:\\(|\\[)\\s*{{p}}\\b\\s*(?:by)?\\s*[:\\s-]*([^()[\\]]+)(?:\\)|\\])",
-            "(?:\\s+|^)(?:\\w+\\s+(?:and|&)\\s+)?{{p}}(?:\\s+(?:and|&)\\s+\\w+)?\\s+by\\b\\s*[:\\s-]*(.+?)(?=\\s*(?:\\/|;|[A-Z][a-z]+:(?=\\s*\\S)|,|$))",
-            "(?:\\s+|^)(?:\\w+\\s+(?:and|&)\\s+)?{{p}}(?:\\s+(?:and|&)\\s+\\w+)?\\b\\s*[:-]\\s*(.+?)(?=\\s*(?:\\/|;|[A-Z][a-z]+:(?=\\s*\\S)|,|$))",
-            "(?:\\s+|^){{p}}(?:\\s+\\w+)*\\s+by\\b\\s*[:\\s-]*(.+?)(?=\\s*(?:\\/|;|,|$))"
-        ];
-        const PATTERNS = {
-            joiners: [",", "/", "|", "And", "&", "X", "×", "With", "w/", "Vs", "Vs.", "Versus", "Present", "Pres.", "Aka", "Meets"],
-            variousArtists: buildCreditRegexes(
-                ["VA", "V A", "V\\/A", "Various", "Various Artists", "Varios", "Varios Artistas", "Různí", "Různí interpreti"],
-                ["^{{p}}$"]
-            ),
-            removeFromArtistName: [],
-            removeFromTitleName: [
-                ...buildCreditRegexes(
-                    ["original mix", "original", "remaster", "remastered", "explicit", "digital bonus track", "digital bonus", "bonus track", "bonus", "24bit", "24 bit", "16bit", "16 bit"],
-                    ["\\(\\s*{{p}}\\s*\\)", "\\[\\s*{{p}}\\s*\\]", "-\\s*{{p}}\\b"]
-                ),
-                /[([-]?\s*\b\d{2,3}\s*bpm\b\s*[)\]]?/gi
-            ],
-            artistCredit: {
-                "Featuring": buildCreditRegexes(
-                    ["featuring", "feat", "ft", "f/"],
-                    [
-                        "(?:\\(|\\[)\\s*{{p}}\\b\\.?\\s*([^()[\\]]+)(?:\\)|\\])",
-                        "(?:\\s+|^){{p}}\\b\\.?\\s*(.+?)(?=\\s+\\b(?:feat|ft|prod|remix|vs|with|and|&)\\b|\\s*[\\[\\(]|$)"
-                    ]
-                ),
-                "Remix": [
-                    ...buildCreditRegexes(
-                        ["remix", "rmx", "remixed", "mix", "mixed", "re-mix", "re-mixed", "version", "edit", "edited", "re-edit", "re-edited", "rework", "reworked", "rebuild", "rebuilt"],
-                        [
-                            "(?:\\(|\\[)\\s*{{p}}\\b\\s*(?:by)?\\s*[:\\s-]*([^()[\\]]+)(?:\\)|\\])",
-                            "(?:\\s+|^)-\\s*{{p}}\\b\\s*(?:by)?\\s*[:\\s-]*(.+?)(?=\\s*[\\[\\(]|$)"
-                        ]
-                    ),
-                    ...buildCreditRegexes(
-                        ["remix", "rmx", "re-mix"],
-                        [
-                            "(?:\\(|\\[)\\s*([^()[\\]]+)\\s+{{p}}\\b\\s*(?:\\)|\\])"
-                        ]
-                    )
-                ],
-                "DJ Mix": buildCreditRegexes(
-                    ["dj mix", "dj-mix"],
-                    GLOBAL_CREDIT_REGEX
-                ),
-                "Compiled By": buildCreditRegexes(
-                    ["compiled", "selected"],
-                    GLOBAL_CREDIT_REGEX
-                ),
-                "Artwork": buildCreditRegexes(
-                    ["artwork", "art work", "art", "design", "designed", "cover", "cover art", "layout"],
-                    GLOBAL_CREDIT_REGEX
-                ),
-                "Producer": buildCreditRegexes(
-                    ["produced", "producer", "prod."],
-                    GLOBAL_CREDIT_REGEX
-                ),
-                "Written-By": buildCreditRegexes(
-                    ["written", "written-by", "writing"],
-                    GLOBAL_CREDIT_REGEX
-                ),
-                "Written-By, Producer": buildCreditRegexes(
-                    ["w&p", "w & p", "written & produced", "written and produced", "produced & written", "produced and written"],
-                    GLOBAL_CREDIT_REGEX
-                ),
-                "Mastered By": buildCreditRegexes(
-                    ["mastered", "mastering", "master", "mastering engineer"],
-                    GLOBAL_CREDIT_REGEX
-                ),
-                "Performer": buildCreditRegexes(
-                    ["performer", "performed", "performing"],
-                    GLOBAL_CREDIT_REGEX
-                )
-            }
-        };
-        const joinerPattern = buildJoinerPattern(PATTERNS.joiners);
-        const oxfordPattern = buildOxfordPattern(PATTERNS.joiners);
-
         const IGNORE_CAPITALIZATION = [
             "FM",
             "VHS",
@@ -275,6 +159,154 @@
         IGNORE_CAPITALIZATION.forEach((word) => {
             ignoreCapitalizationMap.set(word.replace(/\./g, "").toUpperCase(), word);
         });
+
+        const SPACE_REGEX = /\s+/g;
+        const WORD_BOUNDARY_END_REGEX = /\w$/;
+        const PLACEHOLDER_REGEX = /\{\{p\}\}/g;
+        const PLACEHOLDER_BOUNDARY_REGEX = /\{\{p\}\}\\b/g;
+        const JOINER_REPLACE_REGEX = /[.*+?^${}()|[\]\\]/g;
+        function buildCreditRegexes(phrases, templates) {
+            return phrases.flatMap((phrase) => {
+                const creditPhrase = phrase.replace(SPACE_REGEX, "\\s+");
+                return templates.map((template) => {
+                    let finalTemplate = template;
+                    if (!WORD_BOUNDARY_END_REGEX.test(phrase)) {
+                        finalTemplate = finalTemplate.replace(PLACEHOLDER_BOUNDARY_REGEX, "{{p}}");
+                    }
+                    return new RegExp(finalTemplate.replace(PLACEHOLDER_REGEX, creditPhrase), "gi");
+                });
+            });
+        }
+        function escapeRegExp(text) {
+            return text.replace(JOINER_REPLACE_REGEX, "\\$&");
+        }
+        function buildJoinerPattern(joiners) {
+            const escapedJoiners = joiners.map((joiner) => escapeRegExp(joiner));
+            const strongJoiners = escapedJoiners.filter((joiner) => joiner.toLowerCase() !== "x");
+            const xJoiner = escapedJoiners.find((joiner) => joiner.toLowerCase() === "x");
+            const strongPattern = `(?:\\s+(?:${strongJoiners.join("|")})(?=\\s+)|\\s*,\\s*)`;
+            if (xJoiner) {
+                const xPattern = `\\s+${xJoiner}(?=\\s+(?!${strongJoiners.join("|")}|,))`;
+                return new RegExp(`((?:${strongPattern})+|${xPattern})`, "i");
+            }
+            return new RegExp(`((?:${strongPattern})+)`, "i");
+        }
+        function buildOxfordPattern(joiners) {
+            const nonCommaJoiners = joiners.filter((joiner) => joiner !== ",").map((joiner) => escapeRegExp(joiner));
+            return nonCommaJoiners.length > 0 ? new RegExp(`,\\s*(${nonCommaJoiners.join("|")})(?:\\s+|$)`, "gi") : null;
+        }
+
+        const REMOVE_FROM_ARTIST = [];
+        const REMOVE_FROM_TITLE = [
+            ...buildCreditRegexes(
+                ["original mix", "original", "remaster", "remastered", "explicit", "digital bonus track", "digital bonus", "bonus track", "bonus", "24bit", "24 bit", "16bit", "16 bit"],
+                ["\\(\\s*{{p}}\\s*\\)", "\\[\\s*{{p}}\\s*\\]", "-\\s*{{p}}\\b"]
+            ),
+            /[([-]?\s*\b\d{2,3}\s*bpm\b\s*[)\]]?/gi
+        ];
+
+        const GLOBAL_CREDIT_REGEX = [
+            "(?:\\(|\\[)\\s*{{p}}\\b\\s*(?:by)?\\s*[:\\s-]*([^()[\\]]+)(?:\\)|\\])",
+            "(?:\\s+|^)(?:\\w+\\s+(?:and|&)\\s+)?{{p}}(?:\\s+(?:and|&)\\s+\\w+)?\\s+by\\b\\s*[:\\s-]*(.+?)(?=\\s*(?:\\/|;|[A-Z][a-z]+:(?=\\s*\\S)|,|$))",
+            "(?:\\s+|^)(?:\\w+\\s+(?:and|&)\\s+)?{{p}}(?:\\s+(?:and|&)\\s+\\w+)?\\b\\s*[:-]\\s*(.+?)(?=\\s*(?:\\/|;|[A-Z][a-z]+:(?=\\s*\\S)|,|$))",
+            "(?:\\s+|^){{p}}(?:\\s+\\w+)*\\s+by\\b\\s*[:\\s-]*(.+?)(?=\\s*(?:\\/|;|,|$))"
+        ];
+        const ARTIST_CREDIT_ROLES = {
+            "Featuring": buildCreditRegexes(
+                ["featuring", "feat", "ft", "f/"],
+                [
+                    "(?:\\(|\\[)\\s*{{p}}\\b\\.?\\s*([^()[\\]]+)(?:\\)|\\])",
+                    "(?:\\s+|^){{p}}\\b\\.?\\s*(.+?)(?=\\s+\\b(?:feat|ft|prod|remix|vs|with|and|&)\\b|\\s*[\\[\\(]|$)"
+                ]
+            ),
+            "Remix": [
+                ...buildCreditRegexes(
+                    ["remix", "rmx", "remixed", "mix", "mixed", "re-mix", "re-mixed", "version", "edit", "edited", "re-edit", "re-edited", "rework", "reworked", "rebuild", "rebuilt"],
+                    [
+                        "(?:\\(|\\[)\\s*{{p}}\\b\\s*(?:by)?\\s*[:\\s-]*([^()[\\]]+)(?:\\)|\\])",
+                        "(?:\\s+|^)-\\s*{{p}}\\b\\s*(?:by)?\\s*[:\\s-]*(.+?)(?=\\s*[\\[\\(]|$)"
+                    ]
+                ),
+                ...buildCreditRegexes(
+                    ["remix", "rmx", "re-mix"],
+                    [
+                        "(?:\\(|\\[)\\s*([^()[\\]]+)\\s+{{p}}\\b\\s*(?:\\)|\\])"
+                    ]
+                )
+            ],
+            "DJ Mix": buildCreditRegexes(
+                ["dj mix", "dj-mix"],
+                GLOBAL_CREDIT_REGEX
+            ),
+            "Compiled By": buildCreditRegexes(
+                ["compiled", "selected"],
+                GLOBAL_CREDIT_REGEX
+            ),
+            "Artwork": buildCreditRegexes(
+                ["artwork", "art work", "art", "design", "designed", "cover", "cover art", "layout"],
+                GLOBAL_CREDIT_REGEX
+            ),
+            "Producer": buildCreditRegexes(
+                ["produced", "producer", "prod."],
+                GLOBAL_CREDIT_REGEX
+            ),
+            "Written-By": buildCreditRegexes(
+                ["written", "written-by", "writing"],
+                GLOBAL_CREDIT_REGEX
+            ),
+            "Written-By, Producer": buildCreditRegexes(
+                ["w&p", "w & p", "written & produced", "written and produced", "produced & written", "produced and written"],
+                GLOBAL_CREDIT_REGEX
+            ),
+            "Mastered By": buildCreditRegexes(
+                ["mastered", "mastering", "master", "mastering engineer"],
+                GLOBAL_CREDIT_REGEX
+            ),
+            "Performer": buildCreditRegexes(
+                ["performer", "performed", "performing"],
+                GLOBAL_CREDIT_REGEX
+            )
+        };
+
+        const ARTIST_JOINERS = [
+            ",",
+            "/",
+            "|",
+            "And",
+            "&",
+            "X",
+            "×",
+            "With",
+            "w/",
+            "Vs",
+            "Vs.",
+            "Versus",
+            "Present",
+            "Pres.",
+            "Aka",
+            "Meets"
+        ];
+        const joinerPattern = buildJoinerPattern(ARTIST_JOINERS);
+        const oxfordPattern = buildOxfordPattern(ARTIST_JOINERS);
+
+        const VARIOUS_ARTISTS = buildCreditRegexes(
+            [
+                "VA",
+                "V.A",
+                "V.A.",
+                "V. A",
+                "V. A.",
+                "V A",
+                "V\\/A",
+                "Various",
+                "Various Artists",
+                "Varios",
+                "Varios Artistas",
+                "Různí",
+                "Různí interpreti"
+            ],
+            ["^{{p}}$"]
+        );
 
         function cleanString(text, collapseWhitespace = true) {
             if (typeof text !== "string") {
@@ -379,7 +411,7 @@
                     if (normalized.length > 0) {
                         const artist = { ...normalized[0] };
                         if (join) {
-                            const originalJoin = PATTERNS.joiners.find((j) => j.toLowerCase() === join.trim().toLowerCase());
+                            const originalJoin = ARTIST_JOINERS.find((joiner) => joiner.toLowerCase() === join.trim().toLowerCase());
                             artist.join = originalJoin || join;
                         } else {
                             artist.join = ",";
@@ -395,7 +427,7 @@
                 return "";
             }
             let processedText = text;
-            for (const [role, patterns] of Object.entries(PATTERNS.artistCredit)) {
+            for (const [role, patterns] of Object.entries(ARTIST_CREDIT_ROLES)) {
                 for (const pattern of patterns) {
                     processedText = processedText.replace(pattern, (fullMatch, capturedName) => {
                         if (typeof capturedName !== "string") {
@@ -455,7 +487,7 @@
                 if (extraArtists) {
                     cleaned = extractExtraArtists(cleaned, extraArtists);
                 }
-                PATTERNS.removeFromArtistName.forEach((pattern) => {
+                REMOVE_FROM_ARTIST.forEach((pattern) => {
                     cleaned = cleaned.replace(pattern, "").trim();
                 });
                 return capitalizeString(cleaned);
@@ -494,9 +526,8 @@
             if (normalized.length >= 4) {
                 return [{ name: "Various", join: "," }];
             }
-            const vaPatterns = PATTERNS.variousArtists;
-            if (vaPatterns.length > 0) {
-                const isVA = normalized.some((artist) => vaPatterns.some((pattern) => pattern.test(artist.name)));
+            if (VARIOUS_ARTISTS.length > 0) {
+                const isVA = normalized.some((artist) => VARIOUS_ARTISTS.some((pattern) => pattern.test(artist.name)));
                 if (isVA) {
                     return [{ name: "Various", join: "," }];
                 }
@@ -534,7 +565,7 @@
                 return "";
             }
             let title = capitalizeString(rawTitle);
-            PATTERNS.removeFromTitleName.forEach((pattern) => {
+            REMOVE_FROM_TITLE.forEach((pattern) => {
                 title = title.replace(pattern, "").trim();
             });
             if (extraArtists) {
@@ -545,7 +576,7 @@
         }
         function splitArtistTitle(rawTitle, defaultArtists, extraArtists) {
             let cleanTitleForSplit = rawTitle || "";
-            PATTERNS.removeFromTitleName.forEach((pattern) => {
+            REMOVE_FROM_TITLE.forEach((pattern) => {
                 cleanTitleForSplit = cleanTitleForSplit.replace(pattern, "").trim();
             });
             const splitMatch = cleanTitleForSplit.match(/^(\S(?:.*?\S)?)\s+[-\u2013\u2014]\s*(\S.*)$/) || cleanTitleForSplit.match(/^(\S(?:.*?\S)?)[-\u2013\u2014]\s+(\S.*)$/);

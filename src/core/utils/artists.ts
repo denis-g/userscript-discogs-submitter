@@ -1,5 +1,5 @@
 import type { ArtistCredit } from '@/types';
-import { joinerPattern, oxfordPattern, PATTERNS } from '@/config/patterns';
+import { ARTIST_CREDIT_ROLES, ARTIST_JOINERS, joinerPattern, oxfordPattern, REMOVE_FROM_ARTIST, REMOVE_FROM_TITLE, VARIOUS_ARTISTS } from '@/config';
 import { capitalizeString, cleanString, extractBpm } from './string';
 
 /**
@@ -75,7 +75,7 @@ export function parseArtists(artistString: string | null | undefined, extraArtis
         const artist = { ...normalized[0] };
 
         if (join) {
-          const originalJoin = PATTERNS.joiners.find(j => j.toLowerCase() === join.trim().toLowerCase());
+          const originalJoin = ARTIST_JOINERS.find(joiner => joiner.toLowerCase() === join.trim().toLowerCase());
 
           artist.join = originalJoin || join;
         }
@@ -92,7 +92,7 @@ export function parseArtists(artistString: string | null | undefined, extraArtis
 }
 
 /**
- * Scans text for artist credits (e.g. "Remix by...", "feat. ...") using PATTERNS.
+ * Scans text for artist credits (e.g. "Remix by...", "feat. ...") using patterns.
  * When found, it adds the credit to the extraArtists array and removes it from the original text.
  *
  * @param text - The text to scan.
@@ -115,7 +115,7 @@ export function extractExtraArtists(text: string, extraArtists: ArtistCredit[], 
 
   let processedText = text;
 
-  for (const [role, patterns] of Object.entries(PATTERNS.artistCredit)) {
+  for (const [role, patterns] of Object.entries(ARTIST_CREDIT_ROLES)) {
     for (const pattern of patterns) {
       processedText = processedText.replace(pattern, (fullMatch, capturedName) => {
         if (typeof capturedName !== 'string') {
@@ -208,7 +208,7 @@ export function normalizeArtists(artists: string | string[] | null | undefined, 
         cleaned = extractExtraArtists(cleaned, extraArtists);
       }
 
-      PATTERNS.removeFromArtistName.forEach((pattern) => {
+      REMOVE_FROM_ARTIST.forEach((pattern) => {
         cleaned = (cleaned as string).replace(pattern, '').trim();
       });
 
@@ -282,10 +282,8 @@ export function normalizeMainArtists(rawArtists: string | string[] | null | unde
     return [{ name: 'Various', join: ',' }];
   }
 
-  const vaPatterns = PATTERNS.variousArtists;
-
-  if (vaPatterns.length > 0) {
-    const isVA = normalized.some(artist => vaPatterns.some(pattern => pattern.test(artist.name)));
+  if (VARIOUS_ARTISTS.length > 0) {
+    const isVA = normalized.some(artist => VARIOUS_ARTISTS.some(pattern => pattern.test(artist.name)));
 
     if (isVA) {
       return [{ name: 'Various', join: ',' }];
@@ -362,7 +360,7 @@ export function normalizeTitle(rawTitle: string | null | undefined, extraArtists
 
   let title = capitalizeString(rawTitle);
 
-  PATTERNS.removeFromTitleName.forEach((pattern) => {
+  REMOVE_FROM_TITLE.forEach((pattern) => {
     title = title.replace(pattern, '').trim();
   });
 
@@ -392,7 +390,7 @@ export function normalizeTitle(rawTitle: string | null | undefined, extraArtists
 export function splitArtistTitle(rawTitle: string | null | undefined, defaultArtists: ArtistCredit[], extraArtists: ArtistCredit[]) {
   let cleanTitleForSplit = rawTitle || '';
 
-  PATTERNS.removeFromTitleName.forEach((pattern) => {
+  REMOVE_FROM_TITLE.forEach((pattern) => {
     cleanTitleForSplit = cleanTitleForSplit.replace(pattern, '').trim();
   });
 
