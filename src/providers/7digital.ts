@@ -2,7 +2,7 @@ import type {
   ArtistCredit,
   StoreAdapter,
 } from '@/types';
-import { networkRequest } from '@/core/network';
+import { networkRequest } from '@/core';
 import {
   getTextFromTag,
   matchUrls,
@@ -11,7 +11,7 @@ import {
   normalizeMainArtists,
   normalizeReleaseDate,
   normalizeTitle,
-} from '@/core/utils';
+} from '@/utils';
 
 /**
  * Fetches track details array from 7digital API.

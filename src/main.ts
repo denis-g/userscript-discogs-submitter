@@ -1,6 +1,19 @@
+import buttonsCss from '@/assets/css/buttons.css?inline';
+import inputsCss from '@/assets/css/inputs.css?inline';
+import previewCss from '@/assets/css/preview.css?inline';
+import resetCss from '@/assets/css/reset.css?inline';
+import variablesCss from '@/assets/css/variables.css?inline';
+import widgetCss from '@/assets/css/widget.css?inline';
+import iconBug from '@/assets/images/icons/bug.svg?raw';
+import iconChevronDown from '@/assets/images/icons/chevron-down.svg?raw';
+import iconClose from '@/assets/images/icons/close.svg?raw';
+import iconMove from '@/assets/images/icons/move.svg?raw';
+import iconRotateLeft from '@/assets/images/icons/rotate-left.svg?raw';
+import iconSquareCheck from '@/assets/images/icons/square-check.svg?raw';
+import imageLogo from '@/assets/images/logo.svg?raw';
+import { USERSCRIPT } from '@/config';
 import { DigitalStoreRegistry } from '@/providers';
-import { InjectButton } from '@/ui/inject-button';
-import { UiWidget } from '@/ui/widget';
+import { InjectButton, UiWidget } from '@/ui';
 
 /**
  * The core widget controller for the Discogs Submitter userscript.
@@ -21,12 +34,75 @@ class Widget {
   /**
    * Bootstraps the widget, mounts the UI, and starts DOM observation.
    */
-  public init(): void {
-    this.widget.init();
+  public async init(): Promise<void> {
+    await this.widget.init();
+
+    this.injectStyles();
+    this.buildSvgSprite();
 
     this.bindEvents();
     this.setupObservers();
     this.refreshInjection();
+  }
+
+  /**
+   * Injects the styles for the widget.
+   */
+  public injectStyles(): void {
+    if (!document.getElementById(`${USERSCRIPT.ID}-styles`)) {
+      const style = document.createElement('style');
+
+      style.id = `${USERSCRIPT.ID}-styles`;
+      style.textContent = variablesCss + resetCss + inputsCss + buttonsCss + widgetCss + previewCss;
+
+      document.head.appendChild(style);
+    }
+  }
+
+  /**
+   * Builds the SVG sprite for the widget.
+   */
+  public buildSvgSprite(): void {
+    if (document.getElementById(`${USERSCRIPT.ID}-svg-sprite`)) {
+      return;
+    }
+
+    const svgSprite = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+
+    svgSprite.id = `${USERSCRIPT.ID}-svg-sprite`;
+    svgSprite.style.display = 'none';
+
+    const rawIcons: Record<string, string> = {
+      'ds-logo': imageLogo,
+      'ds-icon-move': iconMove,
+      'ds-icon-close': iconClose,
+      'ds-icon-bug': iconBug,
+      'ds-icon-chevron-down': iconChevronDown,
+      'ds-square-check': iconSquareCheck,
+      'ds-rotate-left': iconRotateLeft,
+    };
+    const parser = new DOMParser();
+    let symbolsHtml = '';
+
+    Object.entries(rawIcons).forEach(([iconId, svgString]) => {
+      if (!svgString) {
+        return;
+      }
+
+      const doc = parser.parseFromString(svgString, 'image/svg+xml');
+      const svgElement = doc.querySelector('svg');
+
+      if (svgElement) {
+        const viewBox = svgElement.getAttribute('viewBox') || '0 0 1024 1024';
+        const innerContent = svgElement.innerHTML.trim();
+
+        symbolsHtml += `<symbol id="${iconId}" viewBox="${viewBox}">${innerContent}</symbol>`;
+      }
+    });
+
+    svgSprite.innerHTML = symbolsHtml;
+
+    document.body.appendChild(svgSprite);
   }
 
   /**
@@ -119,15 +195,10 @@ class Widget {
     this.patchPushState();
 
     window.addEventListener('popstate', () => this.checkForUrlChange());
-
-    setInterval(() => {
-      this.checkForUrlChange();
-      this.refreshInjection();
-    }, 1000);
   }
 
   /**
-   * Periodically checks if the URL has changed and triggers a re-injection if so.
+   * Verifies if the URL has changed and triggers a re-injection if so.
    */
   private checkForUrlChange(): void {
     if (this.handleUrlChange()) {

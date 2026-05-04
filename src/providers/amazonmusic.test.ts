@@ -3,7 +3,6 @@ import { amazonmusic } from './amazonmusic';
 
 describe('amazonmusic provider', () => {
   it('should parse release data from HTML document', async () => {
-    // Mock the DOM
     document.body.innerHTML = `
       <div id="main_content">
         <music-detail-header

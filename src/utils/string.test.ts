@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { capitalizeString, cleanString, extractBpm } from '@/core/utils/string';
+import { capitalizeString, cleanString, extractBpm } from '@/utils';
 
 describe('cleanString', () => {
   it('trims whitespace and collapses multiple spaces', () => {

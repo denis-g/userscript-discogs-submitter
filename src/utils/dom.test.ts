@@ -67,20 +67,28 @@ describe('dom utilities', () => {
   });
 
   describe('getVisibleText', () => {
-    it('returns all text', () => {
-      document.body.innerHTML = '<div id="visible">Text visible<span>Text hidden</span></div>';
+    it('returns only direct text nodes', () => {
+      document.body.innerHTML = '<div id="container">Direct text<span>Nested text</span></div>';
 
-      const test = document.querySelector('#visible');
+      const test = document.querySelector('#container');
 
-      expect(getVisibleText(test)).toBe('Text visible');
+      expect(getVisibleText(test)).toBe('Direct text');
     });
 
-    it('returns visible text ignoring hidden elements', () => {
-      document.body.innerHTML = '<div id="hidden">Text<span style="display: none;">Hidden</span></div>';
+    it('includes direct text even if a nested sibling is hidden', () => {
+      document.body.innerHTML = '<div id="mixed">Direct<span style="display: none;">Hidden</span></div>';
+
+      const test = document.querySelector('#mixed');
+
+      expect(getVisibleText(test)).toBe('Direct');
+    });
+
+    it('includes direct text even if the container itself is hidden', () => {
+      document.body.innerHTML = '<div id="hidden" style="display: none;">Hidden but direct</div>';
 
       const test = document.querySelector('#hidden');
 
-      expect(getVisibleText(test)).toBe('Text');
+      expect(getVisibleText(test)).toBe('Hidden but direct');
     });
   });
 });

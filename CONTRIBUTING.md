@@ -23,6 +23,19 @@ Thank you for your interest in contributing! This project follows strict enginee
     - Copy the contents of `discogs-submitter.user.js` into a new user script in your userscript manager.
 
 
+## Development Protocol
+
+We follow a strict development protocol to ensure consistency and reliability.
+
+### Autonomous Providers
+Each music store is unique. Keep scraping logic (selectors, JSON-LD parsing, regex for catalog numbers) inside the provider file. Use core utilities from `src/utils/` for normalization (artists, titles, dates, labels). Do not reinvent normalization logic.
+
+### Fresh State Mandate
+Before proposing or applying any changes to a file, always read its current content from the disk. Never rely on stale information from your editor or previous build cycles.
+
+### Surgical Changes
+Touch only what you must. Avoid broad refactorings or "cleanup" of unrelated code. Every change should trace directly to the task at hand.
+
 ## Adding a New Provider
 
 Adding a new digital store is the most common way to contribute. Please follow these steps:
@@ -38,7 +51,7 @@ Adding a new digital store is the most common way to contribute. Please follow t
 To maintain a clean and professional codebase, we enforce the following rules:
 
 ### No Abbreviations
-Readability is our top priority. NEVER use short variable names like `a`, `t`, `i`, `el`, or `it`.
+Readability is our top priority. NEVER use short variable names like `i`, `e`, `el` and etc.
 *   **Bad:** `tracks.map(t => t.title)`
 *   **Good:** `tracks.map(track => track.title)`
 
@@ -69,7 +82,7 @@ The project uses [Antfu ESLint Config](https://github.com/antfu/eslint-config) t
 We follow a **Test-Driven Development (TDD)** approach using **Vitest**. Every bug fix or new feature must include a corresponding test.
 
 ### Testing Guidelines:
-*   **Location:** Provider tests go in `src/providers/[name].test.ts`, utility tests in `src/core/utils/[name].test.ts`.
+*   **Location:** Provider tests go in `src/providers/[name].test.ts`, utility tests in `src/utils/[name].test.ts`.
 *   **DOM Mocking:** Since we parse real websites, use `JSDOM` (provided by Vitest environment) to mock the necessary HTML structures.
 *   **Regex Testing:** For new parsing patterns, add exhaustive test cases to ensure no regressions in artist/title detection.
 

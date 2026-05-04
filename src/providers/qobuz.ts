@@ -9,7 +9,7 @@ import {
   normalizeDuration,
   normalizeMainArtists,
   normalizeTitle,
-} from '@/core/utils';
+} from '@/utils';
 
 /**
  * Scrapes metadata directly from JSON-LD schema injected in the DOM.

@@ -1,4 +1,4 @@
-import { cleanString } from './string';
+import { cleanString } from '@/utils';
 
 /**
  * Extracts text from multiple DOM elements matching a specific CSS selector.
@@ -88,15 +88,16 @@ export function getTextFromTag(target: string, parent: HTMLElement | Document | 
 
 /**
  * Extracts text only from immediate text nodes of a DOM element, ignoring text within nested child elements.
+ * Note: This includes text that might be hidden via CSS (display: none, etc.) as long as it is a direct child.
  *
  * @param element - The DOM element to extract text from.
  * @returns The joined text from direct text nodes, or null if the element is missing or contains no child nodes.
  *
  * @example
  * ```typescript
- * // HTML: <div id="visible">Text visible<span>Text hidden</span></div>
- * const text = getVisibleText(document.querySelector('#visible'));
- * console.log(text); // 'Text visible'
+ * // HTML: <div id="container">Direct text<span>Nested text</span></div>
+ * const text = getVisibleText(document.querySelector('#container'));
+ * console.log(text); // 'Direct text'
  * ```
  */
 export function getVisibleText(element: HTMLElement | Element | null): string | null {

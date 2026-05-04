@@ -1,64 +1,23 @@
 import type {
-  ArtistCredit,
   DiscogsPayload,
   DiscogsPayloadData,
-  DiscogsTrack,
   ReleaseData,
   StoreAdapter,
   StoreFormatOptions,
+  TrackData,
 } from '@/types';
-import resetCss from '@/assets/css/reset.css?inline';
-import variablesCss from '@/assets/css/variables.css?inline';
-import widgetCss from '@/assets/css/widget.css?inline';
-import iconBug from '@/assets/images/icons/bug.svg?raw';
-import iconClose from '@/assets/images/icons/close.svg?raw';
-import iconMove from '@/assets/images/icons/move.svg?raw';
-import imageLogo from '@/assets/images/logo.svg?raw';
-import { DiscogsAdapter } from '@/core/adapter';
-import { networkRequest } from '@/core/network';
-import pkg from '~/package.json' with { type: 'json' };
-
-let widgetTemplate: HTMLTemplateElement | null = null;
-
-function getWidgetTemplate(): HTMLTemplateElement {
-  if (!widgetTemplate) {
-    widgetTemplate = document.createElement('template');
-    widgetTemplate.innerHTML = `
-      <div class="discogs-submitter__header">
-        <svg class="discogs-submitter__header__logo" aria-hidden="true"><use href="#ds-logo"></use></svg>
-        <span class="discogs-submitter__header__title">${GM_info?.script?.name || ''} <small>v${GM_info?.script?.version || ''}</small></span>
-        <svg class="discogs-submitter__header__button is-move" title="Grab to move" role="button"><use href="#ds-icon-move"></use></svg>
-        <svg class="discogs-submitter__header__button is-close" title="Close widget" role="button"><use href="#ds-icon-close"></use></svg>
-      </div>
-      <div class="discogs-submitter__content">
-        <div class="discogs-submitter__preview"></div>
-      </div>
-      <div class="discogs-submitter__footer">
-        <div class="discogs-submitter__status__container">
-          <div class="discogs-submitter__status__text">Waiting...</div>
-          <svg class="discogs-submitter__status__button is-debug" title="Copy debug" hidden role="button"><use href="#ds-icon-bug"></use></svg>
-        </div>
-        <div class="discogs-submitter__actions">
-          <div class="discogs-submitter__actions__button is-submit" role="button" hidden>Submit to Discogs</div>
-        </div>
-        <div class="discogs-submitter__copyright">
-          <a class="discogs-submitter__copyright__link" href="${GM_info?.script?.homepage || ''}" target="_blank">Homepage</a>
-          <a class="discogs-submitter__copyright__link" href="${GM_info?.script?.supportURL || ''}" target="_blank">Report Bug</a>
-          <a class="discogs-submitter__copyright__link" href="${pkg?.funding || ''}" target="_blank">Made with <span>♥</span> for music</a>
-        </div>
-      </div>
-      <div class="discogs-submitter__loader">
-        <svg class="discogs-submitter__loader__icon" aria-hidden="true"><use href="#ds-logo"></use></svg>
-      </div>
-    `.trim();
-  }
-
-  return widgetTemplate;
-}
+import { FILE_FORMATS, RELEASE_TYPES, USERSCRIPT } from '@/config';
+import { DiscogsAdapter, networkRequest, renderTemplate } from '@/core';
+import { UiSelect } from '@/ui';
+import previewTemplate from '@/ui/templates/preview.html?raw';
+import widgetTemplate from '@/ui/templates/widget.html?raw';
+import { ALLOWED_COUNTRIES, extractFormatFromTitle, normalizeCountry, normalizeLabel } from '@/utils';
 
 interface RenderOptions {
   selectedFormat: string;
+  selectedDescriptions: string[];
   isHdAudio: boolean;
+  formatText: string;
   supports: StoreFormatOptions;
 }
 
@@ -68,140 +27,81 @@ interface RenderOptions {
  */
 export const Renderer = {
   /**
-   * Renders a single row in the release summary.
-   *
-   * @param label - The label text for the row header.
-   * @param value - The content value for the row body.
-   * @param extraClass - Optional CSS class to append to the row container.
-   * @returns The HTML string representing the rendered row.
-   *
-   * @example
-   * ```typescript
-   * const html = Renderer.renderRow('Artist', 'Artist Name', 'is-highlighted');
-   * ```
-   */
-  renderRow: (label: string, value: string, extraClass = ''): string => `
-    <div class="discogs-submitter__results__row ${extraClass}">
-      <div class="discogs-submitter__results__head">${label}</div>
-      <div class="discogs-submitter__results__body">${value}</div>
-    </div>
-  `,
-
-  /**
-   * Renders the tracklist table for the parsed release.
-   *
-   * @param tracks - The array of parsed track items.
-   * @returns The HTML string representing the complete tracklist grid.
-   *
-   * @example
-   * ```typescript
-   * const html = Renderer.renderTracklist([{title: 'Track 1', pos: '1', duration: '3:00'}]);
-   * ```
-   */
-  renderTracklist: (tracks: DiscogsTrack[]): string => {
-    const hasTrackArtists = tracks.some(track => (track.artists || []).length > 0);
-    const rowBaseClass = hasTrackArtists ? '' : 'is-no-artist';
-    let html = `
-      <div class="discogs-submitter__results__row is-tracklist ${rowBaseClass}">
-        <div class="discogs-submitter__results__head">#</div>
-        ${hasTrackArtists ? '<div class="discogs-submitter__results__head">Artist</div>' : ''}
-        <div class="discogs-submitter__results__head">Title</div>
-        <div class="discogs-submitter__results__head">Duration</div>
-      </div>
-    `;
-
-    if (!tracks.length) {
-      return `
-        ${html}
-        <div class="discogs-submitter__results__row">
-          <div class="discogs-submitter__results__body">⚠️ No tracks found.</div>
-        </div>
-      `;
-    }
-
-    tracks.forEach((track) => {
-      const trackArtists = (track.artists || [])
-        .map((artist: ArtistCredit, index: number, allArtists: ArtistCredit[]) => `<em>${artist.name}</em>${artist.join && index < allArtists.length - 1 ? ` ${artist.join} ` : ''}`)
-        .join('');
-      const trackExtraArtists = (track.extraartists || [])
-        .map((artist: ArtistCredit) => `${artist.role} – <em>${artist.name}</em>`)
-        .join('<br />');
-
-      html += `
-        <div class="discogs-submitter__results__row is-tracklist ${rowBaseClass}">
-          <div class="discogs-submitter__results__body">${track.pos || '⚠️'}</div>
-          ${hasTrackArtists ? `<div class="discogs-submitter__results__body">${trackArtists}</div>` : ''}
-          <div class="discogs-submitter__results__body">
-            <div>${track.title || '⚠️'}</div>
-            ${trackExtraArtists ? `<small>${trackExtraArtists}</small>` : ''}
-          </div>
-          <div class="discogs-submitter__results__body">${track.duration || '⚠️'}</div>
-        </div>
-      `;
-    });
-
-    return html;
-  },
-
-  /**
    * Renders a structured HTML summary to preview the parsed release data inside the widget.
    *
-   * @param release - The core parsed DiscogsPayloadData object.
-   * @param options - Configuration options such as format and HD audio toggles.
-   * @returns The complete HTML string representing the result screen.
-   *
-   * @example
-   * ```typescript
-   * const html = Renderer.releasePreview(data, { selectedFormat: 'FLAC', isHdAudio: false, supports: store.supports });
-   * ```
+   * @param release - The prepared preview data object (DiscogsPayloadData).
+   * @param options - UI configuration (format, descriptions, etc.).
+   * @param domEl - Container where the preview will be rendered.
+   * @param editedData - The full release data (including user edits) used to populate fields.
+   * @returns A promise that resolves when the rendering is complete.
    */
-  releasePreview: (release: DiscogsPayloadData, options: RenderOptions): string => {
-    const { selectedFormat, isHdAudio, supports } = options;
-    const availableFormats = supports.formats || [];
-    const canHaveHdAudio = selectedFormat !== 'MP3' && !!supports.hdAudio;
-    const coverHtml = release.cover ? `<small><a href="${release.cover}" target="_blank">Preview</a></small>` : '<small>No cover</small>';
-    const artists = (release.artists || [])
-      .map((artist, index, allArtists) => `<em>${artist.name}</em>${artist.join && index < allArtists.length - 1 ? ` ${artist.join} ` : ''}`)
-      .join('') || '⚠️';
-    const extraArtists = (release.extraartists || [])
-      .map(artist => `${artist.role} – <em>${artist.name}</em>`)
-      .join('<br />');
-    const formatLabel = (release.format || [])
-      .map(format => `${format.name}, Qty: ${format.qty}`)
-      .join(', ') || '⚠️';
-    let formatSelectionHtml = '';
+  releasePreview: async (release: DiscogsPayloadData, options: RenderOptions, domEl: HTMLElement, editedData: ReleaseData): Promise<void> => {
+    const { selectedFormat, selectedDescriptions, formatText, supports } = options;
+    const tracks = release.tracks || [];
+    const hasTrackArtists = tracks.some(track => (track.artists || []).length > 0);
+    const data = {
+      ...release,
+      releaseArtists: (editedData.artists || []).map((artist, index) => ({
+        ...artist,
+        _index: index,
+        _last: index === (editedData.artists || []).length - 1,
+      })),
+      rawTitle: editedData.title,
+      rawLabel: editedData.label || '',
+      rawNumber: editedData.number || 'none',
+      rawReleased: editedData.released || '',
+      rawCountry: editedData.country || '',
+      // Release-level credits (extraartists) from editedData
+      rawExtraArtists: (editedData.extraartists || []).map((credit, index) => ({
+        ...credit,
+        _index: index,
+      })),
+      showExtraArtists: (editedData.extraartists || []).length > 0,
+      rawNotes: editedData.notes,
+      rawSubmissionNotes: editedData.submissionNotes,
+      availableCountries: ALLOWED_COUNTRIES.map(country => ({
+        _value: country,
+        isSelected: country === editedData.country,
+      })),
+      selectedFormat,
+      availableFormats: (supports.formats || FILE_FORMATS).map(format => ({
+        _value: format,
+        isSelected: format === selectedFormat,
+      })),
+      formatText,
+      availableDescriptions: RELEASE_TYPES.map(type => ({
+        _value: type,
+        isSelected: selectedDescriptions.includes(type),
+      })),
+      // Prepared tracklist data
+      hasTrackArtists,
+      rowClass: `${hasTrackArtists ? '' : 'is-no-artist'}`,
+      tracks: tracks.map((track, trackIndex) => {
+        const rawTrack = editedData.tracks[trackIndex];
 
-    if (release.format?.some(format => format.name === 'File')) {
-      const types = availableFormats
-        .map(format => `
-          <input type="radio" id="ds[format][${format.toLowerCase()}]" name="ds[format]" tabindex="-1" value="${format}" class="is-format" ${selectedFormat === format ? 'checked' : ''} />
-          <label for="ds[format][${format.toLowerCase()}]">${format}</label>
-        `)
-        .join('');
-      const hdAudio = supports.hdAudio
-        ? `
-          <input type="checkbox" id="ds[format][hdAudio]" tabindex="-1" class="is-hdaudio" ${isHdAudio ? 'checked' : ''} ${!canHaveHdAudio ? 'disabled' : ''} />
-          <label for="ds[format][hdAudio]">24-bit</label>`
-        : '';
+        return {
+          ...track,
+          // Track-level artists from editedData
+          trackArtists: (rawTrack?.artists || []).map((artist, artistIndex) => ({
+            ...artist,
+            _trackIndex: trackIndex,
+            _index: artistIndex,
+            _last: artistIndex === (rawTrack?.artists || []).length - 1,
+          })),
+          // Track-level credits from editedData
+          trackExtraartists: (rawTrack?.extraartists || []).map((credit, creditIndex) => ({
+            ...credit,
+            _trackIndex: trackIndex,
+            _index: creditIndex,
+          })),
+          hasTrackArtists,
+          rowClass: `${hasTrackArtists ? '' : 'is-no-artist'}`,
+          _index: trackIndex,
+        };
+      }),
+    };
 
-      formatSelectionHtml = `, Type: ${types}${hdAudio}`;
-    }
-
-    return `
-      <div class="discogs-submitter__results">
-        ${Renderer.renderRow('Image', coverHtml)}
-        ${Renderer.renderRow('Artist', artists)}
-        ${Renderer.renderRow('Title', release.title || '⚠️')}
-        ${Renderer.renderRow('Label', release.labels?.[0]?.name || '⚠️')}
-        ${Renderer.renderRow('Catalog', release.labels?.[0]?.catno || '⚠️')}
-        ${Renderer.renderRow('Released', release.released || '⚠️', 'is-half')}
-        ${Renderer.renderRow('Country', release.country || '–', 'is-half')}
-        ${Renderer.renderRow('Format', `${formatLabel}${formatSelectionHtml}`)}
-        ${Renderer.renderTracklist(release.tracks || [])}
-        ${extraArtists ? Renderer.renderRow('Credits', extraArtists, 'is-notes') : ''}
-        ${release.notes ? Renderer.renderRow('Notes', release.notes.replace(/\n/g, '<br />'), 'is-notes') : ''}
-      </div>
-    `;
+    renderTemplate(previewTemplate, data, domEl, { replace: true });
   },
 };
 
@@ -216,87 +116,31 @@ export const Renderer = {
  * ```
  */
 export class UiWidget {
-  private readonly WIDGET_ID: string;
   private readonly ui: Record<string, HTMLElement | null> = {};
 
   private state = {
     currentDigitalStore: null as StoreAdapter | null,
     currentPayload: null as DiscogsPayload | null,
     lastRawData: null as ReleaseData | null,
+    editedData: null as ReleaseData | null,
     selectedFormat: null as string | null,
+    selectedDescriptions: [] as string[],
+    formatText: '',
     isHdAudio: false,
     isDragging: false,
     offset: { x: 0, y: 0 },
   };
 
   constructor() {
-    this.WIDGET_ID = GM_info?.script?.namespace || '';
-
     this.handleMouseMove = this.handleMouseMove.bind(this);
     this.handleMouseUp = this.handleMouseUp.bind(this);
   }
 
   /**
-   * Injects the styles for the widget.
-   */
-  public injectStyles(): void {
-    if (!document.getElementById(`${this.WIDGET_ID}-styles`)) {
-      const style = document.createElement('style');
-
-      style.id = `${this.WIDGET_ID}-styles`;
-      style.textContent = variablesCss + resetCss + widgetCss;
-
-      document.head.appendChild(style);
-    }
-  }
-
-  /**
-   * Builds the SVG sprite for the widget.
-   */
-  public buildSvgSprite(): void {
-    if (document.getElementById(`${this.WIDGET_ID}-svg-sprite`)) {
-      return;
-    }
-
-    const svgSprite = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-
-    svgSprite.id = `${this.WIDGET_ID}-svg-sprite`;
-    svgSprite.style.display = 'none';
-
-    const rawIcons = {
-      'ds-logo': imageLogo,
-      'ds-icon-move': iconMove,
-      'ds-icon-close': iconClose,
-      'ds-icon-bug': iconBug,
-    };
-    let symbolsHtml = '';
-
-    Object.entries(rawIcons).forEach(([iconId, svgString]) => {
-      if (!svgString) {
-        return;
-      }
-
-      const viewBoxMatch = svgString.match(/viewBox=["']([^"']+)["']/i);
-      const viewBox = viewBoxMatch ? viewBoxMatch[1] : '0 0 1024 1024';
-      const innerMatch = svgString.match(/<svg[^>]*>([\s\S]*?)<\/svg>/i);
-
-      if (innerMatch && innerMatch[1]) {
-        const innerContent = innerMatch[1].trim();
-
-        symbolsHtml += `<symbol id="${iconId}" viewBox="${viewBox}">${innerContent}</symbol>`;
-      }
-    });
-
-    svgSprite.innerHTML = symbolsHtml;
-
-    document.body.appendChild(svgSprite);
-  }
-
-  /**
    * Builds the widget popup.
    */
-  public buildPopup(): void {
-    if (document.getElementById(this.WIDGET_ID)) {
+  public async buildPopup(): Promise<void> {
+    if (document.getElementById(USERSCRIPT.ID)) {
       return;
     }
 
@@ -304,24 +148,29 @@ export class UiWidget {
     const currentUrl = new URL(window.location.href);
     const isWebArchive = currentUrl.hostname === 'web.archive.org' && currentUrl.pathname.startsWith('/web/');
 
-    container.id = this.WIDGET_ID;
+    container.id = USERSCRIPT.ID;
     container.className = `${container.id} ${isWebArchive ? 'is-webarchive' : ''}`;
 
-    const template = getWidgetTemplate();
-    const clone = template.content.cloneNode(true);
+    const data = {
+      scriptName: USERSCRIPT.NAME,
+      scriptVersion: USERSCRIPT.VERSION,
+      homepage: USERSCRIPT.HOMEPAGE,
+      supportURL: USERSCRIPT.SUPPORT_URL,
+      funding: USERSCRIPT.FUNDING_URL,
+    };
 
-    container.appendChild(clone);
+    renderTemplate(widgetTemplate, data, container);
     document.body.appendChild(container);
 
     this.ui.widget = container;
     this.ui.header = container.querySelector('.discogs-submitter__header');
-    this.ui.headerButtonMove = container.querySelector('.discogs-submitter__header__button.is-move');
-    this.ui.headerButtonClose = container.querySelector('.discogs-submitter__header__button.is-close');
-    this.ui.statusContainer = container.querySelector('.discogs-submitter__status__container');
+    this.ui.headerButtonMove = container.querySelector('.discogs-submitter__header .discogs-submitter__button.is-move');
+    this.ui.headerButtonClose = container.querySelector('.discogs-submitter__header .discogs-submitter__button.is-close');
+    this.ui.status = container.querySelector('.discogs-submitter__status');
     this.ui.statusText = container.querySelector('.discogs-submitter__status__text');
-    this.ui.statusButtonDebug = container.querySelector('.discogs-submitter__status__button.is-debug');
+    this.ui.statusButtonDebug = container.querySelector('.discogs-submitter__status .discogs-submitter__button.is-debug');
     this.ui.preview = container.querySelector('.discogs-submitter__preview');
-    this.ui.actionsButtonSubmit = container.querySelector('.discogs-submitter__actions__button.is-submit');
+    this.ui.actionsButtonSubmit = container.querySelector('.discogs-submitter__actions .discogs-submitter__button.is-primary');
     this.ui.loader = container.querySelector('.discogs-submitter__loader');
   }
 
@@ -356,6 +205,7 @@ export class UiWidget {
 
     this.state.currentPayload = null;
     this.state.lastRawData = null;
+    this.state.editedData = null;
 
     if (this.ui.preview) {
       this.ui.preview.innerHTML = '';
@@ -365,10 +215,6 @@ export class UiWidget {
 
     if (this.ui.actionsButtonSubmit) {
       this.ui.actionsButtonSubmit.setAttribute('hidden', 'true');
-    }
-
-    if (this.ui.statusButtonDebug) {
-      this.ui.statusButtonDebug.setAttribute('hidden', 'true');
     }
   }
 
@@ -385,6 +231,7 @@ export class UiWidget {
 
   /**
    * Updates the status message and visual state.
+   * Also manages the visibility of the debug button (shown only on success or error).
    *
    * @param message - The text message to display.
    * @param status - The semantic status type (info, success, error, warning).
@@ -394,9 +241,18 @@ export class UiWidget {
       this.ui.statusText.innerHTML = message;
     }
 
-    if (this.ui.statusContainer) {
-      this.ui.statusContainer.classList.remove('is-error', 'is-success', 'is-info', 'is-warning');
-      this.ui.statusContainer.classList.add(`is-${status}`);
+    if (this.ui.status) {
+      this.ui.status.classList.remove('is-error', 'is-success', 'is-info', 'is-warning');
+      this.ui.status.classList.add(`is-${status}`);
+    }
+
+    if (this.ui.statusButtonDebug) {
+      if (status === 'error' || status === 'success') {
+        this.ui.statusButtonDebug.removeAttribute('hidden');
+      }
+      else {
+        this.ui.statusButtonDebug.setAttribute('hidden', 'true');
+      }
     }
   }
 
@@ -413,10 +269,6 @@ export class UiWidget {
     this.setStatus('Parsing current release...', 'info');
     this.setLoader(true);
 
-    if (this.ui.statusButtonDebug) {
-      this.ui.statusButtonDebug.setAttribute('hidden', 'true');
-    }
-
     if (this.ui.actionsButtonSubmit) {
       this.ui.actionsButtonSubmit.setAttribute('hidden', 'true');
     }
@@ -425,16 +277,55 @@ export class UiWidget {
       this.ui.preview.innerHTML = '';
     }
 
-    if (this.ui.statusContainer) {
-      delete this.ui.statusContainer.dataset.rawJson;
+    if (this.ui.status) {
+      delete this.ui.status.dataset.rawJson;
     }
 
     try {
-      this.state.lastRawData = await this.state.currentDigitalStore.parse();
+      const data = await this.state.currentDigitalStore.parse();
+
+      this.state.lastRawData = JSON.parse(JSON.stringify(data));
+      this.state.editedData = JSON.parse(JSON.stringify(data));
+
+      // Normalize country and apply label heuristic once during initial parsing
+      if (this.state.editedData) {
+        if (!this.state.editedData.country) {
+          this.state.editedData.country = 'Worldwide';
+        }
+        else {
+          this.state.editedData.country = ALLOWED_COUNTRIES.includes(this.state.editedData.country)
+            ? this.state.editedData.country
+            : normalizeCountry(this.state.editedData.country);
+        }
+
+        const primaryArtistName = (this.state.editedData.artists?.[0]?.name || '').trim();
+
+        this.state.editedData.label = normalizeLabel(this.state.editedData.label, primaryArtistName);
+      }
 
       // Default selections
       this.state.selectedFormat = this.state.currentDigitalStore.supports?.formats?.[0] || 'WAV';
+      this.state.selectedDescriptions = extractFormatFromTitle(this.state.lastRawData?.title);
+      this.state.formatText = '';
       this.state.isHdAudio = false;
+
+      // Ensure notes and submission notes are initialized if DiscogsAdapter would generate them
+      if (this.state.editedData && this.state.lastRawData) {
+        const tempPayload = DiscogsAdapter.buildPayload(this.state.editedData, window.location.href, {
+          format: this.state.selectedFormat || 'WAV',
+          descriptions: this.state.selectedDescriptions,
+        });
+
+        if (!this.state.editedData.notes && tempPayload._previewObject.notes) {
+          this.state.editedData.notes = tempPayload._previewObject.notes;
+          this.state.lastRawData.notes = tempPayload._previewObject.notes;
+        }
+
+        if (!this.state.editedData.submissionNotes && tempPayload._previewObject.submissionNotes) {
+          this.state.editedData.submissionNotes = tempPayload._previewObject.submissionNotes;
+          this.state.lastRawData.submissionNotes = tempPayload._previewObject.submissionNotes;
+        }
+      }
 
       this.renderPayload();
 
@@ -448,17 +339,14 @@ export class UiWidget {
     catch (error) {
       this.state.currentPayload = null;
       this.state.lastRawData = null;
+      this.state.editedData = null;
 
       const errMsg = (error as Error).message || String(error);
 
       this.setStatus(errMsg, 'error');
 
-      if (this.ui.statusContainer) {
-        this.ui.statusContainer.dataset.rawJson = `URL: ${window.location.href}\nVersion: ${GM_info?.script?.version || ''}\nError Trace:\n${(error as Error).stack || error}`;
-      }
-
-      if (this.ui.statusButtonDebug) {
-        this.ui.statusButtonDebug.removeAttribute('hidden');
+      if (this.ui.status) {
+        this.ui.status.dataset.rawJson = `URL: ${window.location.href}\nVersion: ${USERSCRIPT.VERSION}\nError Trace:\n${(error as Error).stack || error}`;
       }
     }
     finally {
@@ -469,40 +357,51 @@ export class UiWidget {
   /**
    * Finalizes the Discogs payload and updates the preview container with the rendered data.
    */
-  private renderPayload(): void {
-    if (!this.state.lastRawData || !this.state.currentDigitalStore) {
+  private async renderPayload(): Promise<void> {
+    if (!this.state.editedData || !this.state.currentDigitalStore) {
       return;
     }
 
-    // HD Audio is only allowed if the format is NOT MP3 and the store supports it
-    const effectiveHdAudio = this.state.selectedFormat !== 'MP3' && this.state.isHdAudio && this.state.currentDigitalStore.supports?.hdAudio;
+    // HD Audio logic is simplified: if we select MP3 and formatText is empty, set it to "320 kbps"
+    if (this.state.selectedFormat === 'MP3' && !this.state.formatText) {
+      this.state.formatText = '320 kbps';
+    }
+    else if (this.state.selectedFormat !== 'MP3' && this.state.formatText === '320 kbps') {
+      this.state.formatText = '';
+    }
 
-    this.state.currentPayload = DiscogsAdapter.buildPayload(this.state.lastRawData, window.location.href, {
+    this.state.currentPayload = DiscogsAdapter.buildPayload(this.state.editedData, window.location.href, {
       format: this.state.selectedFormat || 'WAV',
-      isHdAudio: effectiveHdAudio,
+      isHdAudio: this.state.isHdAudio,
+      descriptions: this.state.selectedDescriptions,
+      formatText: this.state.formatText,
+      country: this.state.editedData.country || '',
     });
 
     const previewObj = this.state.currentPayload._previewObject;
     const rawJsonString = JSON.stringify(previewObj, null, 2);
 
     if (this.ui.preview) {
-      this.ui.preview.innerHTML = Renderer.releasePreview(previewObj, {
+      await Renderer.releasePreview(previewObj, {
         selectedFormat: this.state.selectedFormat || 'WAV',
-        isHdAudio: effectiveHdAudio,
+        selectedDescriptions: this.state.selectedDescriptions,
+        formatText: this.state.formatText,
+        isHdAudio: this.state.isHdAudio,
         supports: this.state.currentDigitalStore.supports || { formats: [], hdAudio: false },
-      });
+      }, this.ui.preview, this.state.editedData);
+
+      // Initialize custom selects for Format, Description and Country
+      UiSelect.init(this.ui.preview.querySelector('.is-format'));
+      UiSelect.init(this.ui.preview.querySelector('.is-description'));
+      UiSelect.init(this.ui.preview.querySelector('.is-country'));
     }
 
-    if (this.ui.statusContainer) {
-      this.ui.statusContainer.dataset.rawJson = rawJsonString;
+    if (this.ui.status) {
+      this.ui.status.dataset.rawJson = rawJsonString;
     }
 
     if (this.ui.actionsButtonSubmit) {
       this.ui.actionsButtonSubmit.removeAttribute('hidden');
-    }
-
-    if (this.ui.statusButtonDebug) {
-      this.ui.statusButtonDebug.removeAttribute('hidden');
     }
   }
 
@@ -512,7 +411,7 @@ export class UiWidget {
    * @returns A promise that resolves when the copy operation completes.
    */
   private async handleDebugCopy(): Promise<void> {
-    const textToCopy = this.ui.statusContainer?.dataset.rawJson;
+    const textToCopy = this.ui.status?.dataset.rawJson;
 
     if (!textToCopy) {
       return;
@@ -579,12 +478,12 @@ export class UiWidget {
       const jsonData = JSON.parse(response as string);
 
       if (jsonData?.id) {
-        if (this.state.lastRawData?.cover) {
+        if (this.state.editedData?.cover) {
           this.setStatus('Draft created. Uploading cover image...', 'info');
 
           try {
             const coverBlob = await networkRequest({
-              url: this.state.lastRawData.cover,
+              url: this.state.editedData.cover,
               method: 'GET',
               responseType: 'blob',
             });
@@ -668,23 +567,211 @@ export class UiWidget {
     return '<small><strong>The list of artists is presented in random order, separated by commas (`,`), and may not exactly match the list of authors from the official release source.</strong></small>';
   }
 
+  /**
+   * Centralized handler for all interactive changes within the release preview.
+   * Updates the internal state and triggers a payload re-render.
+   *
+   * @param event - The DOM change event.
+   */
+  private async handlePreviewChange(event: Event): Promise<void> {
+    const target = event.target as HTMLElement;
+
+    if (target.classList.contains('is-format')) {
+      this.state.selectedFormat = (target as HTMLSelectElement).value;
+      await this.renderPayload();
+    }
+    else if (target.classList.contains('is-description')) {
+      const select = target as HTMLSelectElement;
+
+      this.state.selectedDescriptions = Array.from(select.selectedOptions).map(option => option.value);
+      await this.renderPayload();
+    }
+    else if (target.classList.contains('is-edit') && this.state.editedData) {
+      const field = target.dataset.field;
+      const indexStr = target.dataset.index;
+      const indices = indexStr ? indexStr.split('|').map(v => Number.parseInt(v, 10)) : null;
+      const subindex = target.dataset.subindex ? Number.parseInt(target.dataset.subindex, 10) : null;
+      const value = (target.contentEditable === 'plaintext-only' || target.contentEditable === 'true')
+        ? (target as HTMLElement).innerText.trim() // eslint-disable-line unicorn/prefer-dom-node-text-content
+        : (target as HTMLInputElement | HTMLTextAreaElement).value;
+
+      this.updateEditedData(field, value, indices ? indices[indices.length - 1] : null, subindex, indices);
+      await this.renderPayload();
+    }
+  }
+
+  /**
+   * Updates the edited state based on the field path and value.
+   *
+   * @param field - Field path (e.g., 'artists', 'tracks.title').
+   * @param value - New value.
+   * @param index - Index for array fields.
+   * @param subindex - Optional sub-index for nested array fields.
+   * @param allIndices - All indices for deeply nested paths.
+   */
+  private updateEditedData(field: string | undefined, value: string, index: number | null, subindex: number | null, allIndices: number[] | null): void {
+    if (!field || !this.state.editedData) {
+      return;
+    }
+
+    if (field === 'artists.name' && index !== null) {
+      const artist = this.state.editedData.artists[index];
+
+      if (artist) {
+        artist.name = value;
+      }
+    }
+    else if (field === 'extraartists.name' && index !== null) {
+      const credit = this.state.editedData.extraartists[index];
+
+      if (credit) {
+        credit.name = value;
+      }
+    }
+    else if (field === 'formatText') {
+      this.state.formatText = value;
+    }
+    else if (field === 'notes') {
+      this.state.editedData.notes = value;
+    }
+    else if (field === 'submissionNotes') {
+      this.state.editedData.submissionNotes = value;
+    }
+    else if (field.startsWith('tracks.')) {
+      const parts = field.split('.');
+      const trackField = parts[1] as keyof TrackData;
+      // For tracks, index from data-index is usually the track index
+      // If we have multiple indices, the first one is the track index (from ../_index in template)
+      const trackIdx = allIndices ? allIndices[0] : index;
+      const track = this.state.editedData.tracks[trackIdx!];
+
+      if (track) {
+        if (trackField === 'artists' && subindex !== null) {
+          const artist = track.artists[subindex];
+
+          if (artist) {
+            artist.name = value;
+          }
+        }
+        else if (trackField === 'extraartists' && subindex !== null) {
+          const credit = track.extraartists[subindex];
+
+          if (credit) {
+            credit.name = value;
+          }
+        }
+        else {
+          (track[trackField] as any) = value;
+        }
+      }
+    }
+    else {
+      (this.state.editedData as any)[field] = value;
+    }
+  }
+
+  /**
+   * Restores original parsed data for a specific field.
+   *
+   * @param field - The field identifier.
+   * @param index - Optional index for array items.
+   * @param subindex - Optional sub-index for nested array items.
+   */
+  private async handleRestore(field: string | undefined, index: number | null, subindex: number | null): Promise<void> {
+    if (!field || !this.state.lastRawData || !this.state.editedData) {
+      return;
+    }
+
+    if (field === 'artists.name' && index !== null) {
+      this.state.editedData.artists[index].name = this.state.lastRawData.artists[index].name;
+    }
+    else if (field === 'tracks.artists.name' && index !== null && subindex !== null) {
+      this.state.editedData.tracks[index].artists[subindex].name = this.state.lastRawData.tracks[index].artists[subindex].name;
+    }
+    else if (field === 'tracks.title' && index !== null) {
+      this.state.editedData.tracks[index].title = this.state.lastRawData.tracks[index].title;
+    }
+    else if (field === 'tracks.extraartists.name' && index !== null && subindex !== null) {
+      this.state.editedData.tracks[index].extraartists[subindex].name = this.state.lastRawData.tracks[index].extraartists[subindex].name;
+    }
+    else if (field === 'tracks' && index !== null) {
+      this.state.editedData.tracks[index] = JSON.parse(JSON.stringify(this.state.lastRawData.tracks[index]));
+    }
+    else if (field === 'extraartists.name' && index !== null) {
+      this.state.editedData.extraartists[index].name = this.state.lastRawData.extraartists[index].name;
+    }
+    else if (field === 'extraartists' && index !== null) {
+      this.state.editedData.extraartists[index] = JSON.parse(JSON.stringify(this.state.lastRawData.extraartists[index]));
+    }
+    else if (field === 'formatText') {
+      this.state.formatText = '';
+    }
+    else {
+      (this.state.editedData as any)[field] = JSON.parse(JSON.stringify((this.state.lastRawData as any)[field]));
+    }
+
+    await this.renderPayload();
+  }
+
   private bindEvents(): void {
     this.ui.headerButtonClose?.addEventListener('click', () => this.ui.widget?.classList.remove('is-open'));
 
-    this.ui.preview?.addEventListener('change', (event) => {
-      const target = event.target as HTMLInputElement;
+    this.ui.preview?.addEventListener('change', event => void this.handlePreviewChange(event));
 
-      if (target.classList.contains('is-format')) {
-        this.state.selectedFormat = target.value;
+    this.ui.preview?.addEventListener('click', async (event) => {
+      const target = event.target as HTMLElement;
+      const fieldButton = target.closest('.discogs-submitter__results__field .discogs-submitter__button');
 
-        this.renderPayload();
-      }
-      else if (target.classList.contains('is-hdaudio')) {
-        this.state.isHdAudio = target.checked;
+      if (fieldButton) {
+        const btn = fieldButton as HTMLElement;
+        const field = btn.dataset.field;
+        const indexStr = btn.dataset.index;
+        const indices = indexStr ? indexStr.split('|').map(v => Number.parseInt(v, 10)) : null;
+        const subindex = btn.dataset.subindex ? Number.parseInt(btn.dataset.subindex, 10) : null;
 
-        this.renderPayload();
+        await this.handleRestore(field, indices ? indices[indices.length - 1] : null, subindex);
       }
     });
+
+    // Contenteditable handlers
+    this.ui.preview?.addEventListener('keydown', (event) => {
+      if ((event.target as HTMLElement).classList.contains('is-edit')) {
+        event.stopPropagation();
+      }
+    });
+
+    this.ui.preview?.addEventListener('keyup', (event) => {
+      if ((event.target as HTMLElement).classList.contains('is-edit')) {
+        event.stopPropagation();
+      }
+    });
+
+    this.ui.preview?.addEventListener('paste', (event) => {
+      const target = event.target as HTMLElement;
+
+      if (target.contentEditable === 'plaintext-only' || target.contentEditable === 'true') {
+        event.preventDefault();
+
+        const text = (event.clipboardData || (window as any).clipboardData).getData('text/plain');
+
+        document.execCommand('insertText', false, text);
+      }
+    });
+
+    this.ui.preview?.addEventListener('input', (event) => {
+      const target = event.target as HTMLElement;
+
+      if (target.contentEditable === 'plaintext-only' || target.contentEditable === 'true') {
+        // Basic cleanup logic if needed
+      }
+    });
+
+    // We need to trigger handlePreviewChange on blur for contenteditable
+    this.ui.preview?.addEventListener('blur', (event) => {
+      if ((event.target as HTMLElement).classList.contains('is-edit')) {
+        void this.handlePreviewChange(event);
+      }
+    }, true);
 
     this.ui.statusButtonDebug?.addEventListener('click', () => this.handleDebugCopy());
     this.ui.actionsButtonSubmit?.addEventListener('click', () => this.handleSubmit());
@@ -766,10 +853,8 @@ export class UiWidget {
     this.ui.headerButtonMove?.addEventListener('touchstart', event => handleDown(event), { passive: false });
   }
 
-  public init(): void {
-    this.injectStyles();
-    this.buildSvgSprite();
-    this.buildPopup();
+  public async init(): Promise<void> {
+    await this.buildPopup();
     this.bindDraggableEvent();
     this.bindEvents();
   }

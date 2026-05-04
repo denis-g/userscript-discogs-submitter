@@ -1,0 +1,99 @@
+
+.discogs-submitter__results {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--ds-gap);
+  font-family: var(--ds-font-monospace);
+  font-size: 10px;
+  line-height: normal;
+}
+
+.discogs-submitter__results__row {
+  width: 100%;
+  display: grid;
+  gap: calc(var(--ds-gap) / 2);
+  grid-template-columns: 60px 1fr;
+  padding: 2px 0;
+  border-bottom: 1px dotted rgba(0, 0, 0, 0.2);
+
+  &.is-half {
+    width: calc(50% - var(--ds-gap) / 2);
+  }
+
+  &.is-tracklist {
+    grid-template-columns: 20px 1fr 1fr 50px;
+
+    &.is-no-artist {
+      grid-template-columns: 20px 1fr 50px;
+    }
+
+    > .discogs-submitter__results__head {
+      text-align: left;
+    }
+
+    > .discogs-submitter__results__body:last-child {
+      text-align: right;
+    }
+  }
+
+  &.is-notes {
+    grid-template-columns: 1fr;
+    gap: calc(var(--ds-gap) / 6);
+
+    > .discogs-submitter__results__head {
+      text-align: left;
+    }
+  }
+}
+
+.discogs-submitter__results__head {
+  font-weight: bold;
+  text-align: right;
+}
+
+.discogs-submitter__results__body {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: calc(var(--ds-gap) / 6);
+
+  a {
+    color: var(--ds-color-primary);
+  }
+
+  small {
+    font-size: 9px;
+  }
+
+  &.is-multiple {
+    display: block;
+
+    .discogs-submitter__results__field {
+      display: inline-flex;
+      vertical-align: middle;
+      width: auto;
+    }
+  }
+
+  &.is-inner {
+    padding-left: calc(var(--ds-gap) / 2);
+  }
+}
+
+.discogs-submitter__results__field {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: start;
+  gap: calc(var(--ds-gap) / 6);
+  width: 100%;
+
+  .discogs-submitter__textarea {
+    width: 100%;
+    min-height: 60px;
+  }
+
+  .discogs-submitter__button {
+    flex: 0 0 auto;
+    padding: calc(var(--ds-gap) / 6);
+  }
+}

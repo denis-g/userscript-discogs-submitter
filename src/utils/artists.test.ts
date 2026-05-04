@@ -7,22 +7,21 @@ import {
 } from './artists';
 
 describe('normalizeMainArtists', () => {
-  it('converts 4 or more artists to "Various"', () => {
-    const fourArtists = 'Artist One, Artist Two, Artist Three & Artist Four';
-    const result = normalizeMainArtists(fourArtists);
+  it('converts 6 or more artists to "Various"', () => {
+    const sixArtists = 'A1, A2, A3, A4, A5 & A6';
+    const result = normalizeMainArtists(sixArtists);
 
     expect(result).toHaveLength(1);
     expect(result[0].name).toBe('Various');
   });
 
-  it('keeps 3 or fewer artists lists', () => {
-    const threeArtists = 'Artist One, Artist Two & Artist Three';
-    const result = normalizeMainArtists(threeArtists);
+  it('keeps 5 or fewer artists lists', () => {
+    const fiveArtists = 'A1, A2, A3, A4 & A5';
+    const result = normalizeMainArtists(fiveArtists);
 
-    expect(result).toHaveLength(3);
-    expect(result[0].name).toBe('Artist One');
-    expect(result[1].name).toBe('Artist Two');
-    expect(result[2].name).toBe('Artist Three');
+    expect(result).toHaveLength(5);
+    expect(result[0].name).toBe('A1');
+    expect(result[4].name).toBe('A5');
   });
 
   it('normalizes common VA variations to "Various"', () => {

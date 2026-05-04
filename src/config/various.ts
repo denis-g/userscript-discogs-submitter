@@ -1,4 +1,4 @@
-import { buildCreditRegexes } from '@/core/utils/regex';
+import { buildCreditRegexes } from '@/utils/regex';
 
 /**
  * Regex patterns for identifying "Various Artists" across different languages and abbreviations.

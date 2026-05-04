@@ -13,9 +13,8 @@
   background: var(--ds-color-white);
   border: 2px solid var(--ds-color-gray-dark);
   border-radius: calc(var(--ds-radius) * 2);
-  outline: 1px solid var(--ds-color-gray-dark);
-  transition: outline 0.2s ease;
-  will-change: outline;
+  outline: 2px solid var(--ds-color-gray-dark);
+  transition: all 0.3s ease;
 
   &:hover {
     outline: 2px solid var(--ds-color-white);

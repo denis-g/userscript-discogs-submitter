@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import * as network from '@/core/network';
+import { networkRequest } from '@/core';
 import { sevendigital } from './7digital';
 
-vi.mock('@/core/network');
+vi.mock('@/core');
 
 describe('7digital provider', () => {
   it('should parse release data from API response', async () => {
@@ -12,7 +12,7 @@ describe('7digital provider', () => {
       <div class="release-data-info">13 Apr 2026</div>
     `;
 
-    vi.mocked(network.networkRequest).mockResolvedValue(JSON.stringify({
+    vi.mocked(networkRequest).mockResolvedValue(JSON.stringify({
       tracks: [
         {
           title: 'Track One',

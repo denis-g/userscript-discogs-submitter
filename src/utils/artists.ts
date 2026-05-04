@@ -1,6 +1,6 @@
 import type { ArtistCredit } from '@/types';
 import { ARTIST_CREDIT_ROLES, ARTIST_JOINERS, joinerPattern, oxfordPattern, REMOVE_FROM_ARTIST, REMOVE_FROM_TITLE, VARIOUS_ARTISTS } from '@/config';
-import { capitalizeString, cleanString, extractBpm } from './string';
+import { capitalizeString, cleanString, extractBpm } from '@/utils';
 
 /**
  * Heuristic check to determine if a captured string is likely a credit (artist name)
@@ -228,7 +228,7 @@ export function normalizeArtists(artists: string | string[] | null | undefined, 
  *
  * Logic flow:
  * 1. "Compiled By" artists become primary if found.
- * 2. Extremely long artist lists (>5) default to "Various".
+ * 2. Long artist lists (more than 5) default to "Various".
  * 3. Fallbacks to common "Various Artists" expressions.
  *
  * @param rawArtists - Original artist string or array from store.
@@ -278,7 +278,7 @@ export function normalizeMainArtists(rawArtists: string | string[] | null | unde
   }
 
   // If there are too many artists, default to "Various"
-  if (normalized.length >= 4) {
+  if (normalized.length > 5) {
     return [{ name: 'Various', join: ',' }];
   }
 

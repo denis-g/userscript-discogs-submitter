@@ -2,7 +2,7 @@ import type {
   ArtistCredit,
   StoreAdapter,
 } from '@/types';
-import { networkRequest } from '@/core/network';
+import { networkRequest } from '@/core';
 import {
   cleanString,
   getReleaseIdFromUrl,
@@ -13,7 +13,7 @@ import {
   normalizeMainArtists,
   normalizeReleaseDate,
   normalizeTitle,
-} from '@/core/utils';
+} from '@/utils';
 
 /**
  * Fetches playlist details array from JunoDownload API.

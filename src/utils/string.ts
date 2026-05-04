@@ -1,4 +1,4 @@
-import { ignoreCapitalizationMap } from '@/config/abbreviations';
+import { ignoreCapitalizationMap } from '@/config';
 
 /**
  * Trims whitespace, optionally collapses multiple spaces/newlines/tabs into a single space,

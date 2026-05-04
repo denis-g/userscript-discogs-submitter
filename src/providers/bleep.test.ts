@@ -10,7 +10,6 @@ describe('bleep provider', () => {
   });
 
   it('should parse release data correctly', async () => {
-    // Mock DOM structure for Bleep
     document.body.innerHTML = `
       <div class="product-page">
         <div class="main-product-image">

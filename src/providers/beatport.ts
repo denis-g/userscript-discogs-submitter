@@ -2,14 +2,14 @@ import type {
   ArtistCredit,
   StoreAdapter,
 } from '@/types';
-import { networkRequest } from '@/core/network';
+import { networkRequest } from '@/core';
 import {
   getReleaseIdFromUrl,
   matchUrls,
   normalizeArtists,
   normalizeMainArtists,
   normalizeTitle,
-} from '@/core/utils';
+} from '@/utils';
 
 /**
  * Fetches required tokens and loads store metadata arrays via API endpoints.

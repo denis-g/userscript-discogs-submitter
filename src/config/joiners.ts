@@ -1,4 +1,4 @@
-import { buildJoinerPattern, buildOxfordPattern } from '@/core/utils/regex';
+import { buildJoinerPattern, buildOxfordPattern } from '@/utils/regex';
 
 /**
  * List of recognized artist joiners used to split artist strings.

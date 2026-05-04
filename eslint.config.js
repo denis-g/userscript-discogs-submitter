@@ -5,7 +5,6 @@ export default antfu(
   {
     ignores: [
       'node_modules/*',
-      '.agents/*',
       'discogs-submitter.user.js',
     ],
     stylistic: {

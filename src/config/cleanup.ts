@@ -1,4 +1,4 @@
-import { buildCreditRegexes } from '@/core/utils/regex';
+import { buildCreditRegexes } from '@/utils/regex';
 
 /**
  * Patterns of common terms or promotional text to remove from artist names.

@@ -1,15 +1,22 @@
 import { describe, expect, it, vi } from 'vitest';
-import * as network from '@/core/network';
-import * as urlUtils from '@/core/utils/url';
+import { networkRequest } from '@/core';
+import { getReleaseIdFromUrl } from '@/utils';
 import { junodownload } from './junodownload';
 
-vi.mock('@/core/network');
-vi.mock('@/core/utils/url');
+vi.mock('@/core');
+vi.mock('@/utils', async (importActual) => {
+  const actual = await importActual<typeof import('@/utils')>();
+
+  return {
+    ...actual,
+    getReleaseIdFromUrl: vi.fn(),
+  };
+});
 
 describe('juno download provider', () => {
   it('should parse release data from API and DOM', async () => {
-    vi.mocked(urlUtils.getReleaseIdFromUrl).mockReturnValue('123456');
-    vi.mocked(network.networkRequest).mockResolvedValue(JSON.stringify({
+    vi.mocked(getReleaseIdFromUrl).mockReturnValue('123456');
+    vi.mocked(networkRequest).mockResolvedValue(JSON.stringify({
       items: [
         {
           title: 'Track One',

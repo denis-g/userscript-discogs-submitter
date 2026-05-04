@@ -2,7 +2,8 @@
  * A comprehensive list of valid Discogs country names.
  * These are used to validate and normalize country information parsed from digital stores.
  */
-const ALLOWED_COUNTRIES = [
+export const ALLOWED_COUNTRIES = [
+  'Worldwide',
   'Australia',
   'Belgium',
   'Brazil',
@@ -55,7 +56,6 @@ const ALLOWED_COUNTRIES = [
   'USA, Canada & UK',
   'USA, Canada & Europe',
   'USA & Europe',
-  'Worldwide',
   'Afghanistan',
   'Abkhazia',
   'Albania',
@@ -313,6 +313,7 @@ const ALLOWED_COUNTRIES = [
   'Zanzibar',
   'Zimbabwe',
 ];
+
 /**
  * A mapping of common country name variations to their canonical Discogs names.
  */

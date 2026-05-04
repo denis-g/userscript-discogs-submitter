@@ -5,14 +5,7 @@ import type {
   DiscogsTrack,
   ReleaseData,
 } from '@/types';
-import { groupExtraArtists, normalizeCountry } from './utils';
-
-/**
- * Map Discogs formats to store formats
- */
-export const DISCOGS_FORMAT_MAPPING: Record<string, string> = {
-  DSD: 'DSF',
-};
+import { extractFormatFromTitle, groupExtraArtists, normalizeCountry } from '@/utils';
 
 /**
  * A shared adapter for transforming various digital store data into the Discogs release schema.
@@ -23,9 +16,13 @@ export const DiscogsAdapter = {
    * Transforms raw scraped store data into the strict JSON payload schema required by Discogs.
    *
    * Logic handles track level vs release level artist deduplication, cover mapping,
-   * default fallback labels, format configurations, and standardizing notes.
+   * format configurations, and standardizing notes.
    *
-   * @param data - The raw Data extracted from a store.
+   * NOTE: This method prioritizes manually edited data provided in the `data` object.
+   * Heuristics (like "Not On Label" transformation) should be applied before calling
+   * this method to ensure they are visible and editable in the UI.
+   *
+   * @param data - The raw or edited Data extracted from a store.
    * @param sourceUrl - The originating URL where the data was scraped.
    * @param options - Configuration options determining format and audio quality.
    * @returns The fully constructed JSON payload split into `_previewObject`, `full_data`, and `sub_notes`.
@@ -52,13 +49,13 @@ export const DiscogsAdapter = {
       return trackArtists.every((artist, index) => artist.name === firstTrackArtists[index].name && artist.join === firstTrackArtists[index].join);
     });
     // If all tracks match, we elevate the common track artist to the release level.
+    // However, we only do this if no release artists are provided to avoid overwriting manual edits.
     let finalReleaseArtists = releaseArtistsArr;
 
-    if (allTracksShareSameArtists && firstTrackArtists.length > 0) {
+    if ((!finalReleaseArtists.length || (finalReleaseArtists.length === 1 && !finalReleaseArtists[0].name)) && allTracksShareSameArtists && firstTrackArtists.length > 0) {
       finalReleaseArtists = firstTrackArtists;
     }
 
-    const primaryArtistName = (finalReleaseArtists[0]?.name || '').trim();
     // Check if the final release artists match the track artists (for deduplication)
     const allTracksMatchRelease = tracks.length > 0 && tracks.every((track) => {
       const trackArtists = track.artists || [];
@@ -72,18 +69,20 @@ export const DiscogsAdapter = {
 
       return JSON.stringify(trackArtistNames) === JSON.stringify(releaseArtistNames);
     });
-    const labelName = (data.label && primaryArtistName && data.label === primaryArtistName)
-      ? `Not On Label (${primaryArtistName} Self-released)`
-      : (data.label || 'Not On Label');
-    let formatText = '';
+    // Label logic: Default to "Not On Label" if missing.
+    const labelName = data.label || 'Not On Label';
+    let formatText = options?.formatText ?? '';
 
-    if (format === 'MP3') {
-      formatText = '320 kbps';
-    }
-    else if (isHdAudio) {
-      formatText = '24-bit';
+    if (!formatText) {
+      if (format === 'MP3') {
+        formatText = '320 kbps';
+      }
+      else if (isHdAudio) {
+        formatText = '24-bit';
+      }
     }
 
+    const releaseFormat = options?.descriptions || extractFormatFromTitle(data.title);
     const totalTracks = data.tracks?.length ? `${data.tracks.length}` : '1';
     const validBpmTracks = (data.tracks || []).filter(track => track.bpm);
     const infoBpm = validBpmTracks.length > 0 ? `BPM's:\n${validBpmTracks.map(track => `${track.pos}: ${track.bpm}`).join('\n')}` : '';
@@ -103,10 +102,18 @@ export const DiscogsAdapter = {
       title: data.title || '',
       artists: finalArtists.length ? finalArtists : [{ name: '', join: ',' }],
       extraartists: groupExtraArtists(data.extraartists || []),
-      country: normalizeCountry(data.country || 'Worldwide'),
+      country: normalizeCountry(options?.country !== undefined ? options.country : (data.country || 'Worldwide')),
       released: data.released || '',
       labels: labelName ? [{ name: labelName, catno: data.number || 'none' }] : [{ name: '', catno: '' }],
-      format: [{ name: 'File', qty: totalTracks, desc: [DISCOGS_FORMAT_MAPPING[format] || format], text: formatText }],
+      format: [{
+        name: 'File',
+        qty: totalTracks,
+        desc: [
+          format,
+          ...releaseFormat,
+        ],
+        text: formatText,
+      }],
       tracks: (data.tracks || []).map((track): DiscogsTrack => ({
         pos: track.pos || '',
         artists: allTracksMatchRelease ? [] : track.artists || [],
@@ -114,13 +121,14 @@ export const DiscogsAdapter = {
         title: track.title || '',
         duration: track.duration || '',
       })),
-      notes: infoBpm,
+      notes: data.notes ?? infoBpm,
+      submissionNotes: data.submissionNotes || `${sourceUrl}\n---\nA digital release in ${format} format has been added.`,
     };
 
     return {
       _previewObject: payload,
       full_data: JSON.stringify(payload),
-      sub_notes: `${sourceUrl}\n---\nA digital release in ${format} format has been added.`,
+      sub_notes: payload.submissionNotes,
     };
   },
 };

@@ -1,4 +1,4 @@
-import { buildCreditRegexes } from '@/core/utils/regex';
+import { buildCreditRegexes } from '@/utils/regex';
 
 /**
  * Shared regex templates for capturing artist credits.
@@ -84,6 +84,11 @@ export const ARTIST_CREDIT_ROLES: Record<string, RegExp[]> = {
   ),
   'Mastered By': buildCreditRegexes(
     ['mastered', 'mastering', 'master', 'mastering engineer'],
+    // default
+    GLOBAL_CREDIT_REGEX,
+  ),
+  'Curated By': buildCreditRegexes(
+    ['curated', 'curated by', 'curation', 'curator'],
     // default
     GLOBAL_CREDIT_REGEX,
   ),

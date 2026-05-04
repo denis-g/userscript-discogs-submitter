@@ -13,7 +13,7 @@ import {
   normalizeReleaseDate,
   normalizeTitle,
   splitArtistTitle,
-} from '@/core/utils';
+} from '@/utils';
 
 /**
  * Extracts catalog number from credits and about items.

@@ -97,7 +97,8 @@ It extracts metadata from the source page, normalizes it to meet Discogs formatt
 
 ## Features
 
-- **Metadata Extraction:** Automatically parses artist names (`VA` normalization), release titles, label names (with `Self-released` support), catalog numbers, release dates, and complete tracklists with track artists. If a release is identified as a compilation (e.g., contains "Compiled by..." or "Selected by..."), the compiler is automatically prioritized as the primary release artist.
+- **Metadata Extraction:** Automatically parses artist names (`VA` normalization), release titles, label names (with case-insensitive `Self-released` support), catalog numbers, release dates, and complete tracklists with track artists. If a release is identified as a compilation (e.g., contains "Compiled by..." or "Selected by..."), the compiler is automatically prioritized as the primary release artist.
+- **Interactive Editing:** **Every field** in the widget preview is directly editable. You can fix misparsed metadata, adjust track titles, or swap labels on the fly before sending the data to Discogs.
 - **Credit Extraction:** Automatically identifies and extracts credit roles from titles and descriptions, moving them to the "Extra Artists" section while keeping the original title text clean.
 - **Smart Normalization:** Automatically filters out technical tags, standardizes punctuation, and applies intelligent casing to all fields.
 - **Cover Art & BPM:** Automatically fetches and attaches cover art, ensuring BPM data is included in the Discogs release notes when available.
@@ -157,9 +158,9 @@ Compiled By, Artwork, Producer, Mastered By, Written-By
 1. Open a music release page on any supported store.
 2. Click the **Discogs Submitter** button (usually located near the album buy/download controls).
 3. The floating widget will appear and parse the data automatically.
-4. Review the draft in the preview area.
-5. Select your preferred **Format** and **Bit Depth** if available.
-6. Click **Submit to Discogs** to create your draft.
+4. **Review and Edit:** All fields in the preview area are manually editable. If the script misses something or formats it incorrectly, you can fix it directly in the widget. Use the **Restore** button (↺) to revert any field to its original parsed value.
+5. **Format & Description:** Select the primary **Format** (e.g., `WAV`, `FLAC`, `MP3`) and any additional **Descriptions** (e.g., `24-bit`, `Album`, `EP`). For MP3, you can specify the bitrate (default is `320 kbps`) in the free-text field.
+6. **Submit to Discogs:** Click **Submit to Discogs** to create your draft. A new tab will open with the Discogs release editor.
 
 ## Installation
 

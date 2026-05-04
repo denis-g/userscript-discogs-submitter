@@ -3,6 +3,8 @@ export * from './country';
 export * from './date';
 export * from './dom';
 export * from './duration';
+export * from './format';
+export * from './label';
 export * from './regex';
 export * from './string';
 export * from './url';

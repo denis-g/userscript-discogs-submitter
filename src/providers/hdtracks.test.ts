@@ -1,10 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { hdtracks } from './hdtracks';
-
-// Mock unsafeWindow for getVisibleText if needed
-if (typeof (globalThis as any).unsafeWindow === 'undefined') {
-  (globalThis as any).unsafeWindow = globalThis.window;
-}
 
 describe('hdtracks provider', () => {
   it('should parse release data from DOM', async () => {
@@ -40,13 +35,6 @@ describe('hdtracks provider', () => {
         </div>
       </div>
     `;
-
-    // Mock getSelection for getVisibleText
-    window.getSelection = vi.fn().mockReturnValue({
-      removeAllRanges: vi.fn(),
-      addRange: vi.fn(),
-      toString: () => 'Track One',
-    });
 
     const result = await hdtracks.parse();
 

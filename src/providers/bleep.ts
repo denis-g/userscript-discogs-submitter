@@ -11,7 +11,7 @@ import {
   normalizeMainArtists,
   normalizeReleaseDate,
   normalizeTitle,
-} from '@/core/utils';
+} from '@/utils';
 
 /**
  * Adapter configuration for the Bleep digital store.

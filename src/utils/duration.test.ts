@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeDuration } from '@/core/utils/duration';
+import { normalizeDuration } from '@/utils';
 
 describe('normalizeDuration', () => {
   it('handles seconds format', () => {

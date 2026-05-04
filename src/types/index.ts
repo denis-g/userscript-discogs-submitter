@@ -134,6 +134,8 @@ export interface DiscogsPayloadData {
   tracks: DiscogsTrack[];
   /** Release notes (e.g., store URLs, context). */
   notes: string;
+  /** Submission notes (context for the submission). */
+  submissionNotes: string;
 }
 
 /**
@@ -164,6 +166,8 @@ export interface ReleaseData {
   format?: Array<{ name: string; qty: string; desc: string[]; text: string }>;
   /** Derived notes for Discogs preview fallback. */
   notes?: string;
+  /** Submission notes (context for the submission). */
+  submissionNotes?: string;
 }
 
 /**
@@ -174,6 +178,12 @@ export interface BuildPayloadOptions {
   format?: string;
   /** Whether the chosen format is high-definition (24-bit). */
   isHdAudio?: boolean;
+  /** Manually selected format descriptions (e.g., ["Deluxe Edition", "EP"]). */
+  descriptions?: string[];
+  /** Custom free-text for the format (e.g. "320 kbps", "Remastered"). */
+  formatText?: string;
+  /** User-edited country. */
+  country?: string;
 }
 
 /**

@@ -1,15 +1,22 @@
 import { describe, expect, it, vi } from 'vitest';
-import * as network from '@/core/network';
-import * as utils from '@/core/utils/url';
+import { networkRequest } from '@/core';
+import { getReleaseIdFromUrl } from '@/utils';
 import { beatport } from './beatport';
 
-vi.mock('@/core/network');
-vi.mock('@/core/utils/url');
+vi.mock('@/core');
+vi.mock('@/utils', async (importActual) => {
+  const actual = await importActual<typeof import('@/utils')>();
+
+  return {
+    ...actual,
+    getReleaseIdFromUrl: vi.fn(),
+  };
+});
 
 describe('beatport provider', () => {
   it('should parse release data from API responses', async () => {
-    vi.mocked(utils.getReleaseIdFromUrl).mockReturnValue('1368940');
-    vi.mocked(network.networkRequest).mockImplementation(async (options) => {
+    vi.mocked(getReleaseIdFromUrl).mockReturnValue('1368940');
+    vi.mocked(networkRequest).mockImplementation(async (options) => {
       const url = typeof options.url === 'string' ? options.url : '';
 
       if (url.includes('refresh-anon-token')) {

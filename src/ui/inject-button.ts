@@ -1,21 +1,8 @@
-import cssInjectButton from '@/assets/css/inject-button.css?inline';
+import injectButtonCss from '@/assets/css/inject-button.css?inline';
+import { USERSCRIPT } from '@/config';
+import { renderTemplate } from '@/core';
 
-let buttonTemplate: HTMLTemplateElement | null = null;
-
-function getInjectButtonTemplate(): HTMLTemplateElement {
-  if (!buttonTemplate) {
-    buttonTemplate = document.createElement('template');
-
-    buttonTemplate.innerHTML = `
-      <div class="discogs-submitter__inject__button" role="button">
-        <svg class="discogs-submitter__inject__button__icon" aria-hidden="true"><use href="#ds-logo"></use></svg>
-        <span class="discogs-submitter__inject__button__label">${GM_info?.script?.name || ''}</span>
-      </div>
-    `.trim();
-  }
-
-  return buttonTemplate;
-}
+import injectButtonTemplate from '@/ui/templates/inject-button.html?raw';
 
 /**
  * Manages the "Inject" button that appears on supported digital store pages.
@@ -25,7 +12,7 @@ export class InjectButton {
   private readonly WIDGET_ID: string;
 
   constructor() {
-    this.WIDGET_ID = GM_info?.script?.namespace || '';
+    this.WIDGET_ID = USERSCRIPT.NAME;
 
     this.build();
     this.injectStyles();
@@ -36,17 +23,21 @@ export class InjectButton {
       const style = document.createElement('style');
 
       style.id = `${this.WIDGET_ID}-inject-styles`;
-      style.textContent = cssInjectButton;
+      style.textContent = injectButtonCss;
 
       document.head.appendChild(style);
     }
   }
 
   private build(): void {
-    const template = getInjectButtonTemplate();
-    const clone = template.content.cloneNode(true) as DocumentFragment;
+    const data = {
+      scriptName: USERSCRIPT.NAME,
+    };
+    const wrapper = document.createElement('div');
 
-    this.element = clone.firstElementChild as HTMLElement;
+    renderTemplate(injectButtonTemplate, data, wrapper);
+
+    this.element = wrapper.firstElementChild as HTMLElement;
   }
 
   /**
