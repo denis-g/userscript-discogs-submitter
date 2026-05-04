@@ -16,7 +16,6 @@ import { ALLOWED_COUNTRIES, extractFormatFromTitle, normalizeCountry, normalizeL
 interface RenderOptions {
   selectedFormat: string;
   selectedDescriptions: string[];
-  isHdAudio: boolean;
   formatText: string;
   supports: StoreFormatOptions;
 }
@@ -126,7 +125,6 @@ export class UiWidget {
     selectedFormat: null as string | null,
     selectedDescriptions: [] as string[],
     formatText: '',
-    isHdAudio: false,
     isDragging: false,
     offset: { x: 0, y: 0 },
   };
@@ -307,7 +305,6 @@ export class UiWidget {
       this.state.selectedFormat = this.state.currentDigitalStore.supports?.formats?.[0] || 'WAV';
       this.state.selectedDescriptions = extractFormatFromTitle(this.state.lastRawData?.title);
       this.state.formatText = '';
-      this.state.isHdAudio = false;
 
       // Ensure notes and submission notes are initialized if DiscogsAdapter would generate them
       if (this.state.editedData && this.state.lastRawData) {
@@ -372,7 +369,6 @@ export class UiWidget {
 
     this.state.currentPayload = DiscogsAdapter.buildPayload(this.state.editedData, window.location.href, {
       format: this.state.selectedFormat || 'WAV',
-      isHdAudio: this.state.isHdAudio,
       descriptions: this.state.selectedDescriptions,
       formatText: this.state.formatText,
       country: this.state.editedData.country || '',
@@ -386,8 +382,7 @@ export class UiWidget {
         selectedFormat: this.state.selectedFormat || 'WAV',
         selectedDescriptions: this.state.selectedDescriptions,
         formatText: this.state.formatText,
-        isHdAudio: this.state.isHdAudio,
-        supports: this.state.currentDigitalStore.supports || { formats: [], hdAudio: false },
+        supports: this.state.currentDigitalStore.supports || { formats: [] },
       }, this.ui.preview, this.state.editedData);
 
       // Initialize custom selects for Format, Description and Country

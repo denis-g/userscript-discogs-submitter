@@ -66,7 +66,6 @@ export const beatport: StoreAdapter = {
 
   supports: {
     formats: ['WAV', 'FLAC', 'AIFF', 'MP3'],
-    hdAudio: true,
   },
 
   target: '[class^="ReleaseDetailCard-style__Controls"]',

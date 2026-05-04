@@ -48,7 +48,6 @@ export const junodownload: StoreAdapter = {
 
   supports: {
     formats: ['WAV', 'FLAC', 'AIFF', 'MP3'],
-    hdAudio: true,
   },
 
   target: '#product-action-btns',

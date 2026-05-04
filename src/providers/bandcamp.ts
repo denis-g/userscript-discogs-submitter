@@ -135,7 +135,6 @@ export const bandcamp: StoreAdapter = {
 
   supports: {
     formats: ['WAV', 'FLAC', 'AIFF', 'MP3'],
-    hdAudio: true,
   },
 
   target: '.tralbumCommands',

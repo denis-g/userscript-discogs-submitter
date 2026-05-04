@@ -53,7 +53,6 @@ export const qobuz: StoreAdapter = {
 
   supports: {
     formats: ['WAV', 'FLAC', 'AIFF', 'MP3'],
-    hdAudio: true,
   },
 
   target: '.album-meta',

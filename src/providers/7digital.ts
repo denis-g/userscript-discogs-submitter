@@ -47,7 +47,6 @@ export const sevendigital: StoreAdapter = {
 
   supports: {
     formats: ['FLAC', 'MP3'],
-    hdAudio: true,
   },
 
   target: '.release-purchase',

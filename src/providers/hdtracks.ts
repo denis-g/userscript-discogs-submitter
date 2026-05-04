@@ -25,8 +25,7 @@ export const hdtracks: StoreAdapter = {
   ),
 
   supports: {
-    formats: ['WAV', 'DSD'],
-    hdAudio: true,
+    formats: ['WAV', 'DSF'],
   },
 
   target: '.list-page.page-current .list-info .list-title',

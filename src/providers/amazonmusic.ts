@@ -26,7 +26,6 @@ export const amazonmusic: StoreAdapter = {
 
   supports: {
     formats: ['MP3'],
-    hdAudio: false,
   },
 
   target: 'music-detail-header[primary-text-href] div[slot="icons"]',

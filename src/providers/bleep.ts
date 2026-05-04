@@ -26,7 +26,6 @@ export const bleep: StoreAdapter = {
 
   supports: {
     formats: ['WAV', 'FLAC', 'MP3'],
-    hdAudio: true,
   },
 
   target: '.product-page .product-actions',

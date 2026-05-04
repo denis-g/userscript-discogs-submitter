@@ -16,8 +16,6 @@ export interface ArtistCredit {
 export interface StoreFormatOptions {
   /** A list of available format names (e.g., ["MP3", "WAV", "FLAC"]). */
   formats: string[];
-  /** Indicates whether the store provides hi-res/24-bit audio options. */
-  hdAudio: boolean;
 }
 
 /**
@@ -160,11 +158,7 @@ export interface ReleaseData {
   released: string | null;
   /** The parsed tracks. */
   tracks: TrackData[];
-  /** Derived labels for Discogs preview fallback. */
-  labels?: Array<{ name: string; catno: string }>;
-  /** Derived formats for Discogs preview fallback. */
-  format?: Array<{ name: string; qty: string; desc: string[]; text: string }>;
-  /** Derived notes for Discogs preview fallback. */
+  /** Release notes (e.g., store URLs, context). */
   notes?: string;
   /** Submission notes (context for the submission). */
   submissionNotes?: string;
@@ -176,8 +170,6 @@ export interface ReleaseData {
 export interface BuildPayloadOptions {
   /** The chosen audio format (e.g., "MP3", "WAV"). */
   format?: string;
-  /** Whether the chosen format is high-definition (24-bit). */
-  isHdAudio?: boolean;
   /** Manually selected format descriptions (e.g., ["Deluxe Edition", "EP"]). */
   descriptions?: string[];
   /** Custom free-text for the format (e.g. "320 kbps", "Remastered"). */

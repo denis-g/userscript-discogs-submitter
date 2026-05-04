@@ -29,12 +29,12 @@ export const DiscogsAdapter = {
    *
    * @example
    * ```typescript
-   * const payload = DiscogsAdapter.buildPayload(releaseData, window.location.href, { format: 'WAV', isHdAudio: true });
+   * const payload = DiscogsAdapter.buildPayload(releaseData, window.location.href, { format: 'WAV' });
    * console.log(payload.full_data);
    * ```
    */
   buildPayload: (data: ReleaseData, sourceUrl: string, options?: BuildPayloadOptions): DiscogsPayload => {
-    const { format = 'WAV', isHdAudio = false } = options || {};
+    const { format = 'WAV' } = options || {};
     const releaseArtistsArr = data.artists || [];
     const tracks = data.tracks || [];
     // Determine if all tracks have the same artist list
@@ -76,9 +76,6 @@ export const DiscogsAdapter = {
     if (!formatText) {
       if (format === 'MP3') {
         formatText = '320 kbps';
-      }
-      else if (isHdAudio) {
-        formatText = '24-bit';
       }
     }
 

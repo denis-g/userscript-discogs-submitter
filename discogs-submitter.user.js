@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discogs Submitter
 // @namespace    discogs-submitter
-// @version      3.1.1
+// @version      3.1.2
 // @author       Denis G. <https://github.com/denis-g>
 // @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital, Amazon Music, Bleep, HDtracks and submit releases to Discogs.
 // @license      MIT
@@ -363,7 +363,7 @@
         const oxfordPattern = buildOxfordPattern(ARTIST_JOINERS);
 
         const name = "discogs-submitter";
-        const version = "3.1.1";
+        const version = "3.1.2";
         const funding = "https://buymeacoffee.com/denis_g";
         const homepage = "https://github.com/denis-g/userscript-discogs-submitter";
         const bugs = {"url":"https://github.com/denis-g/userscript-discogs-submitter/issues"};
@@ -1223,7 +1223,7 @@
 
         const DiscogsAdapter = {
             buildPayload: (data, sourceUrl, options) => {
-                const { format = "WAV", isHdAudio = false } = options || {};
+                const { format = "WAV" } = options || {};
                 const releaseArtistsArr = data.artists || [];
                 const tracks = data.tracks || [];
                 const firstTrackArtists = tracks[0]?.artists || [];
@@ -1252,8 +1252,6 @@
                 if (!formatText) {
                     if (format === "MP3") {
                         formatText = "320 kbps";
-                    } else if (isHdAudio) {
-                        formatText = "24-bit";
                     }
                 }
                 const releaseFormat = options?.descriptions || extractFormatFromTitle(data.title);
@@ -1568,8 +1566,7 @@ A digital release in ${format} format has been added.`
                 "https://*.7digital.com/artist/*/release/*"
             ),
             supports: {
-                formats: ["FLAC", "MP3"],
-                hdAudio: true
+                formats: ["FLAC", "MP3"]
             },
             target: ".release-purchase",
             injectButton: (button, target) => {
@@ -1615,8 +1612,7 @@ A digital release in ${format} format has been added.`
                 "https://*.amazon.*/*"
             ),
             supports: {
-                formats: ["MP3"],
-                hdAudio: false
+                formats: ["MP3"]
             },
             target: 'music-detail-header[primary-text-href] div[slot="icons"]',
             injectButton: (button, target) => {
@@ -1745,8 +1741,7 @@ A digital release in ${format} format has been added.`
                 "https://web.archive.org/web/*/*://*.bandcamp.com/album/*"
             ),
             supports: {
-                formats: ["WAV", "FLAC", "AIFF", "MP3"],
-                hdAudio: true
+                formats: ["WAV", "FLAC", "AIFF", "MP3"]
             },
             target: ".tralbumCommands",
             injectButton: (button, target) => {
@@ -1860,8 +1855,7 @@ A digital release in ${format} format has been added.`
                 "https://*.beatport.com/*"
             ),
             supports: {
-                formats: ["WAV", "FLAC", "AIFF", "MP3"],
-                hdAudio: true
+                formats: ["WAV", "FLAC", "AIFF", "MP3"]
             },
             target: '[class^="ReleaseDetailCard-style__Controls"]',
             injectButton: (button, target) => {
@@ -1911,8 +1905,7 @@ A digital release in ${format} format has been added.`
                 "https://bleep.com/*"
             ),
             supports: {
-                formats: ["WAV", "FLAC", "MP3"],
-                hdAudio: true
+                formats: ["WAV", "FLAC", "MP3"]
             },
             target: ".product-page .product-actions",
             injectButton: (button, target) => {
@@ -1978,8 +1971,7 @@ A digital release in ${format} format has been added.`
                 "https://*.hdtracks.com/*"
             ),
             supports: {
-                formats: ["WAV", "DSD"],
-                hdAudio: true
+                formats: ["WAV", "DSF"]
             },
             target: ".list-page.page-current .list-info .list-title",
             injectButton: (button, target) => {
@@ -2036,8 +2028,7 @@ A digital release in ${format} format has been added.`
                 "https://*.junodownload.com/*"
             ),
             supports: {
-                formats: ["WAV", "FLAC", "AIFF", "MP3"],
-                hdAudio: true
+                formats: ["WAV", "FLAC", "AIFF", "MP3"]
             },
             target: "#product-action-btns",
             injectButton: (button, target) => {
@@ -2113,8 +2104,7 @@ A digital release in ${format} format has been added.`
                 "https://*.qobuz.com/*"
             ),
             supports: {
-                formats: ["WAV", "FLAC", "AIFF", "MP3"],
-                hdAudio: true
+                formats: ["WAV", "FLAC", "AIFF", "MP3"]
             },
             target: ".album-meta",
             injectButton: (button, target) => {
@@ -2476,7 +2466,6 @@ A digital release in ${format} format has been added.`
                 selectedFormat: null,
                 selectedDescriptions: [],
                 formatText: "",
-                isHdAudio: false,
                 isDragging: false,
                 offset: { x: 0, y: 0 }
             };
@@ -2587,7 +2576,6 @@ A digital release in ${format} format has been added.`
                     this.state.selectedFormat = this.state.currentDigitalStore.supports?.formats?.[0] || "WAV";
                     this.state.selectedDescriptions = extractFormatFromTitle(this.state.lastRawData?.title);
                     this.state.formatText = "";
-                    this.state.isHdAudio = false;
                     if (this.state.editedData && this.state.lastRawData) {
                         const tempPayload = DiscogsAdapter.buildPayload(this.state.editedData, window.location.href, {
                             format: this.state.selectedFormat || "WAV",
@@ -2633,7 +2621,6 @@ ${error.stack || error}`;
                 }
                 this.state.currentPayload = DiscogsAdapter.buildPayload(this.state.editedData, window.location.href, {
                     format: this.state.selectedFormat || "WAV",
-                    isHdAudio: this.state.isHdAudio,
                     descriptions: this.state.selectedDescriptions,
                     formatText: this.state.formatText,
                     country: this.state.editedData.country || ""
@@ -2645,8 +2632,7 @@ ${error.stack || error}`;
                         selectedFormat: this.state.selectedFormat || "WAV",
                         selectedDescriptions: this.state.selectedDescriptions,
                         formatText: this.state.formatText,
-                        isHdAudio: this.state.isHdAudio,
-                        supports: this.state.currentDigitalStore.supports || { formats: [], hdAudio: false }
+                        supports: this.state.currentDigitalStore.supports || { formats: [] }
                     }, this.ui.preview, this.state.editedData);
                     UiSelect.init(this.ui.preview.querySelector(".is-format"));
                     UiSelect.init(this.ui.preview.querySelector(".is-description"));
