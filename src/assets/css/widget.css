@@ -77,6 +77,15 @@
   animation: ds-spinner 0.5s linear infinite;
 }
 
+.discogs-submitter__loader__cover {
+  width: 200px;
+  height: 200px;
+  object-fit: cover;
+  border-radius: var(--ds-radius);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  animation: ds-pulse 2s ease-in-out infinite;
+}
+
 .discogs-submitter__header {
   display: flex;
   align-items: center;

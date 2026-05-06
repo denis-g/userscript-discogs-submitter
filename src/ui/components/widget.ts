@@ -8,6 +8,7 @@ import type {
 import { FILE_FORMATS, RELEASE_TYPES, USERSCRIPT } from '@/config';
 import { DiscogsAdapter, networkRequest, renderTemplate } from '@/core';
 import { ContentEditable, Draggable, UiSelect } from '@/ui';
+import loaderTemplate from '@/ui/templates/loader.html?raw';
 import previewTemplate from '@/ui/templates/preview.html?raw';
 import widgetTemplate from '@/ui/templates/widget.html?raw';
 import {
@@ -225,6 +226,10 @@ export class UiWidget {
   private setLoader(isActive: boolean): void {
     if (this.ui.loader) {
       this.ui.loader.classList.toggle('is-loading', isActive);
+
+      if (isActive) {
+        renderTemplate(loaderTemplate, { cover: this.state.editedData?.cover }, this.ui.loader, { replace: true });
+      }
     }
   }
 
@@ -283,24 +288,22 @@ export class UiWidget {
     try {
       const data = await this.state.currentDigitalStore.parse();
 
+      // Normalize country and apply label heuristic once during initial parsing
+      if (!data.country) {
+        data.country = 'Worldwide';
+      }
+      else {
+        data.country = ALLOWED_COUNTRIES.includes(data.country)
+          ? data.country
+          : normalizeCountry(data.country);
+      }
+
+      const primaryArtistName = (data.artists?.[0]?.name || '').trim();
+
+      data.label = normalizeLabel(data.label, primaryArtistName);
+
       this.state.lastRawData = JSON.parse(JSON.stringify(data));
       this.state.editedData = JSON.parse(JSON.stringify(data));
-
-      // Normalize country and apply label heuristic once during initial parsing
-      if (this.state.editedData) {
-        if (!this.state.editedData.country) {
-          this.state.editedData.country = 'Worldwide';
-        }
-        else {
-          this.state.editedData.country = ALLOWED_COUNTRIES.includes(this.state.editedData.country)
-            ? this.state.editedData.country
-            : normalizeCountry(this.state.editedData.country);
-        }
-
-        const primaryArtistName = (this.state.editedData.artists?.[0]?.name || '').trim();
-
-        this.state.editedData.label = normalizeLabel(this.state.editedData.label, primaryArtistName);
-      }
 
       // Default selections
       this.state.selectedFormat = this.state.currentDigitalStore.supports?.formats?.[0] || 'WAV';
@@ -652,7 +655,40 @@ export class UiWidget {
       this.state.formatText = value;
     }
     else {
+      const oldValue = getValueByPath(this.state.editedData, path);
+
       setValueByPath(this.state.editedData, path, value);
+
+      // If we updated a release-level artist name, sync track artists if they matched the old value
+      const artistMatch = path.match(/^artists\.(\d+)\.name$/);
+
+      if (artistMatch && typeof oldValue === 'string') {
+        this.syncTrackArtists(Number.parseInt(artistMatch[1], 10), oldValue, value);
+      }
+    }
+  }
+
+  /**
+   * Synchronizes track-level artists with a new release-level artist name.
+   * Only updates tracks where the artist at the specified index exactly matches the old value.
+   *
+   * @param index - Index of the artist in the artists array.
+   * @param oldName - Previous name to match against.
+   * @param newName - New name to apply.
+   */
+  private syncTrackArtists(index: number, oldName: string, newName: string): void {
+    if (!this.state.editedData) {
+      return;
+    }
+
+    const trimmedOld = oldName.trim().toLowerCase();
+
+    for (const track of this.state.editedData.tracks) {
+      const trackArtist = track.artists?.[index];
+
+      if (trackArtist && (trackArtist.name || '').trim().toLowerCase() === trimmedOld) {
+        trackArtist.name = newName;
+      }
     }
   }
 
@@ -672,6 +708,7 @@ export class UiWidget {
       this.state.formatText = '';
     }
     else {
+      const oldValue = getValueByPath(this.state.editedData, path);
       const originalValue = getValueByPath(this.state.lastRawData, path);
       // For objects (like entire tracks), we need deep copy
       const valueToRestore = (typeof originalValue === 'object' && originalValue !== null)
@@ -679,6 +716,13 @@ export class UiWidget {
         : originalValue;
 
       setValueByPath(this.state.editedData, path, valueToRestore);
+
+      // If we restored a release-level artist name, sync track artists if they matched the current (pre-restore) value
+      const artistMatch = path.match(/^artists\.(\d+)\.name$/);
+
+      if (artistMatch && typeof oldValue === 'string' && typeof valueToRestore === 'string') {
+        this.syncTrackArtists(Number.parseInt(artistMatch[1], 10), oldValue, valueToRestore);
+      }
     }
 
     await this.renderPayload();

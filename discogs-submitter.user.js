@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discogs Submitter
 // @namespace    discogs-submitter
-// @version      3.1.4
+// @version      3.1.5
 // @author       Denis G. <https://github.com/denis-g>
 // @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital, Amazon Music, Bleep, HDtracks and submit releases to Discogs.
 // @license      MIT
@@ -81,7 +81,7 @@
 
         const variablesCss = ":root{--ds-gap: 20px;--ds-radius: 12px;--ds-color-white: #fafafa;--ds-color-black: #212121;--ds-color-gray: #666;--ds-color-gray-dark: #333;--ds-color-gray-medium: #c7c7c7;--ds-color-gray-light: #eee;--ds-color-primary: #148a66;--ds-color-success: #28a745;--ds-color-error: #dc3545;--ds-color-warning: #ffc107;--ds-color-info: #17a2b8;--ds-font-sans: \"Helvetica Neue\", Helvetica, Arial, sans-serif;--ds-font-monospace: \"SFMono-Regular\", Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace}";
 
-        const widgetCss = ".discogs-submitter{contain:layout;overflow:hidden;display:none;flex-direction:column;justify-content:start;gap:var(--ds-gap);position:fixed;z-index:999999;top:var(--ds-gap);right:var(--ds-gap);width:calc(100% - (var(--ds-gap) * 2));max-width:500px;padding:var(--ds-gap) var(--ds-gap) calc(var(--ds-gap) / 2);color:var(--ds-color-black);font-family:var(--ds-font-sans)!important;font-size:14px;font-weight:400;line-height:1.2;text-transform:none;text-shadow:none;background:var(--ds-color-white);border:2px solid var(--ds-color-gray-dark);border-radius:var(--ds-radius);outline:2px solid var(--ds-color-white);opacity:0;transition:opacity .5s ease,box-shadow .8s ease;&.is-open{display:flex;opacity:1;box-shadow:0 0 10px #0009,0 0 30px #000c}&.is-webarchive{top:calc(var(--wm-toolbar-height) + var(--ds-gap))}}.discogs-submitter__loader{position:absolute;z-index:-1;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;opacity:0;transition:all 1s ease;&.is-loading{z-index:10;opacity:1}&:before{content:\"\";position:absolute;top:0;left:0;width:100%;height:100%;background:var(--ds-color-white);opacity:.75}}.discogs-submitter__loader__icon{width:70px;height:70px;animation:ds-spinner .5s linear infinite}.discogs-submitter__header{display:flex;align-items:center;gap:calc(var(--ds-gap) / 2);font-size:20px;font-weight:600;.discogs-submitter__button{color:var(--ds-color-black);&,&:hover{background:none}&.is-move{cursor:grab;&:hover{color:var(--ds-color-info)}&.is-draggable{cursor:grabbing}}&.is-close{&:hover{color:var(--ds-color-error)}}}}.discogs-submitter__header__logo{flex:0 0 auto;width:1.25em;height:1.25em}.discogs-submitter__header__title{margin-right:auto;small{font-size:8px}}.discogs-submitter__preview{margin:0 calc(var(--ds-gap) * -1);padding:0 var(--ds-gap);overflow:auto;max-height:40dvh;scrollbar-width:thin;scrollbar-color:var(--ds-color-gray-dark) transparent;-webkit-overflow-scrolling:touch;&::-webkit-scrollbar{width:6px}}.discogs-submitter__status{--status-color: var(--ds-color-gray-dark);overflow:hidden;position:relative;z-index:1;display:flex;align-items:start;gap:var(--ds-gap);margin-bottom:var(--ds-gap);padding:calc(var(--ds-gap) / 2);border-left:4px solid var(--status-color);border-radius:calc(var(--ds-radius) / 2);transition:all .3s ease;&:after{content:\"\";position:absolute;z-index:-1;top:0;left:0;width:100%;height:100%;background:var(--status-color);opacity:.1;transition:all .3s ease}&.is-success{--status-color: var(--ds-color-success)}&.is-error{--status-color: var(--ds-color-error)}&.is-info{--status-color: var(--ds-color-info)}&.is-warning{--status-color: var(--ds-color-warning)}.discogs-submitter__button{flex:0 0 auto;margin-left:auto;&.is-debug{color:var(--ds-color-gray-dark);background:none;&.is-success{color:var(--ds-color-success)}&.is-error{color:var(--ds-color-error)}}}}.discogs-submitter__actions{display:flex;flex-wrap:nowrap;gap:var(--ds-gap)}.discogs-submitter__copyright{display:flex;justify-content:center;gap:var(--ds-gap);font-size:10px;margin:var(--ds-gap) 0 0}.discogs-submitter__copyright__link{color:currentColor;text-decoration:none;&:hover{text-decoration:underline}span{display:inline-block;vertical-align:middle;font-family:var(--ds-font-monospace);color:var(--ds-color-error);animation:ds-pulse 1s ease-in-out infinite}}@keyframes ds-spinner{0%{transform:rotate(0)}to{transform:rotate(360deg)}}@keyframes ds-pulse{0%{transform:scale(1)}50%{transform:scale(1.2)}to{transform:scale(1)}}";
+        const widgetCss = ".discogs-submitter{contain:layout;overflow:hidden;display:none;flex-direction:column;justify-content:start;gap:var(--ds-gap);position:fixed;z-index:999999;top:var(--ds-gap);right:var(--ds-gap);width:calc(100% - (var(--ds-gap) * 2));max-width:500px;padding:var(--ds-gap) var(--ds-gap) calc(var(--ds-gap) / 2);color:var(--ds-color-black);font-family:var(--ds-font-sans)!important;font-size:14px;font-weight:400;line-height:1.2;text-transform:none;text-shadow:none;background:var(--ds-color-white);border:2px solid var(--ds-color-gray-dark);border-radius:var(--ds-radius);outline:2px solid var(--ds-color-white);opacity:0;transition:opacity .5s ease,box-shadow .8s ease;&.is-open{display:flex;opacity:1;box-shadow:0 0 10px #0009,0 0 30px #000c}&.is-webarchive{top:calc(var(--wm-toolbar-height) + var(--ds-gap))}}.discogs-submitter__loader{position:absolute;z-index:-1;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;opacity:0;transition:all 1s ease;&.is-loading{z-index:10;opacity:1}&:before{content:\"\";position:absolute;top:0;left:0;width:100%;height:100%;background:var(--ds-color-white);opacity:.75}}.discogs-submitter__loader__icon{width:70px;height:70px;animation:ds-spinner .5s linear infinite}.discogs-submitter__loader__cover{width:200px;height:200px;object-fit:cover;border-radius:var(--ds-radius);box-shadow:0 5px 15px #0000004d;animation:ds-pulse 2s ease-in-out infinite}.discogs-submitter__header{display:flex;align-items:center;gap:calc(var(--ds-gap) / 2);font-size:20px;font-weight:600;.discogs-submitter__button{color:var(--ds-color-black);&,&:hover{background:none}&.is-move{cursor:grab;&:hover{color:var(--ds-color-info)}&.is-draggable{cursor:grabbing}}&.is-close{&:hover{color:var(--ds-color-error)}}}}.discogs-submitter__header__logo{flex:0 0 auto;width:1.25em;height:1.25em}.discogs-submitter__header__title{margin-right:auto;small{font-size:8px}}.discogs-submitter__preview{margin:0 calc(var(--ds-gap) * -1);padding:0 var(--ds-gap);overflow:auto;max-height:40dvh;scrollbar-width:thin;scrollbar-color:var(--ds-color-gray-dark) transparent;-webkit-overflow-scrolling:touch;&::-webkit-scrollbar{width:6px}}.discogs-submitter__status{--status-color: var(--ds-color-gray-dark);overflow:hidden;position:relative;z-index:1;display:flex;align-items:start;gap:var(--ds-gap);margin-bottom:var(--ds-gap);padding:calc(var(--ds-gap) / 2);border-left:4px solid var(--status-color);border-radius:calc(var(--ds-radius) / 2);transition:all .3s ease;&:after{content:\"\";position:absolute;z-index:-1;top:0;left:0;width:100%;height:100%;background:var(--status-color);opacity:.1;transition:all .3s ease}&.is-success{--status-color: var(--ds-color-success)}&.is-error{--status-color: var(--ds-color-error)}&.is-info{--status-color: var(--ds-color-info)}&.is-warning{--status-color: var(--ds-color-warning)}.discogs-submitter__button{flex:0 0 auto;margin-left:auto;&.is-debug{color:var(--ds-color-gray-dark);background:none;&.is-success{color:var(--ds-color-success)}&.is-error{color:var(--ds-color-error)}}}}.discogs-submitter__actions{display:flex;flex-wrap:nowrap;gap:var(--ds-gap)}.discogs-submitter__copyright{display:flex;justify-content:center;gap:var(--ds-gap);font-size:10px;margin:var(--ds-gap) 0 0}.discogs-submitter__copyright__link{color:currentColor;text-decoration:none;&:hover{text-decoration:underline}span{display:inline-block;vertical-align:middle;font-family:var(--ds-font-monospace);color:var(--ds-color-error);animation:ds-pulse 1s ease-in-out infinite}}@keyframes ds-spinner{0%{transform:rotate(0)}to{transform:rotate(360deg)}}@keyframes ds-pulse{0%{transform:scale(1)}50%{transform:scale(1.2)}to{transform:scale(1)}}";
 
         const iconBug = "<svg viewBox=\"0 0 640 640\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m224 160c0-53 43-96 96-96s96 43 96 96v3.6c0 15.7-12.7 28.4-28.4 28.4h-135.1c-15.7 0-28.4-12.7-28.4-28.4v-3.6zm345.6 12.8c10.6 14.1 7.7 34.2-6.4 44.8l-97.8 73.3c5.3 8.9 9.3 18.7 11.8 29.1h98.8c17.7 0 32 14.3 32 32s-14.3 32-32 32h-96v32c0 2.6-.1 5.3-.2 7.9l83.4 62.5c14.1 10.6 17 30.7 6.4 44.8s-30.7 17-44.8 6.4l-63.1-47.3c-23.2 44.2-66.5 76.2-117.7 83.9v-230.2c0-13.3-10.7-24-24-24s-24 10.7-24 24v230.2c-51.2-7.7-94.5-39.7-117.7-83.9l-63.1 47.3c-14.1 10.6-34.2 7.7-44.8-6.4s-7.7-34.2 6.4-44.8l83.4-62.5c-.1-2.6-.2-5.2-.2-7.9v-32h-96c-17.7 0-32-14.3-32-32s14.3-32 32-32h98.8c2.5-10.4 6.5-20.2 11.8-29.1l-97.8-73.3c-14.1-10.6-17-30.7-6.4-44.8s30.7-17 44.8-6.4l108.8 81.6c12.3-5.1 25.8-8 40-8h112c14.2 0 27.7 2.8 40 8l108.8-81.6c14.1-10.6 34.2-7.7 44.8 6.4z\"/></svg>";
 
@@ -363,7 +363,7 @@
         const oxfordPattern = buildOxfordPattern(ARTIST_JOINERS);
 
         const name = "discogs-submitter";
-        const version = "3.1.4";
+        const version = "3.1.5";
         const funding = "https://buymeacoffee.com/denis_g";
         const homepage = "https://github.com/denis-g/userscript-discogs-submitter";
         const bugs = {"url":"https://github.com/denis-g/userscript-discogs-submitter/issues"};
@@ -1363,8 +1363,8 @@ A digital release in ${format} format has been added.`
             return attempt(0);
         }
 
-        function chainProps(obj, props) {
-            return !props ? obj : props.split(".").reduce((o, k) => o?.[k], obj);
+        function chainProps(object, props) {
+            return !props ? object : props.split(".").reduce((o, k) => o?.[k], object);
         }
         const EVENT_NAME_RE = /^[A-Z][\w-]*$/i;
         const HANDLER_NAME_RE = /^[A-Z_$][\w$]*$/i;
@@ -1380,7 +1380,10 @@ A digital release in ${format} format has been added.`
                 if (parts.length !== 2 || !EVENT_NAME_RE.test(eventName) || !HANDLER_NAME_RE.test(handlerName)) {
                     throw new TypeError(`Invalid data-event declaration: "${binding}"`);
                 }
-                return { eventName, handlerName };
+                return {
+                    eventName,
+                    handlerName
+                };
             });
         }
         function bindCollectedEvents(bindings, events) {
@@ -1393,37 +1396,215 @@ A digital release in ${format} format has been added.`
                 }
             }
             const processedElements = new Set();
-            for (const { el, eventName, handlerName } of bindings) {
-                el.addEventListener(eventName, events[handlerName]);
-                processedElements.add(el);
+            for (const { element, eventName, handlerName } of bindings) {
+                element.addEventListener(eventName, events[handlerName]);
+                processedElements.add(element);
             }
-            for (const el of processedElements) {
-                el.removeAttribute("data-event");
+            for (const element of processedElements) {
+                element.removeAttribute("data-event");
             }
         }
-        function renderTemplate(template, data, domEl, { replace = false, events } = {}) {
+        function renderTemplate(template, data, domElement, { replace = false, events } = {}) {
             if (replace) {
-                domEl.textContent = "";
+                domElement.textContent = "";
             }
-            let templateEl;
+            let templateElement;
             if (typeof template === "string") {
-                templateEl = document.createElement("template");
-                templateEl.innerHTML = template;
+                templateElement = document.createElement("template");
+                templateElement.innerHTML = template;
             } else {
-                templateEl = template;
+                templateElement = template;
             }
-            const frag = templateEl.content.cloneNode(true);
+            const fragment = templateElement.content.cloneNode(true);
             const eventBindings = events == null ? null : [];
-            walk(frag, data, eventBindings);
+            walk(fragment, data, eventBindings);
             if (eventBindings && eventBindings.length > 0 && events) {
                 bindCollectedEvents(eventBindings, events);
             }
-            domEl.append(frag);
+            domElement.append(fragment);
         }
-        function walk(node, ctx, eventBindings = null) {
+        const processIf = (element, context, walk2, eventBindings) => {
+            if (!element.dataset.if) {
+                return false;
+            }
+            let expression = element.dataset.if.trim();
+            let invert = false;
+            if (expression.startsWith("!")) {
+                invert = true;
+                expression = expression.slice(1).trim();
+            }
+            const rawValue = chainProps(context, expression);
+            let condition = Boolean(rawValue);
+            if (invert) {
+                condition = !condition;
+            }
+            element.removeAttribute("data-if");
+            if (!condition) {
+                element.remove();
+                return true;
+            }
+            if (element.tagName === "VAR" || "unwrap" in element.dataset) {
+                const children = Array.from(element.childNodes);
+                const parent = element.parentElement;
+                if (parent) {
+                    element.before(...children);
+                    element.remove();
+                    for (const childNode of children) {
+                        walk2(childNode, context, eventBindings);
+                    }
+                } else {
+                    for (const childNode of children) {
+                        walk2(childNode, context, eventBindings);
+                    }
+                }
+                return true;
+            }
+            return false;
+        };
+        const processLoop = (element, context, walk2, eventBindings) => {
+            if (!element.dataset.loop) {
+                return false;
+            }
+            const loopExpression = element.dataset.loop;
+            const source = chainProps(context, loopExpression);
+            const processItem = (itemContext) => {
+                const clone = element.cloneNode(true);
+                clone.removeAttribute("data-loop");
+                walk2(clone, itemContext, eventBindings);
+                if (element.tagName === "VAR" || "unwrap" in element.dataset) {
+                    element.before(...Array.from(clone.childNodes));
+                } else {
+                    element.before(clone);
+                }
+            };
+            if (Array.isArray(source)) {
+                const length = source.length;
+                for (let index = 0; index < length; index++) {
+                    const item = source[index];
+                    const baseContext = item && typeof item === "object" ? { ...item } : { _value: item };
+                    const itemContext = {
+                        _value: item,
+                        ...baseContext,
+                        _index: index,
+                        _first: index === 0,
+                        _last: index === length - 1
+                    };
+                    processItem(itemContext);
+                }
+            } else if (source && typeof source === "object") {
+                const entries = Object.entries(source);
+                for (let index = 0; index < entries.length; index++) {
+                    const [key, value] = entries[index];
+                    const itemContext = Array.isArray(value) ? {
+                        _key: key,
+                        _value: value,
+                        _index: index
+                    } : value && typeof value === "object" ? {
+                        _value: value,
+                        ...value,
+                        _key: key,
+                        _index: index
+                    } : {
+                        _key: key,
+                        _value: value,
+                        _index: index
+                    };
+                    processItem(itemContext);
+                }
+            } else if (source != null) {
+                throw new TypeError(`data for "${loopExpression}" must be array or object`);
+            }
+            element.remove();
+            return true;
+        };
+        const processStyle = (element, context) => {
+            if (!element.dataset.style) {
+                return false;
+            }
+            element.dataset.style.split("|").forEach((pair) => {
+                const [property, path] = pair.split(":");
+                const value = chainProps(context, path);
+                if (value != null) {
+                    element.style.setProperty(property, String(value));
+                }
+            });
+            element.removeAttribute("data-style");
+            return false;
+        };
+        const processAttr = (element, context) => {
+            if (!element.dataset.attr) {
+                return false;
+            }
+            element.dataset.attr.split("|").forEach((binding) => {
+                const [key, path] = binding.split(":");
+                const value = chainProps(context, path);
+                if (value != null) {
+                    if (key === "class") {
+                        const classNames = String(value).trim().split(/\s+/).filter(Boolean);
+                        if (classNames.length) {
+                            element.classList.add(...classNames);
+                        }
+                    } else {
+                        element.setAttribute(key, String(value));
+                    }
+                }
+            });
+            element.removeAttribute("data-attr");
+            return false;
+        };
+        const processText = (element, context) => {
+            if (element.dataset.text == null) {
+                return false;
+            }
+            const path = element.dataset.text.trim();
+            const value = path === "" ? context && typeof context === "object" && "_value" in context ? context._value : context : chainProps(context, path);
+            element.textContent = value != null ? String(value) : "";
+            element.removeAttribute("data-text");
+            return false;
+        };
+        const processEvent = (element, context, walk2, eventBindings) => {
+            if (!eventBindings || !element.dataset.event) {
+                return false;
+            }
+            const parsed = parseDataEventDeclaration(element.dataset.event);
+            for (const { eventName, handlerName } of parsed) {
+                eventBindings.push({
+                    element,
+                    eventName,
+                    handlerName
+                });
+            }
+            return false;
+        };
+        const processVar = (element, context, walk2, eventBindings) => {
+            if (element.tagName === "VAR" && !element.firstElementChild) {
+                const path = element.textContent?.trim() || "";
+                const value = path === "" ? context && typeof context === "object" && "_value" in context ? context._value : context : chainProps(context, path);
+                element.replaceWith(document.createTextNode(value != null ? String(value) : ""));
+                return true;
+            }
+            if (element.tagName === "VAR" || "unwrap" in element.dataset) {
+                const children = Array.from(element.childNodes);
+                const parent = element.parentElement;
+                if (parent) {
+                    element.before(...children);
+                    element.remove();
+                    for (const childNode of children) {
+                        walk2(childNode, context, eventBindings);
+                    }
+                } else {
+                    for (const childNode of children) {
+                        walk2(childNode, context, eventBindings);
+                    }
+                }
+                return true;
+            }
+            return false;
+        };
+        function walk(node, context, eventBindings = null) {
             if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
                 for (const child of Array.from(node.childNodes)) {
-                    walk(child, ctx, eventBindings);
+                    walk(child, context, eventBindings);
                 }
                 return;
             }
@@ -1432,145 +1613,22 @@ A digital release in ${format} format has been added.`
                 return;
             }
             if (node.nodeType === Node.ELEMENT_NODE) {
-                const el = node;
-                if (el.dataset.if) {
-                    let expr = el.dataset.if.trim();
-                    let invert = false;
-                    if (expr.startsWith("!")) {
-                        invert = true;
-                        expr = expr.slice(1).trim();
-                    }
-                    const raw = chainProps(ctx, expr);
-                    let cond = Boolean(raw);
-                    if (invert) {
-                        cond = !cond;
-                    }
-                    el.removeAttribute("data-if");
-                    if (!cond) {
-                        el.remove();
-                        return;
-                    }
-                    if (el.tagName === "VAR" || "unwrap" in el.dataset) {
-                        const children = Array.from(el.childNodes);
-                        const parent = el.parentElement;
-                        if (parent) {
-                            el.before(...children);
-                            el.remove();
-                            for (const childNode of children) {
-                                walk(childNode, ctx, eventBindings);
-                            }
-                        } else {
-                            for (const childNode of children) {
-                                walk(childNode, ctx, eventBindings);
-                            }
-                        }
-                        return;
-                    }
-                }
-                if (el.dataset.loop) {
-                    const loopExpr = el.dataset.loop;
-                    const src = chainProps(ctx, loopExpr);
-                    const processItem = (itemCtx) => {
-                        const clone = el.cloneNode(true);
-                        clone.removeAttribute("data-loop");
-                        walk(clone, itemCtx, eventBindings);
-                        if (el.tagName === "VAR" || "unwrap" in el.dataset) {
-                            el.before(...Array.from(clone.childNodes));
-                        } else {
-                            el.before(clone);
-                        }
-                    };
-                    if (Array.isArray(src)) {
-                        const len = src.length;
-                        for (let idx = 0; idx < len; idx++) {
-                            const item = src[idx];
-                            const baseCtx = item && typeof item === "object" ? { ...item } : { _value: item };
-                            const itemCtx = {
-                                ...baseCtx,
-                                _index: idx,
-                                _first: idx === 0,
-                                _last: idx === len - 1
-                            };
-                            processItem(itemCtx);
-                        }
-                    } else if (src && typeof src === "object") {
-                        const entries = Object.entries(src);
-                        for (let idx = 0; idx < entries.length; idx++) {
-                            const [key, val] = entries[idx];
-                            const itemCtx = Array.isArray(val) ? { _key: key, _value: val, _index: idx } : val && typeof val === "object" ? { ...val, _key: key, _index: idx } : { _key: key, _value: val, _index: idx };
-                            processItem(itemCtx);
-                        }
-                    } else if (src != null) {
-                        throw new TypeError(`data for "${loopExpr}" must be array or object`);
-                    }
-                    el.remove();
+                const element = node;
+                if (processIf(element, context, walk, eventBindings)) {
                     return;
                 }
-                if (el.dataset.style) {
-                    el.dataset.style.split("|").forEach((pair) => {
-                        const [prop, path] = pair.split(":");
-                        const value = chainProps(ctx, path);
-                        if (value != null) {
-                            el.style.setProperty(prop, String(value));
-                        }
-                    });
-                    el.removeAttribute("data-style");
-                }
-                if (el.dataset.attr) {
-                    el.dataset.attr.split("|").forEach((binding) => {
-                        const [key, path] = binding.split(":");
-                        const val = chainProps(ctx, path);
-                        if (val != null) {
-                            if (key === "class") {
-                                const classNames = String(val).trim().split(/\s+/).filter(Boolean);
-                                if (classNames.length) {
-                                    el.classList.add(...classNames);
-                                }
-                            } else {
-                                el.setAttribute(key, String(val));
-                            }
-                        }
-                    });
-                    el.removeAttribute("data-attr");
-                }
-                if (el.dataset.text != null) {
-                    const path = el.dataset.text.trim();
-                    const value = path === "" ? ctx && typeof ctx === "object" && "_value" in ctx ? ctx._value : ctx : chainProps(ctx, path);
-                    el.textContent = value != null ? String(value) : "";
-                    el.removeAttribute("data-text");
-                }
-                if (el.tagName === "VAR") {
-                    if (!el.firstElementChild) {
-                        const path = el.textContent?.trim() || "";
-                        const value = path === "" ? ctx && typeof ctx === "object" && "_value" in ctx ? ctx._value : ctx : chainProps(ctx, path);
-                        el.replaceWith(document.createTextNode(value != null ? String(value) : ""));
-                        return;
-                    }
-                }
-                if (el.tagName === "VAR" || "unwrap" in el.dataset) {
-                    const children = Array.from(el.childNodes);
-                    const parent = el.parentElement;
-                    if (parent) {
-                        el.before(...children);
-                        el.remove();
-                        for (const childNode of children) {
-                            walk(childNode, ctx, eventBindings);
-                        }
-                    } else {
-                        for (const childNode of children) {
-                            walk(childNode, ctx, eventBindings);
-                        }
-                    }
+                if (processLoop(element, context, walk, eventBindings)) {
                     return;
                 }
-                if (eventBindings && el.dataset.event) {
-                    const parsed = parseDataEventDeclaration(el.dataset.event);
-                    for (const { eventName, handlerName } of parsed) {
-                        eventBindings.push({ el, eventName, handlerName });
-                    }
+                processStyle(element, context);
+                processAttr(element, context);
+                processText(element, context);
+                processEvent(element, context, walk, eventBindings);
+                if (processVar(element, context, walk, eventBindings)) {
+                    return;
                 }
-                for (const child of Array.from(el.childNodes)) {
-                    walk(child, ctx, eventBindings);
+                for (const child of Array.from(element.childNodes)) {
+                    walk(child, context, eventBindings);
                 }
             }
         }
@@ -2420,9 +2478,11 @@ A digital release in ${format} format has been added.`
             }
         }
 
-        const previewTemplate = "<div class=\"discogs-submitter__results\">\n  <div class=\"discogs-submitter__results__row\">\n    <div class=\"discogs-submitter__results__head\">Image</div>\n    <div class=\"discogs-submitter__results__body\">\n      <var data-if=\"cover\">\n        <a data-attr=\"href:cover\" target=\"_blank\"><small>Preview</small></a>\n      </var>\n      <var data-if=\"!cover\">\n        <small>No cover</small>\n      </var>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row\">\n    <div class=\"discogs-submitter__results__head\">Artists</div>\n    <div class=\"discogs-submitter__results__body is-multiple\">\n      <var data-loop=\"releaseArtists\">\n        <div class=\"discogs-submitter__results__field\">\n          <span class=\"discogs-submitter__input is-edit \" contenteditable=\"plaintext-only\" data-field=\"artists.name\" data-text=\"name\" data-attr=\"data-index:_index\" placeholder=\"Artist...\"></span>\n          <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"artists.name\" data-attr=\"data-index:_index\" title=\"Restore original artist\"><use href=\"#ds-rotate-left\"></use></svg>\n        </div>\n        <var data-if=\"!_last\">\n          <var data-if=\"join\"><var>join</var></var>\n        </var>\n      </var>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row\">\n    <div class=\"discogs-submitter__results__head\">Title</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <span class=\"discogs-submitter__input is-edit\" contenteditable=\"plaintext-only\" data-field=\"title\" data-text=\"rawTitle\" placeholder=\"Title...\"></span>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"title\" title=\"Restore original title\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row is-half\">\n    <div class=\"discogs-submitter__results__head\">Label</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <span class=\"discogs-submitter__input is-edit\" contenteditable=\"plaintext-only\" data-field=\"label\" data-text=\"rawLabel\" placeholder=\"Label...\"></span>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"label\" title=\"Restore original label\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row is-half\">\n    <div class=\"discogs-submitter__results__head\">Catalog</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <span class=\"discogs-submitter__input is-edit\" contenteditable=\"plaintext-only\" data-field=\"number\" data-text=\"rawNumber\" placeholder=\"Catalog...\"></span>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"number\" title=\"Restore original catalog\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row is-half\">\n    <div class=\"discogs-submitter__results__head\">Released</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <span class=\"discogs-submitter__input is-edit\" contenteditable=\"plaintext-only\" data-field=\"released\" data-text=\"rawReleased\" placeholder=\"Date...\"></span>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"released\" title=\"Restore original release date\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row is-half\">\n    <div class=\"discogs-submitter__results__head\">Country</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <select class=\"is-edit is-country\" autocomplete=\"off\" data-field=\"country\" data-placeholder=\"Country...\">\n          <option value=\"\">–</option>\n          <optgroup data-unwrap data-loop=\"availableCountries\">\n            <option data-attr=\"value:_value\" data-if=\"isSelected\" data-text=\"_value\" selected></option>\n            <option data-attr=\"value:_value\" data-if=\"!isSelected\" data-text=\"_value\"></option>\n          </optgroup>\n        </select>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"country\" title=\"Restore original country\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row\">\n    <div class=\"discogs-submitter__results__head\">Format</div>\n    <div class=\"discogs-submitter__results__body is-multiple\">\n      <var data-loop=\"format\">\n        <var>qty</var> x <var>name</var>,\n      </var>\n      <div class=\"discogs-submitter__results__field\">\n        <select class=\"is-format\" autocomplete=\"off\" tabindex=\"-1\" data-placeholder=\"Format...\">\n          <optgroup data-unwrap data-loop=\"availableFormats\">\n            <option data-attr=\"value:_value\" data-if=\"isSelected\" data-text=\"_value\" selected></option>\n            <option data-attr=\"value:_value\" data-if=\"!isSelected\" data-text=\"_value\"></option>\n          </optgroup>\n        </select>\n      </div>\n      <div class=\"discogs-submitter__results__field\">\n        <select class=\"is-description\" multiple autocomplete=\"off\" tabindex=\"-1\" data-placeholder=\"Description...\">\n          <optgroup data-unwrap data-loop=\"availableDescriptions\">\n            <option data-attr=\"value:_value\" data-if=\"isSelected\" data-text=\"_value\" selected></option>\n            <option data-attr=\"value:_value\" data-if=\"!isSelected\" data-text=\"_value\"></option>\n          </optgroup>\n        </select>\n      </div>\n      <div class=\"discogs-submitter__results__field\">\n        <span class=\"discogs-submitter__input is-edit is-format-text\" contenteditable=\"plaintext-only\" data-field=\"formatText\" data-text=\"formatText\" placeholder=\"Free Text...\"></span>\n      </div>\n    </div>\n  </div>\n\n  <div data-attr=\"class:rowClass\" class=\"discogs-submitter__results__row is-tracklist\">\n    <div class=\"discogs-submitter__results__head\">#</div>\n    <var data-if=\"hasTrackArtists\">\n      <div class=\"discogs-submitter__results__head\">Artist</div>\n    </var>\n    <div class=\"discogs-submitter__results__head\">Title / Credits</div>\n    <div class=\"discogs-submitter__results__head\">Duration</div>\n  </div>\n\n  <var data-if=\"!tracks.length\">\n    <div class=\"discogs-submitter__results__row\">\n      <div class=\"discogs-submitter__results__body\">⚠️ No tracks found.</div>\n    </div>\n  </var>\n\n  <var data-loop=\"tracks\">\n    <div data-attr=\"class:rowClass\" class=\"discogs-submitter__results__row is-tracklist\" data-attr=\"data-index:_index\">\n      <div class=\"discogs-submitter__results__body\"><var>pos</var></div>\n      <var data-if=\"hasTrackArtists\">\n        <div class=\"discogs-submitter__results__body is-multiple\">\n          <var data-loop=\"trackArtists\">\n            <div class=\"discogs-submitter__results__field\">\n              <span class=\"discogs-submitter__input is-edit is-track-artists\" contenteditable=\"plaintext-only\" data-field=\"tracks.artists.name\" data-text=\"name\" data-attr=\"data-index:_trackIndex|data-subindex:_index\" placeholder=\"Artist...\"></span>\n              <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"tracks.artists.name\" data-attr=\"data-index:_trackIndex|data-subindex:_index\" title=\"Restore original artist\"><use href=\"#ds-rotate-left\"></use></svg>\n            </div>\n            <var data-if=\"!_last\">\n              <var data-if=\"join\"><var>join</var></var>\n            </var>\n          </var>\n        </div>\n      </var>\n      <div class=\"discogs-submitter__results__body\">\n        <div class=\"discogs-submitter__results__field\">\n          <span class=\"discogs-submitter__input is-edit is-track-title\" contenteditable=\"plaintext-only\" data-field=\"tracks.title\" data-text=\"title\" data-attr=\"data-index:_index\"></span>\n          <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"tracks.title\" data-attr=\"data-index:_index\" title=\"Restore original title\"><use href=\"#ds-rotate-left\"></use></svg>\n        </div>\n        <var data-if=\"trackExtraartists.length\">\n          <var data-loop=\"trackExtraartists\">\n            <div class=\"discogs-submitter__results__body is-multiple is-inner\">\n              <small><var>role</var> – </small>\n              <div class=\"discogs-submitter__results__field\">\n                <span class=\"discogs-submitter__input is-edit is-track-extraartists\" contenteditable=\"plaintext-only\" data-field=\"tracks.extraartists.name\" data-text=\"name\" data-attr=\"data-index:_trackIndex|data-subindex:_index\" placeholder=\"Artist...\"></span>\n                <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"tracks.extraartists.name\" data-attr=\"data-index:_trackIndex|data-subindex:_index\" title=\"Restore original credit\"><use href=\"#ds-rotate-left\"></use></svg>\n              </div>\n            </div>\n          </var>\n        </var>\n      </div>\n      <div class=\"discogs-submitter__results__body\"><var>duration</var></div>\n    </div>\n  </var>\n\n  <var data-if=\"showExtraArtists\">\n    <div class=\"discogs-submitter__results__row is-notes\">\n      <div class=\"discogs-submitter__results__head\">Credits</div>\n      <div class=\"discogs-submitter__results__body is-multiple\">\n        <var data-loop=\"rawExtraArtists\">\n          <var>role</var> –\n          <div class=\"discogs-submitter__results__field\">\n            <span class=\"discogs-submitter__input is-edit\" contenteditable=\"plaintext-only\" data-field=\"extraartists.name\" data-text=\"name\" data-attr=\"data-index:_index\" placeholder=\"Artist...\"></span>\n            <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"extraartists.name\" data-attr=\"data-index:_index\" title=\"Restore original credit\"><use href=\"#ds-rotate-left\"></use></svg>\n          </div>\n          <br/>\n        </var>\n      </div>\n    </div>\n  </var>\n\n  <div class=\"discogs-submitter__results__row is-notes\">\n    <div class=\"discogs-submitter__results__head\">Notes</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <span class=\"discogs-submitter__textarea is-edit\" contenteditable=\"plaintext-only\" data-field=\"notes\" data-text=\"rawNotes\" placeholder=\"Notes...\"></span>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"notes\" title=\"Restore original notes\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row is-notes\">\n    <div class=\"discogs-submitter__results__head\">Submission Notes</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <span class=\"discogs-submitter__textarea is-edit\" contenteditable=\"plaintext-only\" data-field=\"submissionNotes\" data-text=\"rawSubmissionNotes\" placeholder=\"Submission Notes...\"></span>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"submissionNotes\" title=\"Restore original submission notes\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n</div>\n";
+        const loaderTemplate = "<var data-if=\"cover\">\n  <img data-attr=\"src:cover\" class=\"discogs-submitter__loader__cover\" alt=\"Loading...\" />\n</var>\n<var data-if=\"!cover\">\n  <svg class=\"discogs-submitter__loader__icon\" aria-hidden=\"true\"><use href=\"#ds-logo\"></use></svg>\n</var>\n";
 
-        const widgetTemplate = "<div class=\"discogs-submitter__header\">\n  <svg class=\"discogs-submitter__header__logo\" aria-hidden=\"true\"><use href=\"#ds-logo\"></use></svg>\n  <span class=\"discogs-submitter__header__title\"><var>scriptName</var> <small>v<var>scriptVersion</var></small></span>\n  <svg class=\"discogs-submitter__button is-icon is-large is-move\" title=\"Grab to move\" role=\"button\"><use href=\"#ds-icon-move\"></use></svg>\n  <svg class=\"discogs-submitter__button is-icon is-large is-close\" title=\"Close widget\" role=\"button\"><use href=\"#ds-icon-close\"></use></svg>\n</div>\n\n<div class=\"discogs-submitter__preview\"></div>\n\n<div class=\"discogs-submitter__footer\">\n  <div class=\"discogs-submitter__status\">\n    <div class=\"discogs-submitter__status__text\">Waiting...</div>\n    <svg class=\"discogs-submitter__button is-icon is-debug\" title=\"Copy debug\" hidden role=\"button\"><use href=\"#ds-icon-bug\"></use></svg>\n  </div>\n\n  <div class=\"discogs-submitter__actions\">\n    <div class=\"discogs-submitter__button is-full is-large is-primary\" role=\"button\" hidden>Submit to Discogs</div>\n  </div>\n\n  <div class=\"discogs-submitter__copyright\">\n    <a class=\"discogs-submitter__copyright__link\" data-attr=\"href:homepage\" target=\"_blank\">Homepage</a>\n    <a class=\"discogs-submitter__copyright__link\" data-attr=\"href:supportURL\" target=\"_blank\">Report Bug</a>\n    <a class=\"discogs-submitter__copyright__link\" data-attr=\"href:funding\" target=\"_blank\">Made with <span>♥</span> for music</a>\n  </div>\n</div>\n\n<div class=\"discogs-submitter__loader\">\n  <svg class=\"discogs-submitter__loader__icon\" aria-hidden=\"true\"><use href=\"#ds-logo\"></use></svg>\n</div>\n";
+        const previewTemplate = "<div class=\"discogs-submitter__results\">\n  <div class=\"discogs-submitter__results__row\">\n    <div class=\"discogs-submitter__results__head\">Image</div>\n    <div class=\"discogs-submitter__results__body\">\n      <var data-if=\"cover\">\n        <a data-attr=\"href:cover\" target=\"_blank\"><small>Preview</small></a>\n      </var>\n      <var data-if=\"!cover\">\n        <small>No cover</small>\n      </var>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row\">\n    <div class=\"discogs-submitter__results__head\">Artists</div>\n    <div class=\"discogs-submitter__results__body is-multiple\">\n      <var data-loop=\"releaseArtists\">\n        <div class=\"discogs-submitter__results__field\">\n          <span class=\"discogs-submitter__input is-edit \" contenteditable=\"plaintext-only\" data-field=\"artists.name\" data-text=\"name\" data-attr=\"data-index:_index\" placeholder=\"Artist...\"></span>\n          <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"artists.name\" data-attr=\"data-index:_index\" title=\"Restore original artist\"><use href=\"#ds-rotate-left\"></use></svg>\n        </div>\n        <var data-if=\"!_last\">\n          <var data-if=\"join\"><var>join</var></var>\n        </var>\n      </var>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row\">\n    <div class=\"discogs-submitter__results__head\">Title</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <span class=\"discogs-submitter__input is-edit\" contenteditable=\"plaintext-only\" data-field=\"title\" data-text=\"rawTitle\" placeholder=\"Title...\"></span>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"title\" title=\"Restore original title\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row is-half\">\n    <div class=\"discogs-submitter__results__head\">Label</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <span class=\"discogs-submitter__input is-edit\" contenteditable=\"plaintext-only\" data-field=\"label\" data-text=\"rawLabel\" placeholder=\"Label...\"></span>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"label\" title=\"Restore original label\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row is-half\">\n    <div class=\"discogs-submitter__results__head\">Catalog</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <span class=\"discogs-submitter__input is-edit\" contenteditable=\"plaintext-only\" data-field=\"number\" data-text=\"rawNumber\" placeholder=\"Catalog...\"></span>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"number\" title=\"Restore original catalog\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row is-half\">\n    <div class=\"discogs-submitter__results__head\">Released</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <span class=\"discogs-submitter__input is-edit\" contenteditable=\"plaintext-only\" data-field=\"released\" data-text=\"rawReleased\" placeholder=\"Date...\"></span>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"released\" title=\"Restore original release date\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row is-half\">\n    <div class=\"discogs-submitter__results__head\">Country</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <select class=\"is-edit is-country\" autocomplete=\"off\" data-field=\"country\" data-placeholder=\"Country...\">\n          <option value=\"\">–</option>\n          <optgroup data-unwrap data-loop=\"availableCountries\">\n            <option data-attr=\"value:_value\" data-if=\"isSelected\" data-text=\"_value\" selected></option>\n            <option data-attr=\"value:_value\" data-if=\"!isSelected\" data-text=\"_value\"></option>\n          </optgroup>\n        </select>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"country\" title=\"Restore original country\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row\">\n    <div class=\"discogs-submitter__results__head\">Format</div>\n    <div class=\"discogs-submitter__results__body is-multiple\">\n      <var data-loop=\"format\">\n        <var>qty</var> x <var>name</var>,\n      </var>\n      <div class=\"discogs-submitter__results__field\">\n        <select class=\"is-format\" autocomplete=\"off\" tabindex=\"-1\" data-placeholder=\"Format...\">\n          <optgroup data-unwrap data-loop=\"availableFormats\">\n            <option data-attr=\"value:_value\" data-if=\"isSelected\" data-text=\"_value\" selected></option>\n            <option data-attr=\"value:_value\" data-if=\"!isSelected\" data-text=\"_value\"></option>\n          </optgroup>\n        </select>\n      </div>\n      <div class=\"discogs-submitter__results__field\">\n        <select class=\"is-description\" multiple autocomplete=\"off\" tabindex=\"-1\" data-placeholder=\"Description...\">\n          <optgroup data-unwrap data-loop=\"availableDescriptions\">\n            <option data-attr=\"value:_value\" data-if=\"isSelected\" data-text=\"_value\" selected></option>\n            <option data-attr=\"value:_value\" data-if=\"!isSelected\" data-text=\"_value\"></option>\n          </optgroup>\n        </select>\n      </div>\n      <div class=\"discogs-submitter__results__field\">\n        <span class=\"discogs-submitter__input is-edit is-format-text\" contenteditable=\"plaintext-only\" data-field=\"formatText\" data-text=\"formatText\" placeholder=\"Free Text...\"></span>\n      </div>\n    </div>\n  </div>\n\n  <div data-attr=\"class:rowClass\" class=\"discogs-submitter__results__row is-tracklist\">\n    <div class=\"discogs-submitter__results__head\">#</div>\n    <var data-if=\"hasTrackArtists\">\n      <div class=\"discogs-submitter__results__head\">Artist</div>\n    </var>\n    <div class=\"discogs-submitter__results__head\">Title / Credits</div>\n    <div class=\"discogs-submitter__results__head\">Duration</div>\n  </div>\n\n  <var data-if=\"!tracks.length\">\n    <div class=\"discogs-submitter__results__row\">\n      <div class=\"discogs-submitter__results__body\">⚠️ No tracks found.</div>\n    </div>\n  </var>\n\n  <var data-loop=\"tracks\">\n    <div data-attr=\"class:rowClass\" class=\"discogs-submitter__results__row is-tracklist\" data-attr=\"data-index:_index\">\n      <div class=\"discogs-submitter__results__body\"><var>pos</var></div>\n      <var data-if=\"hasTrackArtists\">\n        <div class=\"discogs-submitter__results__body is-multiple\">\n          <var data-loop=\"trackArtists\">\n            <div class=\"discogs-submitter__results__field\">\n              <span class=\"discogs-submitter__input is-edit is-track-artists\" contenteditable=\"plaintext-only\" data-field=\"tracks.artists.name\" data-text=\"name\" data-attr=\"data-index:_trackIndex|data-subindex:_index\" placeholder=\"Artist...\"></span>\n              <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"tracks.artists.name\" data-attr=\"data-index:_trackIndex|data-subindex:_index\" title=\"Restore original artist\"><use href=\"#ds-rotate-left\"></use></svg>\n            </div>\n            <var data-if=\"!_last\">\n              <var data-if=\"join\"><var>join</var></var>\n            </var>\n          </var>\n        </div>\n      </var>\n      <div class=\"discogs-submitter__results__body\">\n        <div class=\"discogs-submitter__results__field\">\n          <span class=\"discogs-submitter__input is-edit is-track-title\" contenteditable=\"plaintext-only\" data-field=\"tracks.title\" data-text=\"title\" data-attr=\"data-index:_index\" placeholder=\"Title...\"></span>\n          <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"tracks.title\" data-attr=\"data-index:_index\" title=\"Restore original title\"><use href=\"#ds-rotate-left\"></use></svg>\n        </div>\n        <var data-if=\"trackExtraartists.length\">\n          <var data-loop=\"trackExtraartists\">\n            <div class=\"discogs-submitter__results__body is-multiple is-inner\">\n              <small><var>role</var> – </small>\n              <div class=\"discogs-submitter__results__field\">\n                <span class=\"discogs-submitter__input is-edit is-track-extraartists\" contenteditable=\"plaintext-only\" data-field=\"tracks.extraartists.name\" data-text=\"name\" data-attr=\"data-index:_trackIndex|data-subindex:_index\" placeholder=\"Artist...\"></span>\n                <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"tracks.extraartists.name\" data-attr=\"data-index:_trackIndex|data-subindex:_index\" title=\"Restore original credit\"><use href=\"#ds-rotate-left\"></use></svg>\n              </div>\n            </div>\n          </var>\n        </var>\n      </div>\n      <div class=\"discogs-submitter__results__body\"><var>duration</var></div>\n    </div>\n  </var>\n\n  <var data-if=\"showExtraArtists\">\n    <div class=\"discogs-submitter__results__row is-notes\">\n      <div class=\"discogs-submitter__results__head\">Credits</div>\n      <div class=\"discogs-submitter__results__body is-multiple\">\n        <var data-loop=\"rawExtraArtists\">\n          <var>role</var> –\n          <div class=\"discogs-submitter__results__field\">\n            <span class=\"discogs-submitter__input is-edit\" contenteditable=\"plaintext-only\" data-field=\"extraartists.name\" data-text=\"name\" data-attr=\"data-index:_index\" placeholder=\"Artist...\"></span>\n            <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"extraartists.name\" data-attr=\"data-index:_index\" title=\"Restore original credit\"><use href=\"#ds-rotate-left\"></use></svg>\n          </div>\n          <br/>\n        </var>\n      </div>\n    </div>\n  </var>\n\n  <div class=\"discogs-submitter__results__row is-notes\">\n    <div class=\"discogs-submitter__results__head\">Notes</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <span class=\"discogs-submitter__textarea is-edit\" contenteditable=\"plaintext-only\" data-field=\"notes\" data-text=\"rawNotes\" placeholder=\"Notes...\"></span>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"notes\" title=\"Restore original notes\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row is-notes\">\n    <div class=\"discogs-submitter__results__head\">Submission Notes</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <span class=\"discogs-submitter__textarea is-edit\" contenteditable=\"plaintext-only\" data-field=\"submissionNotes\" data-text=\"rawSubmissionNotes\" placeholder=\"Submission Notes...\"></span>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"submissionNotes\" title=\"Restore original submission notes\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n</div>\n";
+
+        const widgetTemplate = "<div class=\"discogs-submitter__header\">\n  <svg class=\"discogs-submitter__header__logo\" aria-hidden=\"true\"><use href=\"#ds-logo\"></use></svg>\n  <span class=\"discogs-submitter__header__title\"><var>scriptName</var> <small>v<var>scriptVersion</var></small></span>\n  <svg class=\"discogs-submitter__button is-icon is-large is-move\" title=\"Grab to move\" role=\"button\"><use href=\"#ds-icon-move\"></use></svg>\n  <svg class=\"discogs-submitter__button is-icon is-large is-close\" title=\"Close widget\" role=\"button\"><use href=\"#ds-icon-close\"></use></svg>\n</div>\n\n<div class=\"discogs-submitter__preview\"></div>\n\n<div class=\"discogs-submitter__footer\">\n  <div class=\"discogs-submitter__status\">\n    <div class=\"discogs-submitter__status__text\">Waiting...</div>\n    <svg class=\"discogs-submitter__button is-icon is-debug\" title=\"Copy debug\" hidden role=\"button\"><use href=\"#ds-icon-bug\"></use></svg>\n  </div>\n\n  <div class=\"discogs-submitter__actions\">\n    <div class=\"discogs-submitter__button is-full is-large is-primary\" role=\"button\" hidden>Submit to Discogs</div>\n  </div>\n\n  <div class=\"discogs-submitter__copyright\">\n    <a class=\"discogs-submitter__copyright__link\" data-attr=\"href:homepage\" target=\"_blank\">Homepage</a>\n    <a class=\"discogs-submitter__copyright__link\" data-attr=\"href:supportURL\" target=\"_blank\">Report Bug</a>\n    <a class=\"discogs-submitter__copyright__link\" data-attr=\"href:funding\" target=\"_blank\">Made with <span>♥</span> for music</a>\n  </div>\n</div>\n\n<div class=\"discogs-submitter__loader\"></div>\n";
 
         const Renderer = {
             releasePreview: async (release, options, domEl, editedData) => {
@@ -2555,6 +2615,9 @@ A digital release in ${format} format has been added.`
             setLoader(isActive) {
                 if (this.ui.loader) {
                     this.ui.loader.classList.toggle("is-loading", isActive);
+                    if (isActive) {
+                        renderTemplate(loaderTemplate, { cover: this.state.editedData?.cover }, this.ui.loader, { replace: true });
+                    }
                 }
             }
             setStatus(message, status = "info") {
@@ -2590,17 +2653,15 @@ A digital release in ${format} format has been added.`
                 }
                 try {
                     const data = await this.state.currentDigitalStore.parse();
+                    if (!data.country) {
+                        data.country = "Worldwide";
+                    } else {
+                        data.country = ALLOWED_COUNTRIES.includes(data.country) ? data.country : normalizeCountry(data.country);
+                    }
+                    const primaryArtistName = (data.artists?.[0]?.name || "").trim();
+                    data.label = normalizeLabel(data.label, primaryArtistName);
                     this.state.lastRawData = JSON.parse(JSON.stringify(data));
                     this.state.editedData = JSON.parse(JSON.stringify(data));
-                    if (this.state.editedData) {
-                        if (!this.state.editedData.country) {
-                            this.state.editedData.country = "Worldwide";
-                        } else {
-                            this.state.editedData.country = ALLOWED_COUNTRIES.includes(this.state.editedData.country) ? this.state.editedData.country : normalizeCountry(this.state.editedData.country);
-                        }
-                        const primaryArtistName = (this.state.editedData.artists?.[0]?.name || "").trim();
-                        this.state.editedData.label = normalizeLabel(this.state.editedData.label, primaryArtistName);
-                    }
                     this.state.selectedFormat = this.state.currentDigitalStore.supports?.formats?.[0] || "WAV";
                     this.state.selectedDescriptions = extractFormatFromTitle(this.state.lastRawData?.title);
                     this.state.formatText = "";
@@ -2829,7 +2890,24 @@ ${error.stack || error}`;
                 if (path === "formatText") {
                     this.state.formatText = value;
                 } else {
+                    const oldValue = getValueByPath(this.state.editedData, path);
                     setValueByPath(this.state.editedData, path, value);
+                    const artistMatch = path.match(/^artists\.(\d+)\.name$/);
+                    if (artistMatch && typeof oldValue === "string") {
+                        this.syncTrackArtists(Number.parseInt(artistMatch[1], 10), oldValue, value);
+                    }
+                }
+            }
+            syncTrackArtists(index, oldName, newName) {
+                if (!this.state.editedData) {
+                    return;
+                }
+                const trimmedOld = oldName.trim().toLowerCase();
+                for (const track of this.state.editedData.tracks) {
+                    const trackArtist = track.artists?.[index];
+                    if (trackArtist && (trackArtist.name || "").trim().toLowerCase() === trimmedOld) {
+                        trackArtist.name = newName;
+                    }
                 }
             }
             async handleRestore(el) {
@@ -2840,9 +2918,14 @@ ${error.stack || error}`;
                 if (path === "formatText") {
                     this.state.formatText = "";
                 } else {
+                    const oldValue = getValueByPath(this.state.editedData, path);
                     const originalValue = getValueByPath(this.state.lastRawData, path);
                     const valueToRestore = typeof originalValue === "object" && originalValue !== null ? JSON.parse(JSON.stringify(originalValue)) : originalValue;
                     setValueByPath(this.state.editedData, path, valueToRestore);
+                    const artistMatch = path.match(/^artists\.(\d+)\.name$/);
+                    if (artistMatch && typeof oldValue === "string" && typeof valueToRestore === "string") {
+                        this.syncTrackArtists(Number.parseInt(artistMatch[1], 10), oldValue, valueToRestore);
+                    }
                 }
                 await this.renderPayload();
             }
@@ -2901,9 +2984,11 @@ ${error.stack || error}`;
                 document.execCommand("insertText", false, text);
             },
             handleKeydown: (event) => {
-                if (event.key === "Enter") {
+                const target = event.target;
+                const isTextArea = target.classList.contains("discogs-submitter__textarea");
+                if (event.key === "Enter" && !isTextArea) {
                     event.preventDefault();
-                    event.target.blur();
+                    target.blur();
                 }
                 event.stopPropagation();
             }

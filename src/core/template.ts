@@ -1,7 +1,7 @@
 /**
  * Traverses an object via dot-notation path.
  *
- * @param obj - Base object that contains the data.
+ * @param object - Base object that contains the data.
  * @param props - Dot-separated path (e.g. "user.address.city").
  * @returns The resolved value or `undefined` if any segment is missing.
  *
@@ -11,8 +11,8 @@
  * const name = chainProps(data, 'user.name'); // 'John'
  * ```
  */
-function chainProps(obj: any, props: string): any {
-  return !props ? obj : props.split('.').reduce((o, k) => o?.[k], obj);
+function chainProps(object: any, props: string): any {
+  return !props ? object : props.split('.').reduce((o, k) => o?.[k], object);
 }
 
 const EVENT_NAME_RE = /^[A-Z][\w-]*$/i;
@@ -22,8 +22,11 @@ const HANDLER_NAME_RE = /^[A-Z_$][\w$]*$/i;
  * Event binding internal interface.
  */
 interface EventBinding {
-  el: HTMLElement;
+  /** Target element for the event. */
+  element: HTMLElement;
+  /** Name of the DOM event (e.g., 'click'). */
   eventName: string;
+  /** Name of the handler function in the events map. */
   handlerName: string;
 }
 
@@ -63,7 +66,10 @@ function parseDataEventDeclaration(declaration: string): Array<{ eventName: stri
       throw new TypeError(`Invalid data-event declaration: "${binding}"`);
     }
 
-    return { eventName, handlerName };
+    return {
+      eventName,
+      handlerName,
+    };
   });
 }
 
@@ -87,14 +93,15 @@ function bindCollectedEvents(bindings: EventBinding[], events: Record<string, Ev
 
   const processedElements = new Set<HTMLElement>();
 
-  for (const { el, eventName, handlerName } of bindings) {
-    el.addEventListener(eventName, events[handlerName]);
-    processedElements.add(el);
+  for (const { element, eventName, handlerName } of bindings) {
+    element.addEventListener(eventName, events[handlerName]);
+
+    processedElements.add(element);
   }
 
   // Remove data-event only after successful listener registration.
-  for (const el of processedElements) {
-    el.removeAttribute('data-event');
+  for (const element of processedElements) {
+    element.removeAttribute('data-event');
   }
 }
 
@@ -111,276 +118,409 @@ function bindCollectedEvents(bindings: EventBinding[], events: Record<string, Ev
  *
  * @param template - The <template> node or HTML string to instantiate.
  * @param data - Arbitrary data object for binding.
- * @param domEl - Insertion point in the live DOM.
+ * @param domElement - Insertion point in the live DOM.
  * @param options - Optional parameters.
  * @param options.replace - If true, clears the target container before rendering.
  * @param options.events - Explicit event handler map for data-event.
  *
  * @example
  * ```typescript
- * const tpl = '<div>Hello <var>name</var>!</div>';
- * renderTemplate(tpl, { name: 'World' }, document.body);
+ * const template = '<div>Hello <var>name</var>!</div>';
+ * renderTemplate(template, { name: 'World' }, document.body);
  * ```
  */
 export function renderTemplate(
   template: HTMLTemplateElement | string,
   data: any,
-  domEl: HTMLElement,
+  domElement: HTMLElement,
   { replace = false, events }: RenderOptions = {},
 ): void {
   // Optionally clear existing content
   if (replace) {
-    domEl.textContent = '';
+    domElement.textContent = '';
   }
 
-  let templateEl: HTMLTemplateElement;
+  let templateElement: HTMLTemplateElement;
 
   if (typeof template === 'string') {
-    templateEl = document.createElement('template');
-    templateEl.innerHTML = template;
+    templateElement = document.createElement('template');
+    templateElement.innerHTML = template;
   }
   else {
-    templateEl = template;
+    templateElement = template;
   }
 
-  const frag = templateEl.content.cloneNode(true) as DocumentFragment;
+  const fragment = templateElement.content.cloneNode(true) as DocumentFragment;
   const eventBindings = events == null ? null : [] as EventBinding[];
 
-  walk(frag, data, eventBindings);
+  walk(fragment, data, eventBindings);
 
   if (eventBindings && eventBindings.length > 0 && events) {
     bindCollectedEvents(eventBindings, events);
   }
 
-  domEl.append(frag);
+  domElement.append(fragment);
 }
+
+/**
+ * Directive processor type definition.
+ *
+ * @param element - The element being processed.
+ * @param context - Current data context.
+ * @param walk - The recursion function.
+ * @param eventBindings - Collected event bindings list.
+ * @returns True if processing should stop for the current element.
+ */
+type DirectiveProcessor = (
+  element: HTMLElement,
+  context: any,
+  walk: (node: Node, context: any, eventBindings: EventBinding[] | null) => void,
+  eventBindings: EventBinding[] | null,
+) => boolean;
+
+/**
+ * Processes data-if directive.
+ *
+ * @param element - The element to check for data-if.
+ * @param context - Current data context.
+ * @param walk - The recursion function.
+ * @param eventBindings - Collected event bindings.
+ * @returns True if the element was removed or unwrapped.
+ */
+const processIf: DirectiveProcessor = (element, context, walk, eventBindings) => {
+  if (!element.dataset.if) {
+    return false;
+  }
+
+  let expression = element.dataset.if.trim();
+  let invert = false;
+
+  if (expression.startsWith('!')) {
+    invert = true;
+    expression = expression.slice(1).trim();
+  }
+
+  const rawValue = chainProps(context, expression);
+  let condition = Boolean(rawValue);
+
+  if (invert) {
+    condition = !condition;
+  }
+
+  element.removeAttribute('data-if');
+
+  if (!condition) {
+    element.remove();
+
+    return true;
+  }
+
+  // If it was a <var> wrapper or has data-unwrap, unwrap it and walk the children
+  if (element.tagName === 'VAR' || 'unwrap' in element.dataset) {
+    const children = Array.from(element.childNodes);
+    const parent = element.parentElement;
+
+    if (parent) {
+      element.before(...children);
+      element.remove();
+
+      for (const childNode of children) {
+        walk(childNode, context, eventBindings);
+      }
+    }
+    else {
+      for (const childNode of children) {
+        walk(childNode, context, eventBindings);
+      }
+    }
+
+    return true;
+  }
+
+  return false;
+};
+/**
+ * Processes data-loop directive.
+ *
+ * @param element - The element to repeat.
+ * @param context - Current data context.
+ * @param walk - The recursion function.
+ * @param eventBindings - Collected event bindings.
+ * @returns Always true as the original element is removed.
+ */
+const processLoop: DirectiveProcessor = (element, context, walk, eventBindings) => {
+  if (!element.dataset.loop) {
+    return false;
+  }
+
+  const loopExpression = element.dataset.loop;
+  const source = chainProps(context, loopExpression);
+  const processItem = (itemContext: any) => {
+    const clone = element.cloneNode(true) as HTMLElement;
+
+    clone.removeAttribute('data-loop');
+
+    walk(clone, itemContext, eventBindings);
+
+    if (element.tagName === 'VAR' || 'unwrap' in element.dataset) {
+      element.before(...Array.from(clone.childNodes));
+    }
+    else {
+      element.before(clone);
+    }
+  };
+
+  if (Array.isArray(source)) {
+    const length = source.length;
+
+    for (let index = 0; index < length; index++) {
+      const item = source[index];
+      const baseContext = (item && typeof item === 'object') ? { ...item } : { _value: item };
+      const itemContext = {
+        _value: item,
+        ...baseContext,
+        _index: index,
+        _first: index === 0,
+        _last: index === length - 1,
+      };
+
+      processItem(itemContext);
+    }
+  }
+  else if (source && typeof source === 'object') {
+    const entries = Object.entries(source);
+
+    for (let index = 0; index < entries.length; index++) {
+      const [key, value] = entries[index];
+      const itemContext = Array.isArray(value)
+        ? {
+            _key: key,
+            _value: value,
+            _index: index,
+          }
+        : (value && typeof value === 'object'
+            ? {
+                _value: value,
+                ...value,
+                _key: key,
+                _index: index,
+              }
+            : {
+                _key: key,
+                _value: value,
+                _index: index,
+              });
+
+      processItem(itemContext);
+    }
+  }
+  else if (source != null) {
+    throw new TypeError(`data for "${loopExpression}" must be array or object`);
+  }
+
+  element.remove();
+
+  return true;
+};
+/**
+ * Processes data-style directive.
+ *
+ * @param element - The element to apply styles to.
+ * @param context - Current data context.
+ * @returns Always false.
+ */
+const processStyle: DirectiveProcessor = (element, context) => {
+  if (!element.dataset.style) {
+    return false;
+  }
+
+  element.dataset.style.split('|').forEach((pair) => {
+    const [property, path] = pair.split(':');
+    const value = chainProps(context, path);
+
+    if (value != null) {
+      element.style.setProperty(property, String(value));
+    }
+  });
+
+  element.removeAttribute('data-style');
+
+  return false;
+};
+/**
+ * Processes data-attr directive.
+ *
+ * @param element - The element to apply attributes to.
+ * @param context - Current data context.
+ * @returns Always false.
+ */
+const processAttr: DirectiveProcessor = (element, context) => {
+  if (!element.dataset.attr) {
+    return false;
+  }
+
+  element.dataset.attr.split('|').forEach((binding) => {
+    const [key, path] = binding.split(':');
+    const value = chainProps(context, path);
+
+    if (value != null) {
+      if (key === 'class') {
+        const classNames = String(value).trim().split(/\s+/).filter(Boolean);
+
+        if (classNames.length) {
+          element.classList.add(...classNames);
+        }
+      }
+      else {
+        element.setAttribute(key, String(value));
+      }
+    }
+  });
+
+  element.removeAttribute('data-attr');
+
+  return false;
+};
+/**
+ * Processes data-text directive.
+ *
+ * @param element - The element to set text content for.
+ * @param context - Current data context.
+ * @returns Always false.
+ */
+const processText: DirectiveProcessor = (element, context) => {
+  if (element.dataset.text == null) {
+    return false;
+  }
+
+  const path = element.dataset.text.trim();
+  const value = path === ''
+    ? (context && typeof context === 'object' && '_value' in context ? context._value : context)
+    : chainProps(context, path);
+
+  element.textContent = value != null ? String(value) : '';
+
+  element.removeAttribute('data-text');
+
+  return false;
+};
+/**
+ * Processes data-event directive.
+ *
+ * @param element - The element to collect events from.
+ * @param context - Current data context.
+ * @param walk - The recursion function.
+ * @param eventBindings - Collected event bindings.
+ * @returns Always false.
+ */
+const processEvent: DirectiveProcessor = (element, context, walk, eventBindings) => {
+  if (!eventBindings || !element.dataset.event) {
+    return false;
+  }
+
+  const parsed = parseDataEventDeclaration(element.dataset.event);
+
+  for (const { eventName, handlerName } of parsed) {
+    eventBindings.push({
+      element,
+      eventName,
+      handlerName,
+    });
+  }
+
+  return false;
+};
+/**
+ * Processes <var> placeholders and data-unwrap.
+ *
+ * @param element - The element to process as a placeholder or unwrap.
+ * @param context - Current data context.
+ * @param walk - The recursion function.
+ * @param eventBindings - Collected event bindings.
+ * @returns True if the element was replaced or unwrapped.
+ */
+const processVar: DirectiveProcessor = (element, context, walk, eventBindings) => {
+  if (element.tagName === 'VAR' && !element.firstElementChild) {
+    const path = element.textContent?.trim() || '';
+    const value = path === ''
+      ? (context && typeof context === 'object' && '_value' in context ? context._value : context)
+      : chainProps(context, path);
+
+    element.replaceWith(document.createTextNode(value != null ? String(value) : ''));
+
+    return true;
+  }
+
+  if (element.tagName === 'VAR' || 'unwrap' in element.dataset) {
+    const children = Array.from(element.childNodes);
+    const parent = element.parentElement;
+
+    if (parent) {
+      element.before(...children);
+      element.remove();
+
+      for (const childNode of children) {
+        walk(childNode, context, eventBindings);
+      }
+    }
+    else {
+      for (const childNode of children) {
+        walk(childNode, context, eventBindings);
+      }
+    }
+
+    return true;
+  }
+
+  return false;
+};
 
 /**
  * Recursively processes a node and its children in place using declarative directives.
  *
  * @param node - The node to walk.
- * @param ctx - Current data context.
+ * @param context - Current data context.
  * @param eventBindings - Collected event bindings.
  */
-function walk(node: Node, ctx: any, eventBindings: EventBinding[] | null = null): void {
-  // 1. Handle DocumentFragment (initial call or loop/if results)
+function walk(node: Node, context: any, eventBindings: EventBinding[] | null = null): void {
   if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
     for (const child of Array.from(node.childNodes)) {
-      walk(child, ctx, eventBindings);
+      walk(child, context, eventBindings);
     }
 
     return;
   }
 
-  // 2. Handle HTML Comments (drop them)
   if (node.nodeType === Node.COMMENT_NODE) {
     node.parentElement?.removeChild(node);
 
     return;
   }
 
-  // 3. Handle Element nodes
   if (node.nodeType === Node.ELEMENT_NODE) {
-    const el = node as HTMLElement;
+    const element = node as HTMLElement;
 
-    /* --- data-if -------------------------------------------------- */
-    if (el.dataset.if) {
-      let expr = el.dataset.if.trim();
-      let invert = false;
-
-      if (expr.startsWith('!')) {
-        invert = true;
-        expr = expr.slice(1).trim();
-      }
-
-      const raw = chainProps(ctx, expr);
-      let cond = Boolean(raw);
-
-      if (invert) {
-        cond = !cond;
-      }
-
-      el.removeAttribute('data-if');
-
-      if (!cond) {
-        el.remove();
-
-        return;
-      }
-
-      // If it was a <var> wrapper or has data-unwrap, unwrap it and walk the children
-      if (el.tagName === 'VAR' || 'unwrap' in el.dataset) {
-        const children = Array.from(el.childNodes);
-        const parent = el.parentElement;
-
-        if (parent) {
-          el.before(...children);
-          el.remove();
-          for (const childNode of children) {
-            walk(childNode, ctx, eventBindings);
-          }
-        }
-        else {
-          // Fragment or detached node
-          for (const childNode of children) {
-            walk(childNode, ctx, eventBindings);
-          }
-        }
-
-        return;
-      }
-    }
-
-    /* --- data-loop -------------------------------------------------- */
-    if (el.dataset.loop) {
-      const loopExpr = el.dataset.loop;
-      const src = chainProps(ctx, loopExpr);
-      const processItem = (itemCtx: any) => {
-        const clone = el.cloneNode(true) as HTMLElement;
-
-        clone.removeAttribute('data-loop');
-
-        walk(clone, itemCtx, eventBindings);
-
-        if (el.tagName === 'VAR' || 'unwrap' in el.dataset) {
-          el.before(...Array.from(clone.childNodes));
-        }
-        else {
-          el.before(clone);
-        }
-      };
-
-      if (Array.isArray(src)) {
-        const len = src.length;
-
-        for (let idx = 0; idx < len; idx++) {
-          const item = src[idx];
-          const baseCtx = (item && typeof item === 'object') ? { ...item } : { _value: item };
-          const itemCtx = {
-            ...baseCtx,
-            _index: idx,
-            _first: idx === 0,
-            _last: idx === len - 1,
-          };
-
-          processItem(itemCtx);
-        }
-      }
-      else if (src && typeof src === 'object') {
-        const entries = Object.entries(src);
-
-        for (let idx = 0; idx < entries.length; idx++) {
-          const [key, val] = entries[idx];
-          const itemCtx = Array.isArray(val)
-            ? { _key: key, _value: val, _index: idx }
-            : (val && typeof val === 'object' ? { ...val, _key: key, _index: idx } : { _key: key, _value: val, _index: idx });
-
-          processItem(itemCtx);
-        }
-      }
-      else if (src != null) {
-        throw new TypeError(`data for "${loopExpr}" must be array or object`);
-      }
-
-      el.remove();
-
+    // Ordered processors: Control flow first, then decorators, then placeholders/unwrapping
+    if (processIf(element, context, walk, eventBindings)) {
       return;
     }
 
-    /* --- data-style -------------------------------------------------- */
-    if (el.dataset.style) {
-      el.dataset.style.split('|').forEach((pair) => {
-        const [prop, path] = pair.split(':');
-        const value = chainProps(ctx, path);
-
-        if (value != null) {
-          el.style.setProperty(prop, String(value));
-        }
-      });
-      el.removeAttribute('data-style');
-    }
-
-    /* --- data-attr -------------------------------------------------- */
-    if (el.dataset.attr) {
-      el.dataset.attr.split('|').forEach((binding) => {
-        const [key, path] = binding.split(':');
-        const val = chainProps(ctx, path);
-
-        if (val != null) {
-          if (key === 'class') {
-            const classNames = String(val).trim().split(/\s+/).filter(Boolean);
-
-            if (classNames.length) {
-              el.classList.add(...classNames);
-            }
-          }
-          else {
-            el.setAttribute(key, String(val));
-          }
-        }
-      });
-      el.removeAttribute('data-attr');
-    }
-
-    /* --- data-text -------------------------------------------------- */
-    if (el.dataset.text != null) {
-      const path = el.dataset.text.trim();
-      const value = path === ''
-        ? (ctx && typeof ctx === 'object' && '_value' in ctx ? ctx._value : ctx)
-        : chainProps(ctx, path);
-
-      el.textContent = value != null ? String(value) : '';
-      el.removeAttribute('data-text');
-    }
-
-    /* --- <var> placeholders (element version) ---------------------- */
-    if (el.tagName === 'VAR') {
-      if (!el.firstElementChild) {
-        const path = el.textContent?.trim() || '';
-        const value = path === ''
-          ? (ctx && typeof ctx === 'object' && '_value' in ctx ? ctx._value : ctx)
-          : chainProps(ctx, path);
-
-        el.replaceWith(document.createTextNode(value != null ? String(value) : ''));
-
-        return;
-      }
-    }
-
-    if (el.tagName === 'VAR' || 'unwrap' in el.dataset) {
-      // If it's a wrapper that reached here (no data-if/loop/placeholder), unwrap it
-      const children = Array.from(el.childNodes);
-      const parent = el.parentElement;
-
-      if (parent) {
-        el.before(...children);
-        el.remove();
-
-        for (const childNode of children) {
-          walk(childNode, ctx, eventBindings);
-        }
-      }
-      else {
-        for (const childNode of children) {
-          walk(childNode, ctx, eventBindings);
-        }
-      }
-
+    if (processLoop(element, context, walk, eventBindings)) {
       return;
     }
 
-    /* --- data-event ------------------------------------------------- */
-    if (eventBindings && el.dataset.event) {
-      const parsed = parseDataEventDeclaration(el.dataset.event);
+    processStyle(element, context, walk, eventBindings);
+    processAttr(element, context, walk, eventBindings);
+    processText(element, context, walk, eventBindings);
+    processEvent(element, context, walk, eventBindings);
 
-      for (const { eventName, handlerName } of parsed) {
-        eventBindings.push({ el, eventName, handlerName });
-      }
+    if (processVar(element, context, walk, eventBindings)) {
+      return;
     }
 
-    // Normal element → recurse into its children
-    for (const child of Array.from(el.childNodes)) {
-      walk(child, ctx, eventBindings);
+    // Normal element -> recurse into its children
+    for (const child of Array.from(element.childNodes)) {
+      walk(child, context, eventBindings);
     }
   }
 }

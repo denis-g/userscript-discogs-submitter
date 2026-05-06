@@ -23,11 +23,13 @@ export const ContentEditable = {
    * @param event - The KeyboardEvent.
    */
   handleKeydown: (event: KeyboardEvent): void => {
-    // Prevent Enter key from creating new lines in single-line editable fields
-    if (event.key === 'Enter') {
-      event.preventDefault();
+    const target = event.target as HTMLElement;
+    const isTextArea = target.classList.contains('discogs-submitter__textarea');
 
-      (event.target as HTMLElement).blur();
+    // Prevent Enter key from creating new lines in single-line editable fields
+    if (event.key === 'Enter' && !isTextArea) {
+      event.preventDefault();
+      target.blur();
     }
 
     // Stop propagation to prevent accidental widget closure or global shortcuts
