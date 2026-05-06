@@ -4,7 +4,7 @@ import {
   normalizeMainArtists,
   normalizeTitle,
   splitArtistTitle,
-} from './artists';
+} from '../artists';
 
 describe('normalizeMainArtists', () => {
   it('converts 6 or more artists to "Various"', () => {

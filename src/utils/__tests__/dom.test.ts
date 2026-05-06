@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getManyTextFromTags, getTextFromTag, getVisibleText } from './dom';
+import { getManyTextFromTags, getTextFromTag, getVisibleText } from '../dom';
 
 describe('dom utilities', () => {
   describe('getTextFromTag', () => {

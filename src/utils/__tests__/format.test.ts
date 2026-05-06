@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extractFormatFromTitle } from './format';
+import { extractFormatFromTitle } from '../format';
 
 describe('extractFormatFromTitle', () => {
   it('returns an empty array for null, undefined, or empty titles', () => {

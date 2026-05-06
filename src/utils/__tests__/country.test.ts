@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeCountry } from './country';
+import { normalizeCountry } from '../country';
 
 describe('normalizeCountry', () => {
   it('should be case-insensitive for allowed countries', () => {

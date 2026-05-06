@@ -4,14 +4,20 @@ import type {
   ReleaseData,
   StoreAdapter,
   StoreFormatOptions,
-  TrackData,
 } from '@/types';
 import { FILE_FORMATS, RELEASE_TYPES, USERSCRIPT } from '@/config';
 import { DiscogsAdapter, networkRequest, renderTemplate } from '@/core';
-import { UiSelect } from '@/ui';
+import { ContentEditable, Draggable, UiSelect } from '@/ui';
 import previewTemplate from '@/ui/templates/preview.html?raw';
 import widgetTemplate from '@/ui/templates/widget.html?raw';
-import { ALLOWED_COUNTRIES, extractFormatFromTitle, normalizeCountry, normalizeLabel } from '@/utils';
+import {
+  ALLOWED_COUNTRIES,
+  extractFormatFromTitle,
+  getValueByPath,
+  normalizeCountry,
+  normalizeLabel,
+  setValueByPath,
+} from '@/utils';
 
 interface RenderOptions {
   selectedFormat: string;
@@ -125,14 +131,9 @@ export class UiWidget {
     selectedFormat: null as string | null,
     selectedDescriptions: [] as string[],
     formatText: '',
-    isDragging: false,
-    offset: { x: 0, y: 0 },
   };
 
-  constructor() {
-    this.handleMouseMove = this.handleMouseMove.bind(this);
-    this.handleMouseUp = this.handleMouseUp.bind(this);
-  }
+  constructor() {}
 
   /**
    * Builds the widget popup.
@@ -143,7 +144,7 @@ export class UiWidget {
     }
 
     const container = document.createElement('aside');
-    const currentUrl = new URL(window.location.href);
+    const currentUrl = new URL(unsafeWindow.location.href);
     const isWebArchive = currentUrl.hostname === 'web.archive.org' && currentUrl.pathname.startsWith('/web/');
 
     container.id = USERSCRIPT.ID;
@@ -308,7 +309,7 @@ export class UiWidget {
 
       // Ensure notes and submission notes are initialized if DiscogsAdapter would generate them
       if (this.state.editedData && this.state.lastRawData) {
-        const tempPayload = DiscogsAdapter.buildPayload(this.state.editedData, window.location.href, {
+        const tempPayload = DiscogsAdapter.buildPayload(this.state.editedData, unsafeWindow.location.href, {
           format: this.state.selectedFormat || 'WAV',
           descriptions: this.state.selectedDescriptions,
         });
@@ -343,7 +344,7 @@ export class UiWidget {
       this.setStatus(errMsg, 'error');
 
       if (this.ui.status) {
-        this.ui.status.dataset.rawJson = `URL: ${window.location.href}\nVersion: ${USERSCRIPT.VERSION}\nError Trace:\n${(error as Error).stack || error}`;
+        this.ui.status.dataset.rawJson = `URL: ${unsafeWindow.location.href}\nVersion: ${USERSCRIPT.VERSION}\nError Trace:\n${(error as Error).stack || error}`;
       }
     }
     finally {
@@ -367,7 +368,7 @@ export class UiWidget {
       this.state.formatText = '';
     }
 
-    this.state.currentPayload = DiscogsAdapter.buildPayload(this.state.editedData, window.location.href, {
+    this.state.currentPayload = DiscogsAdapter.buildPayload(this.state.editedData, unsafeWindow.location.href, {
       format: this.state.selectedFormat || 'WAV',
       descriptions: this.state.selectedDescriptions,
       formatText: this.state.formatText,
@@ -582,127 +583,102 @@ export class UiWidget {
       await this.renderPayload();
     }
     else if (target.classList.contains('is-edit') && this.state.editedData) {
-      const field = target.dataset.field;
-      const indexStr = target.dataset.index;
-      const indices = indexStr ? indexStr.split('|').map(v => Number.parseInt(v, 10)) : null;
-      const subindex = target.dataset.subindex ? Number.parseInt(target.dataset.subindex, 10) : null;
       const value = (target.contentEditable === 'plaintext-only' || target.contentEditable === 'true')
-        ? (target as HTMLElement).innerText.trim() // eslint-disable-line unicorn/prefer-dom-node-text-content
+        ? target.textContent?.trim() || ''
         : (target as HTMLInputElement | HTMLTextAreaElement).value;
 
-      this.updateEditedData(field, value, indices ? indices[indices.length - 1] : null, subindex, indices);
+      this.updateEditedData(target, value);
       await this.renderPayload();
     }
   }
 
   /**
-   * Updates the edited state based on the field path and value.
+   * Resolves the full data path from element attributes.
    *
-   * @param field - Field path (e.g., 'artists', 'tracks.title').
-   * @param value - New value.
-   * @param index - Index for array fields.
-   * @param subindex - Optional sub-index for nested array fields.
-   * @param allIndices - All indices for deeply nested paths.
+   * @param el - The element containing path metadata.
+   * @returns The resolved dot-notation path.
    */
-  private updateEditedData(field: string | undefined, value: string, index: number | null, subindex: number | null, allIndices: number[] | null): void {
-    if (!field || !this.state.editedData) {
+  private getResolvedPath(el: HTMLElement): string {
+    const field = el.dataset.field;
+
+    if (!field) {
+      return '';
+    }
+
+    const indexStr = el.dataset.index;
+    const indices = indexStr ? indexStr.split('|').map(v => Number.parseInt(v, 10)) : [];
+    const subindex = el.dataset.subindex ? Number.parseInt(el.dataset.subindex, 10) : null;
+
+    // Special case: formatText is in state, not editedData
+    if (field === 'formatText') {
+      return 'formatText';
+    }
+
+    // Map template field names to actual data paths
+    if (field === 'artists.name') {
+      return `artists.${indices[0]}.name`;
+    }
+    if (field === 'extraartists.name') {
+      return `extraartists.${indices[0]}.name`;
+    }
+    if (field.startsWith('tracks.')) {
+      const trackIdx = indices[0];
+      const trackField = field.split('.')[1];
+
+      if (trackField === 'artists' || trackField === 'extraartists') {
+        return `tracks.${trackIdx}.${trackField}.${subindex}.name`;
+      }
+
+      return `tracks.${trackIdx}.${trackField}`;
+    }
+
+    return field;
+  }
+
+  /**
+   * Updates the edited state using a path-based mechanism.
+   *
+   * @param el - The element that triggered the update.
+   * @param value - The new value.
+   */
+  private updateEditedData(el: HTMLElement, value: string): void {
+    const path = this.getResolvedPath(el);
+
+    if (!path || !this.state.editedData) {
       return;
     }
 
-    if (field === 'artists.name' && index !== null) {
-      const artist = this.state.editedData.artists[index];
-
-      if (artist) {
-        artist.name = value;
-      }
-    }
-    else if (field === 'extraartists.name' && index !== null) {
-      const credit = this.state.editedData.extraartists[index];
-
-      if (credit) {
-        credit.name = value;
-      }
-    }
-    else if (field === 'formatText') {
+    if (path === 'formatText') {
       this.state.formatText = value;
     }
-    else if (field === 'notes') {
-      this.state.editedData.notes = value;
-    }
-    else if (field === 'submissionNotes') {
-      this.state.editedData.submissionNotes = value;
-    }
-    else if (field.startsWith('tracks.')) {
-      const parts = field.split('.');
-      const trackField = parts[1] as keyof TrackData;
-      // For tracks, index from data-index is usually the track index
-      // If we have multiple indices, the first one is the track index (from ../_index in template)
-      const trackIdx = allIndices ? allIndices[0] : index;
-      const track = this.state.editedData.tracks[trackIdx!];
-
-      if (track) {
-        if (trackField === 'artists' && subindex !== null) {
-          const artist = track.artists[subindex];
-
-          if (artist) {
-            artist.name = value;
-          }
-        }
-        else if (trackField === 'extraartists' && subindex !== null) {
-          const credit = track.extraartists[subindex];
-
-          if (credit) {
-            credit.name = value;
-          }
-        }
-        else {
-          (track[trackField] as any) = value;
-        }
-      }
-    }
     else {
-      (this.state.editedData as any)[field] = value;
+      setValueByPath(this.state.editedData, path, value);
     }
   }
 
   /**
    * Restores original parsed data for a specific field.
    *
-   * @param field - The field identifier.
-   * @param index - Optional index for array items.
-   * @param subindex - Optional sub-index for nested array items.
+   * @param el - The element that triggered the restore.
    */
-  private async handleRestore(field: string | undefined, index: number | null, subindex: number | null): Promise<void> {
-    if (!field || !this.state.lastRawData || !this.state.editedData) {
+  private async handleRestore(el: HTMLElement): Promise<void> {
+    const path = this.getResolvedPath(el);
+
+    if (!path || !this.state.lastRawData || !this.state.editedData) {
       return;
     }
 
-    if (field === 'artists.name' && index !== null) {
-      this.state.editedData.artists[index].name = this.state.lastRawData.artists[index].name;
-    }
-    else if (field === 'tracks.artists.name' && index !== null && subindex !== null) {
-      this.state.editedData.tracks[index].artists[subindex].name = this.state.lastRawData.tracks[index].artists[subindex].name;
-    }
-    else if (field === 'tracks.title' && index !== null) {
-      this.state.editedData.tracks[index].title = this.state.lastRawData.tracks[index].title;
-    }
-    else if (field === 'tracks.extraartists.name' && index !== null && subindex !== null) {
-      this.state.editedData.tracks[index].extraartists[subindex].name = this.state.lastRawData.tracks[index].extraartists[subindex].name;
-    }
-    else if (field === 'tracks' && index !== null) {
-      this.state.editedData.tracks[index] = JSON.parse(JSON.stringify(this.state.lastRawData.tracks[index]));
-    }
-    else if (field === 'extraartists.name' && index !== null) {
-      this.state.editedData.extraartists[index].name = this.state.lastRawData.extraartists[index].name;
-    }
-    else if (field === 'extraartists' && index !== null) {
-      this.state.editedData.extraartists[index] = JSON.parse(JSON.stringify(this.state.lastRawData.extraartists[index]));
-    }
-    else if (field === 'formatText') {
+    if (path === 'formatText') {
       this.state.formatText = '';
     }
     else {
-      (this.state.editedData as any)[field] = JSON.parse(JSON.stringify((this.state.lastRawData as any)[field]));
+      const originalValue = getValueByPath(this.state.lastRawData, path);
+      // For objects (like entire tracks), we need deep copy
+      const valueToRestore = (typeof originalValue === 'object' && originalValue !== null)
+        ? JSON.parse(JSON.stringify(originalValue))
+        : originalValue;
+
+      setValueByPath(this.state.editedData, path, valueToRestore);
     }
 
     await this.renderPayload();
@@ -718,20 +694,14 @@ export class UiWidget {
       const fieldButton = target.closest('.discogs-submitter__results__field .discogs-submitter__button');
 
       if (fieldButton) {
-        const btn = fieldButton as HTMLElement;
-        const field = btn.dataset.field;
-        const indexStr = btn.dataset.index;
-        const indices = indexStr ? indexStr.split('|').map(v => Number.parseInt(v, 10)) : null;
-        const subindex = btn.dataset.subindex ? Number.parseInt(btn.dataset.subindex, 10) : null;
-
-        await this.handleRestore(field, indices ? indices[indices.length - 1] : null, subindex);
+        await this.handleRestore(fieldButton as HTMLElement);
       }
     });
 
-    // Contenteditable handlers
+    // Contenteditable handlers using utility
     this.ui.preview?.addEventListener('keydown', (event) => {
       if ((event.target as HTMLElement).classList.contains('is-edit')) {
-        event.stopPropagation();
+        ContentEditable.handleKeydown(event);
       }
     });
 
@@ -742,26 +712,12 @@ export class UiWidget {
     });
 
     this.ui.preview?.addEventListener('paste', (event) => {
-      const target = event.target as HTMLElement;
-
-      if (target.contentEditable === 'plaintext-only' || target.contentEditable === 'true') {
-        event.preventDefault();
-
-        const text = (event.clipboardData || (window as any).clipboardData).getData('text/plain');
-
-        document.execCommand('insertText', false, text);
+      if ((event.target as HTMLElement).classList.contains('is-edit')) {
+        ContentEditable.handlePaste(event);
       }
     });
 
-    this.ui.preview?.addEventListener('input', (event) => {
-      const target = event.target as HTMLElement;
-
-      if (target.contentEditable === 'plaintext-only' || target.contentEditable === 'true') {
-        // Basic cleanup logic if needed
-      }
-    });
-
-    // We need to trigger handlePreviewChange on blur for contenteditable
+    // Trigger handlePreviewChange on blur for contenteditable
     this.ui.preview?.addEventListener('blur', (event) => {
       if ((event.target as HTMLElement).classList.contains('is-edit')) {
         void this.handlePreviewChange(event);
@@ -772,80 +728,17 @@ export class UiWidget {
     this.ui.actionsButtonSubmit?.addEventListener('click', () => this.handleSubmit());
   }
 
-  private getCoords(event: MouseEvent | TouchEvent): { x: number; y: number } {
-    if ('touches' in event && event.touches.length > 0) {
-      return {
-        x: (event as TouchEvent).touches[0].pageX,
-        y: (event as TouchEvent).touches[0].pageY,
-      };
-    }
-
-    return {
-      x: (event as MouseEvent).pageX,
-      y: (event as MouseEvent).pageY,
-    };
-  }
-
-  private handleMouseMove(event: MouseEvent | TouchEvent): void {
-    if (!this.state.isDragging || !this.ui.widget) {
-      return;
-    }
-
-    const coords = this.getCoords(event);
-    const rootRect = this.ui.widget.getBoundingClientRect();
-    const left = Math.min(Math.max(0, coords.x - this.state.offset.x), window.innerWidth - rootRect.width);
-    const top = Math.min(Math.max(0, coords.y - this.state.offset.y), window.innerHeight - rootRect.height);
-
-    this.ui.widget.style.left = `${left}px`;
-    this.ui.widget.style.top = `${top}px`;
-  }
-
-  private handleMouseUp(): void {
-    if (!this.state.isDragging) {
-      return;
-    }
-
-    this.state.isDragging = false;
-
-    this.ui.headerButtonMove?.classList.remove('is-draggable');
-
-    document.removeEventListener('mousemove', this.handleMouseMove);
-    document.removeEventListener('touchmove', this.handleMouseMove);
-    document.removeEventListener('mouseup', this.handleMouseUp);
-    document.removeEventListener('touchend', this.handleMouseUp);
-  }
-
+  /**
+   * Initializes the draggable behavior for the widget.
+   */
   private bindDraggableEvent(): void {
-    const handleDown = (event: MouseEvent | TouchEvent) => {
-      // Ignore right-click
-      if ('button' in event && event.button !== 0) {
-        return;
-      }
+    if (this.ui.widget && this.ui.headerButtonMove) {
+      const draggable = new Draggable(this.ui.widget, this.ui.headerButtonMove, (isDragging) => {
+        this.ui.headerButtonMove?.classList.toggle('is-draggable', isDragging);
+      });
 
-      if (!this.ui.widget || !this.ui.widget.classList.contains('is-open')) {
-        return;
-      }
-
-      event.preventDefault();
-
-      this.state.isDragging = true;
-
-      const coords = this.getCoords(event);
-      const rect = this.ui.widget.getBoundingClientRect();
-
-      this.state.offset.x = coords.x - rect.left;
-      this.state.offset.y = coords.y - rect.top;
-
-      this.ui.headerButtonMove?.classList.add('is-draggable');
-
-      document.addEventListener('mousemove', this.handleMouseMove);
-      document.addEventListener('touchmove', this.handleMouseMove, { passive: false });
-      document.addEventListener('mouseup', this.handleMouseUp);
-      document.addEventListener('touchend', this.handleMouseUp);
-    };
-
-    this.ui.headerButtonMove?.addEventListener('mousedown', event => handleDown(event));
-    this.ui.headerButtonMove?.addEventListener('touchstart', event => handleDown(event), { passive: false });
+      draggable.init();
+    }
   }
 
   public async init(): Promise<void> {

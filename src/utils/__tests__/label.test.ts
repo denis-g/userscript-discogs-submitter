@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeLabel } from './label';
+import { normalizeLabel } from '../label';
 
 describe('normalizeLabel', () => {
   it('should return "Not On Label" for empty input', () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { networkRequest } from '@/core';
-import { sevendigital } from './7digital';
+import { sevendigital } from '../7digital';
 
 vi.mock('@/core');
 

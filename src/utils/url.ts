@@ -30,7 +30,7 @@ export function matchUrls(...patterns: string[]): (_url: string) => boolean {
  * console.log(id); // '12345'
  * ```
  */
-export function getReleaseIdFromUrl(url: string = window.location.href): string | null {
+export function getReleaseIdFromUrl(url: string = unsafeWindow.location.href): string | null {
   try {
     const path = new URL(url).pathname;
 

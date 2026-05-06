@@ -5,6 +5,7 @@ export * from './dom';
 export * from './duration';
 export * from './format';
 export * from './label';
+export * from './object';
 export * from './regex';
 export * from './string';
 export * from './url';

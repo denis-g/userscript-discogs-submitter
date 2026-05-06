@@ -4,7 +4,7 @@ import {
   buildJoinerPattern,
   buildOxfordPattern,
   escapeRegExp,
-} from './regex';
+} from '../regex';
 
 describe('regex utilities', () => {
   describe('buildCreditRegexes', () => {

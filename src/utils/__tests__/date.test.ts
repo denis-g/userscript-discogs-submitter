@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeReleaseDate } from './date';
+import { normalizeReleaseDate } from '../date';
 
 describe('normalizeReleaseDate', () => {
   it('normalizes Bandcamp date formats (DD Mmm YYYY)', () => {

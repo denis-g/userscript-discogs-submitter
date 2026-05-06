@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getReleaseIdFromUrl, matchUrls } from './url';
+import { getReleaseIdFromUrl, matchUrls } from '../url';
 
 describe('url utilities', () => {
   describe('matchUrls', () => {

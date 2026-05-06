@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { networkRequest } from '@/core';
 import { getReleaseIdFromUrl } from '@/utils';
-import { beatport } from './beatport';
+import { beatport } from '../beatport';
 
 vi.mock('@/core');
 vi.mock('@/utils', async (importActual) => {

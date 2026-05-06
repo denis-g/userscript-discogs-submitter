@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { qobuz } from './qobuz';
+import { qobuz } from '../qobuz';
 
 describe('qobuz provider', () => {
   it('should parse release data from JSON-LD and DOM', async () => {

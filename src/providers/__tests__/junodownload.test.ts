@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { networkRequest } from '@/core';
 import { getReleaseIdFromUrl } from '@/utils';
-import { junodownload } from './junodownload';
+import { junodownload } from '../junodownload';
 
 vi.mock('@/core');
 vi.mock('@/utils', async (importActual) => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { amazonmusic } from './amazonmusic';
+import { amazonmusic } from '../amazonmusic';
 
 describe('amazonmusic provider', () => {
   it('should parse release data from HTML document', async () => {

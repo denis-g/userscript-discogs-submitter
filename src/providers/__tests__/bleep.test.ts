@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bleep } from './bleep';
+import { bleep } from '../bleep';
 
 describe('bleep provider', () => {
   it('should have correct ID and test regex', () => {

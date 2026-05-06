@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hdtracks } from './hdtracks';
+import { hdtracks } from '../hdtracks';
 
 describe('hdtracks provider', () => {
   it('should parse release data from DOM', async () => {

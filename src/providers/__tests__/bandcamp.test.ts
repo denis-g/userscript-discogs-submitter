@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bandcamp } from './bandcamp';
+import { bandcamp } from '../bandcamp';
 
 describe('bandcamp provider', () => {
   it('should parse basic album data from DOM', async () => {

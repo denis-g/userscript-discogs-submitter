@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discogs Submitter
 // @namespace    discogs-submitter
-// @version      3.1.3
+// @version      3.1.4
 // @author       Denis G. <https://github.com/denis-g>
 // @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital, Amazon Music, Bleep, HDtracks and submit releases to Discogs.
 // @license      MIT
@@ -363,7 +363,7 @@
         const oxfordPattern = buildOxfordPattern(ARTIST_JOINERS);
 
         const name = "discogs-submitter";
-        const version = "3.1.3";
+        const version = "3.1.4";
         const funding = "https://buymeacoffee.com/denis_g";
         const homepage = "https://github.com/denis-g/userscript-discogs-submitter";
         const bugs = {"url":"https://github.com/denis-g/userscript-discogs-submitter/issues"};
@@ -1136,6 +1136,30 @@
             return cleanLabel;
         }
 
+        function getValueByPath(obj, path) {
+            if (!path) {
+                return obj;
+            }
+            return path.split(".").reduce((o, k) => o?.[k], obj);
+        }
+        function setValueByPath(obj, path, value) {
+            if (!path) {
+                return;
+            }
+            const parts = path.split(".");
+            let current = obj;
+            for (let i = 0; i < parts.length - 1; i++) {
+                const key = parts[i];
+                const nextKey = parts[i + 1];
+                if (!(key in current)) {
+                    current[key] = /^\d+$/.test(nextKey) ? [] : {};
+                }
+                current = current[key];
+            }
+            const lastKey = parts[parts.length - 1];
+            current[lastKey] = value;
+        }
+
         function cleanString(text, collapseWhitespace = true) {
             if (typeof text !== "string") {
                 return null;
@@ -1212,7 +1236,7 @@
             );
             return (url) => regexes.some((regex) => regex.test(url));
         }
-        function getReleaseIdFromUrl(url = window.location.href) {
+        function getReleaseIdFromUrl(url = unsafeWindow.location.href) {
             try {
                 const path = new URL(url).pathname;
                 return path.split("/").filter(Boolean).at(-1) || null;
@@ -2174,7 +2198,7 @@ A digital release in ${format} format has been added.`
                 bleep,
                 hdtracks
             ],
-            detectByLocation: () => DigitalStoreRegistry.list.find((provider) => provider.test(window.location.href))
+            detectByLocation: () => DigitalStoreRegistry.list.find((provider) => provider.test(unsafeWindow.location.href))
         };
 
         const injectButtonCss = ".discogs-submitter__inject__button{all:unset;display:inline-flex;vertical-align:middle;align-items:center;justify-content:center;gap:10px;cursor:pointer;user-select:none;padding:calc(var(--ds-gap) / 2);background:var(--ds-color-white);border:2px solid var(--ds-color-gray-dark);border-radius:calc(var(--ds-radius) * 2);outline:2px solid var(--ds-color-gray-dark);transition:all .3s ease;&:hover{outline:2px solid var(--ds-color-white);.discogs-submitter__inject__button__icon{animation:ds-spinner 1s linear infinite}}&.is-disabled{opacity:.5;pointer-events:none}}.discogs-submitter__inject__button__icon{display:block;width:1.25em;height:1.25em}.discogs-submitter__inject__button__label{color:var(--ds-color-black);font-family:var(--ds-font-sans)!important;font-size:14px;font-weight:700;line-height:1.2;text-transform:none;text-shadow:none;white-space:nowrap}.discogs-submitter__inject__button{&.is-bandcamp{margin-bottom:1.5em;box-sizing:border-box}&.is-qobuz{margin-top:20px;text-transform:none}&.is-qobuz{.discogs-submitter__inject__button__icon{margin-top:-4px}}&.is-junodownload{margin-top:20px}&.is-beatport{margin-top:8px}&.is-amazonmusic{margin-top:24px;margin-right:100%}&.is-bleep{margin:1.429rem 0 0}&.is-hdtracks{margin:15px 0 0}}";
@@ -2473,20 +2497,16 @@ A digital release in ${format} format has been added.`
                 editedData: null,
                 selectedFormat: null,
                 selectedDescriptions: [],
-                formatText: "",
-                isDragging: false,
-                offset: { x: 0, y: 0 }
+                formatText: ""
             };
             constructor() {
-                this.handleMouseMove = this.handleMouseMove.bind(this);
-                this.handleMouseUp = this.handleMouseUp.bind(this);
             }
             async buildPopup() {
                 if (document.getElementById(USERSCRIPT.ID)) {
                     return;
                 }
                 const container = document.createElement("aside");
-                const currentUrl = new URL(window.location.href);
+                const currentUrl = new URL(unsafeWindow.location.href);
                 const isWebArchive = currentUrl.hostname === "web.archive.org" && currentUrl.pathname.startsWith("/web/");
                 container.id = USERSCRIPT.ID;
                 container.className = `${container.id} ${isWebArchive ? "is-webarchive" : ""}`;
@@ -2585,7 +2605,7 @@ A digital release in ${format} format has been added.`
                     this.state.selectedDescriptions = extractFormatFromTitle(this.state.lastRawData?.title);
                     this.state.formatText = "";
                     if (this.state.editedData && this.state.lastRawData) {
-                        const tempPayload = DiscogsAdapter.buildPayload(this.state.editedData, window.location.href, {
+                        const tempPayload = DiscogsAdapter.buildPayload(this.state.editedData, unsafeWindow.location.href, {
                             format: this.state.selectedFormat || "WAV",
                             descriptions: this.state.selectedDescriptions
                         });
@@ -2609,7 +2629,7 @@ A digital release in ${format} format has been added.`
                     const errMsg = error.message || String(error);
                     this.setStatus(errMsg, "error");
                     if (this.ui.status) {
-                        this.ui.status.dataset.rawJson = `URL: ${window.location.href}
+                        this.ui.status.dataset.rawJson = `URL: ${unsafeWindow.location.href}
 Version: ${USERSCRIPT.VERSION}
 Error Trace:
 ${error.stack || error}`;
@@ -2627,7 +2647,7 @@ ${error.stack || error}`;
                 } else if (this.state.selectedFormat !== "MP3" && this.state.formatText === "320 kbps") {
                     this.state.formatText = "";
                 }
-                this.state.currentPayload = DiscogsAdapter.buildPayload(this.state.editedData, window.location.href, {
+                this.state.currentPayload = DiscogsAdapter.buildPayload(this.state.editedData, unsafeWindow.location.href, {
                     format: this.state.selectedFormat || "WAV",
                     descriptions: this.state.selectedDescriptions,
                     formatText: this.state.formatText,
@@ -2769,81 +2789,60 @@ ${error.stack || error}`;
                     this.state.selectedDescriptions = Array.from(select.selectedOptions).map((option) => option.value);
                     await this.renderPayload();
                 } else if (target.classList.contains("is-edit") && this.state.editedData) {
-                    const field = target.dataset.field;
-                    const indexStr = target.dataset.index;
-                    const indices = indexStr ? indexStr.split("|").map((v) => Number.parseInt(v, 10)) : null;
-                    const subindex = target.dataset.subindex ? Number.parseInt(target.dataset.subindex, 10) : null;
-                    const value = target.contentEditable === "plaintext-only" || target.contentEditable === "true" ? target.innerText.trim() : target.value;
-                    this.updateEditedData(field, value, indices ? indices[indices.length - 1] : null, subindex, indices);
+                    const value = target.contentEditable === "plaintext-only" || target.contentEditable === "true" ? target.textContent?.trim() || "" : target.value;
+                    this.updateEditedData(target, value);
                     await this.renderPayload();
                 }
             }
-            updateEditedData(field, value, index, subindex, allIndices) {
-                if (!field || !this.state.editedData) {
+            getResolvedPath(el) {
+                const field = el.dataset.field;
+                if (!field) {
+                    return "";
+                }
+                const indexStr = el.dataset.index;
+                const indices = indexStr ? indexStr.split("|").map((v) => Number.parseInt(v, 10)) : [];
+                const subindex = el.dataset.subindex ? Number.parseInt(el.dataset.subindex, 10) : null;
+                if (field === "formatText") {
+                    return "formatText";
+                }
+                if (field === "artists.name") {
+                    return `artists.${indices[0]}.name`;
+                }
+                if (field === "extraartists.name") {
+                    return `extraartists.${indices[0]}.name`;
+                }
+                if (field.startsWith("tracks.")) {
+                    const trackIdx = indices[0];
+                    const trackField = field.split(".")[1];
+                    if (trackField === "artists" || trackField === "extraartists") {
+                        return `tracks.${trackIdx}.${trackField}.${subindex}.name`;
+                    }
+                    return `tracks.${trackIdx}.${trackField}`;
+                }
+                return field;
+            }
+            updateEditedData(el, value) {
+                const path = this.getResolvedPath(el);
+                if (!path || !this.state.editedData) {
                     return;
                 }
-                if (field === "artists.name" && index !== null) {
-                    const artist = this.state.editedData.artists[index];
-                    if (artist) {
-                        artist.name = value;
-                    }
-                } else if (field === "extraartists.name" && index !== null) {
-                    const credit = this.state.editedData.extraartists[index];
-                    if (credit) {
-                        credit.name = value;
-                    }
-                } else if (field === "formatText") {
+                if (path === "formatText") {
                     this.state.formatText = value;
-                } else if (field === "notes") {
-                    this.state.editedData.notes = value;
-                } else if (field === "submissionNotes") {
-                    this.state.editedData.submissionNotes = value;
-                } else if (field.startsWith("tracks.")) {
-                    const parts = field.split(".");
-                    const trackField = parts[1];
-                    const trackIdx = allIndices ? allIndices[0] : index;
-                    const track = this.state.editedData.tracks[trackIdx];
-                    if (track) {
-                        if (trackField === "artists" && subindex !== null) {
-                            const artist = track.artists[subindex];
-                            if (artist) {
-                                artist.name = value;
-                            }
-                        } else if (trackField === "extraartists" && subindex !== null) {
-                            const credit = track.extraartists[subindex];
-                            if (credit) {
-                                credit.name = value;
-                            }
-                        } else {
-                            track[trackField] = value;
-                        }
-                    }
                 } else {
-                    this.state.editedData[field] = value;
+                    setValueByPath(this.state.editedData, path, value);
                 }
             }
-            async handleRestore(field, index, subindex) {
-                if (!field || !this.state.lastRawData || !this.state.editedData) {
+            async handleRestore(el) {
+                const path = this.getResolvedPath(el);
+                if (!path || !this.state.lastRawData || !this.state.editedData) {
                     return;
                 }
-                if (field === "artists.name" && index !== null) {
-                    this.state.editedData.artists[index].name = this.state.lastRawData.artists[index].name;
-                } else if (field === "tracks.artists.name" && index !== null && subindex !== null) {
-                    this.state.editedData.tracks[index].artists[subindex].name = this.state.lastRawData.tracks[index].artists[subindex].name;
-                } else if (field === "tracks.title" && index !== null) {
-                    this.state.editedData.tracks[index].title = this.state.lastRawData.tracks[index].title;
-                } else if (field === "tracks.extraartists.name" && index !== null && subindex !== null) {
-                    this.state.editedData.tracks[index].extraartists[subindex].name = this.state.lastRawData.tracks[index].extraartists[subindex].name;
-                } else if (field === "tracks" && index !== null) {
-                    this.state.editedData.tracks[index] = JSON.parse(JSON.stringify(this.state.lastRawData.tracks[index]));
-                } else if (field === "extraartists.name" && index !== null) {
-                    this.state.editedData.extraartists[index].name = this.state.lastRawData.extraartists[index].name;
-                } else if (field === "extraartists" && index !== null) {
-                    this.state.editedData.extraartists[index] = JSON.parse(JSON.stringify(this.state.lastRawData.extraartists[index]));
-                } else if (field === "formatText") {
+                if (path === "formatText") {
                     this.state.formatText = "";
                 } else {
-                    this.state.editedData[field] = JSON.parse(JSON.stringify(this.state.lastRawData[field]));
+                    const originalValue = getValueByPath(this.state.lastRawData, path);
+                    const valueToRestore = typeof originalValue === "object" && originalValue !== null ? JSON.parse(JSON.stringify(originalValue)) : originalValue;
+                    setValueByPath(this.state.editedData, path, valueToRestore);
                 }
                 await this.renderPayload();
             }
@@ -2854,17 +2853,12 @@ ${error.stack || error}`;
                     const target = event.target;
                     const fieldButton = target.closest(".discogs-submitter__results__field .discogs-submitter__button");
                     if (fieldButton) {
-                        const btn = fieldButton;
-                        const field = btn.dataset.field;
-                        const indexStr = btn.dataset.index;
-                        const indices = indexStr ? indexStr.split("|").map((v) => Number.parseInt(v, 10)) : null;
-                        const subindex = btn.dataset.subindex ? Number.parseInt(btn.dataset.subindex, 10) : null;
-                        await this.handleRestore(field, indices ? indices[indices.length - 1] : null, subindex);
+                        await this.handleRestore(fieldButton);
                     }
                 });
                 this.ui.preview?.addEventListener("keydown", (event) => {
                     if (event.target.classList.contains("is-edit")) {
-                        event.stopPropagation();
+                        ContentEditable.handleKeydown(event);
                     }
                 });
                 this.ui.preview?.addEventListener("keyup", (event) => {
@@ -2873,16 +2867,9 @@ ${error.stack || error}`;
                     }
                 });
                 this.ui.preview?.addEventListener("paste", (event) => {
-                    const target = event.target;
-                    if (target.contentEditable === "plaintext-only" || target.contentEditable === "true") {
-                        event.preventDefault();
-                        const text = (event.clipboardData || window.clipboardData).getData("text/plain");
-                        document.execCommand("insertText", false, text);
+                    if (event.target.classList.contains("is-edit")) {
+                        ContentEditable.handlePaste(event);
                     }
-                });
-                this.ui.preview?.addEventListener("input", (event) => {
-                    const target = event.target;
-                    if (target.contentEditable === "plaintext-only" || target.contentEditable === "true") ;
                 });
                 this.ui.preview?.addEventListener("blur", (event) => {
                     if (event.target.classList.contains("is-edit")) {
@@ -2891,6 +2878,54 @@ ${error.stack || error}`;
                 }, true);
                 this.ui.statusButtonDebug?.addEventListener("click", () => this.handleDebugCopy());
                 this.ui.actionsButtonSubmit?.addEventListener("click", () => this.handleSubmit());
+            }
+            bindDraggableEvent() {
+                if (this.ui.widget && this.ui.headerButtonMove) {
+                    const draggable = new Draggable(this.ui.widget, this.ui.headerButtonMove, (isDragging) => {
+                        this.ui.headerButtonMove?.classList.toggle("is-draggable", isDragging);
+                    });
+                    draggable.init();
+                }
+            }
+            async init() {
+                await this.buildPopup();
+                this.bindDraggableEvent();
+                this.bindEvents();
+            }
+        }
+
+        const ContentEditable = {
+            handlePaste: (event) => {
+                event.preventDefault();
+                const text = (event.clipboardData || unsafeWindow.clipboardData).getData("text/plain");
+                document.execCommand("insertText", false, text);
+            },
+            handleKeydown: (event) => {
+                if (event.key === "Enter") {
+                    event.preventDefault();
+                    event.target.blur();
+                }
+                event.stopPropagation();
+            }
+        };
+
+        class Draggable {
+            constructor(element, handle, onStateChange) {
+                this.element = element;
+                this.handle = handle;
+                this.onStateChange = onStateChange;
+                this.handleMouseDown = this.handleMouseDown.bind(this);
+                this.handleMouseMove = this.handleMouseMove.bind(this);
+                this.handleMouseUp = this.handleMouseUp.bind(this);
+            }
+            element;
+            handle;
+            onStateChange;
+            isDragging = false;
+            offset = { x: 0, y: 0 };
+            init() {
+                this.handle.addEventListener("mousedown", this.handleMouseDown);
+                this.handle.addEventListener("touchstart", this.handleMouseDown, { passive: false });
             }
             getCoords(event) {
                 if ("touches" in event && event.touches.length > 0) {
@@ -2904,55 +2939,43 @@ ${error.stack || error}`;
                     y: event.pageY
                 };
             }
+            handleMouseDown(event) {
+                if ("button" in event && event.button !== 0) {
+                    return;
+                }
+                event.preventDefault();
+                this.isDragging = true;
+                this.onStateChange?.(true);
+                const coords = this.getCoords(event);
+                const rect = this.element.getBoundingClientRect();
+                this.offset.x = coords.x - rect.left;
+                this.offset.y = coords.y - rect.top;
+                document.addEventListener("mousemove", this.handleMouseMove);
+                document.addEventListener("touchmove", this.handleMouseMove, { passive: false });
+                document.addEventListener("mouseup", this.handleMouseUp);
+                document.addEventListener("touchend", this.handleMouseUp);
+            }
             handleMouseMove(event) {
-                if (!this.state.isDragging || !this.ui.widget) {
+                if (!this.isDragging) {
                     return;
                 }
                 const coords = this.getCoords(event);
-                const rootRect = this.ui.widget.getBoundingClientRect();
-                const left = Math.min(Math.max(0, coords.x - this.state.offset.x), window.innerWidth - rootRect.width);
-                const top = Math.min(Math.max(0, coords.y - this.state.offset.y), window.innerHeight - rootRect.height);
-                this.ui.widget.style.left = `${left}px`;
-                this.ui.widget.style.top = `${top}px`;
+                const rootRect = this.element.getBoundingClientRect();
+                const left = Math.min(Math.max(0, coords.x - this.offset.x), window.innerWidth - rootRect.width);
+                const top = Math.min(Math.max(0, coords.y - this.offset.y), window.innerHeight - rootRect.height);
+                this.element.style.left = `${left}px`;
+                this.element.style.top = `${top}px`;
             }
             handleMouseUp() {
-                if (!this.state.isDragging) {
+                if (!this.isDragging) {
                     return;
                 }
-                this.state.isDragging = false;
-                this.ui.headerButtonMove?.classList.remove("is-draggable");
+                this.isDragging = false;
+                this.onStateChange?.(false);
                 document.removeEventListener("mousemove", this.handleMouseMove);
                 document.removeEventListener("touchmove", this.handleMouseMove);
                 document.removeEventListener("mouseup", this.handleMouseUp);
                 document.removeEventListener("touchend", this.handleMouseUp);
-            }
-            bindDraggableEvent() {
-                const handleDown = (event) => {
-                    if ("button" in event && event.button !== 0) {
-                        return;
-                    }
-                    if (!this.ui.widget || !this.ui.widget.classList.contains("is-open")) {
-                        return;
-                    }
-                    event.preventDefault();
-                    this.state.isDragging = true;
-                    const coords = this.getCoords(event);
-                    const rect = this.ui.widget.getBoundingClientRect();
-                    this.state.offset.x = coords.x - rect.left;
-                    this.state.offset.y = coords.y - rect.top;
-                    this.ui.headerButtonMove?.classList.add("is-draggable");
-                    document.addEventListener("mousemove", this.handleMouseMove);
-                    document.addEventListener("touchmove", this.handleMouseMove, { passive: false });
-                    document.addEventListener("mouseup", this.handleMouseUp);
-                    document.addEventListener("touchend", this.handleMouseUp);
-                };
-                this.ui.headerButtonMove?.addEventListener("mousedown", (event) => handleDown(event));
-                this.ui.headerButtonMove?.addEventListener("touchstart", (event) => handleDown(event), { passive: false });
-            }
-            async init() {
-                await this.buildPopup();
-                this.bindDraggableEvent();
-                this.bindEvents();
             }
         }
 
@@ -2964,7 +2987,7 @@ ${error.stack || error}`;
             constructor() {
                 this.widget = new UiWidget();
                 this.injectButton = new InjectButton();
-                this.currentUrl = window.location.href;
+                this.currentUrl = unsafeWindow.location.href;
             }
             async init() {
                 await this.widget.init();
@@ -3044,7 +3067,7 @@ ${error.stack || error}`;
                 }
             }
             handleUrlChange() {
-                const newUrl = window.location.href;
+                const newUrl = unsafeWindow.location.href;
                 if (newUrl === this.currentUrl) {
                     return false;
                 }
@@ -3069,7 +3092,7 @@ ${error.stack || error}`;
                     subtree: true
                 });
                 this.patchPushState();
-                window.addEventListener("popstate", () => this.checkForUrlChange());
+                unsafeWindow.addEventListener("popstate", () => this.checkForUrlChange());
             }
             checkForUrlChange() {
                 if (this.handleUrlChange()) {

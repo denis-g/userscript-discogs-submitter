@@ -28,7 +28,7 @@ class Widget {
   constructor() {
     this.widget = new UiWidget();
     this.injectButton = new InjectButton();
-    this.currentUrl = window.location.href;
+    this.currentUrl = unsafeWindow.location.href;
   }
 
   /**
@@ -155,7 +155,7 @@ class Widget {
    * @returns True if the URL actually changed and the widget was reset, otherwise false.
    */
   private handleUrlChange(): boolean {
-    const newUrl = window.location.href;
+    const newUrl = unsafeWindow.location.href;
 
     if (newUrl === this.currentUrl) {
       return false;
@@ -194,7 +194,7 @@ class Widget {
 
     this.patchPushState();
 
-    window.addEventListener('popstate', () => this.checkForUrlChange());
+    unsafeWindow.addEventListener('popstate', () => this.checkForUrlChange());
   }
 
   /**

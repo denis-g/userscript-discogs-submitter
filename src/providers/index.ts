@@ -36,5 +36,5 @@ export const DigitalStoreRegistry = {
    * }
    * ```
    */
-  detectByLocation: (): StoreAdapter | undefined => DigitalStoreRegistry.list.find(provider => provider.test(window.location.href)),
+  detectByLocation: (): StoreAdapter | undefined => DigitalStoreRegistry.list.find(provider => provider.test(unsafeWindow.location.href)),
 };
