@@ -25,14 +25,15 @@ async function getData() {
     throw new Error(`[Discogs Submitter] Release ID not found`);
   }
 
-  const responseText = (await networkRequest({
+  const response = await networkRequest<{ tracks: any[] }>({
     url: `https://api.7digital.com/1.2/release/tracks?releaseid=${releaseId}&pagesize=100&imagesize=800&usageTypes=download&oauth_consumer_key=7digital.com`,
     headers: {
       Accept: 'application/json',
     },
-  }));
+    responseType: 'json',
+  });
 
-  return JSON.parse(responseText).tracks;
+  return response.tracks;
 }
 
 /**

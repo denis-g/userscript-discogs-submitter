@@ -465,26 +465,26 @@ export class UiWidget {
       formData.append('full_data', this.state.currentPayload.full_data);
       formData.append('sub_notes', this.state.currentPayload.sub_notes);
 
-      const response = await networkRequest({
+      const jsonData = await networkRequest<{ id: number }>({
         method: 'POST',
         url: 'https://www.discogs.com/submission/release/create',
         data: formData,
+        responseType: 'json',
       });
-      const jsonData = JSON.parse(response as string);
 
       if (jsonData?.id) {
         if (this.state.editedData?.cover) {
           this.setStatus('Draft created. Uploading cover image...', 'info');
 
           try {
-            const coverBlob = await networkRequest({
+            const coverBlob = await networkRequest<Blob>({
               url: this.state.editedData.cover,
               method: 'GET',
               responseType: 'blob',
             });
             const imageFormData = new FormData();
 
-            imageFormData.append('image', coverBlob as Blob, 'cover.jpg');
+            imageFormData.append('image', coverBlob, 'cover.jpg');
             imageFormData.append('pos', '1');
 
             await networkRequest({

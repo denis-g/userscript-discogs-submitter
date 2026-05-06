@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discogs Submitter
 // @namespace    discogs-submitter
-// @version      3.1.2
+// @version      3.1.3
 // @author       Denis G. <https://github.com/denis-g>
 // @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital, Amazon Music, Bleep, HDtracks and submit releases to Discogs.
 // @license      MIT
@@ -363,7 +363,7 @@
         const oxfordPattern = buildOxfordPattern(ARTIST_JOINERS);
 
         const name = "discogs-submitter";
-        const version = "3.1.2";
+        const version = "3.1.3";
         const funding = "https://buymeacoffee.com/denis_g";
         const homepage = "https://github.com/denis-g/userscript-discogs-submitter";
         const bugs = {"url":"https://github.com/denis-g/userscript-discogs-submitter/issues"};
@@ -1313,7 +1313,11 @@ A digital release in ${format} format has been added.`
                     ...options,
                     onload: (response) => {
                         if (response.status >= 200 && response.status < 300) {
-                            resolve(!config.responseType || config.responseType === "text" ? response.responseText : response.response);
+                            if (config.responseType === "json") {
+                                resolve(response.response);
+                            } else {
+                                resolve(!config.responseType || config.responseType === "text" ? response.responseText : response.response);
+                            }
                         } else {
                             reject(new Error(`HTTP Error: ${response.status} ${response.statusText || ""}`.trim()));
                         }
@@ -1552,13 +1556,14 @@ A digital release in ${format} format has been added.`
             if (!releaseId) {
                 throw new Error(`[Discogs Submitter] Release ID not found`);
             }
-            const responseText = await networkRequest({
+            const response = await networkRequest({
                 url: `https://api.7digital.com/1.2/release/tracks?releaseid=${releaseId}&pagesize=100&imagesize=800&usageTypes=download&oauth_consumer_key=7digital.com`,
                 headers: {
                     Accept: "application/json"
-                }
+                },
+                responseType: "json"
             });
-            return JSON.parse(responseText).tracks;
+            return response.tracks;
         }
         const sevendigital = {
             id: "7digital",
@@ -1825,28 +1830,30 @@ A digital release in ${format} format has been added.`
             }
             const accessTokenResponse = await networkRequest({
                 url: `https://www.beatport.com/api/auth/refresh-anon-token`,
-                method: "POST"
+                method: "POST",
+                responseType: "json"
             });
-            const accessToken = JSON.parse(accessTokenResponse).access_token;
+            const accessToken = accessTokenResponse.access_token;
             if (!accessToken) {
                 throw new Error("Beatport access token not found");
             }
-            const [metaResponse, tracksResponse] = await Promise.all([
+            const [meta, tracksResponse] = await Promise.all([
                 networkRequest({
                     url: `https://api.beatport.com/v4/catalog/releases/${releaseId}`,
                     headers: {
                         Authorization: `Bearer ${accessToken}`
-                    }
+                    },
+                    responseType: "json"
                 }),
                 networkRequest({
                     url: `https://api.beatport.com/v4/catalog/releases/${releaseId}/tracks?per_page=100`,
                     headers: {
                         Authorization: `Bearer ${accessToken}`
-                    }
+                    },
+                    responseType: "json"
                 })
             ]);
-            const meta = JSON.parse(metaResponse);
-            const tracks = JSON.parse(tracksResponse).results;
+            const tracks = tracksResponse.results;
             return { ...meta, tracks };
         }
         const beatport = {
@@ -2016,11 +2023,12 @@ A digital release in ${format} format has been added.`
             if (!releaseId) {
                 throw new Error(`[Discogs Submitter] Release ID not found`);
             }
-            const responseText = await networkRequest({
+            const response = await networkRequest({
                 url: `https://www.junodownload.com/api/1.2/playlist/getplaylistdetails/?product_key=${releaseId}&output_type=json`,
-                method: "GET"
+                method: "GET",
+                responseType: "json"
             });
-            return JSON.parse(responseText).items;
+            return response.items;
         }
         const junodownload = {
             id: "junodownload",
@@ -2685,12 +2693,12 @@ ${error.stack || error}`;
                     const formData = new FormData();
                     formData.append("full_data", this.state.currentPayload.full_data);
                     formData.append("sub_notes", this.state.currentPayload.sub_notes);
-                    const response = await networkRequest({
+                    const jsonData = await networkRequest({
                         method: "POST",
                         url: "https://www.discogs.com/submission/release/create",
-                        data: formData
+                        data: formData,
+                        responseType: "json"
                     });
-                    const jsonData = JSON.parse(response);
                     if (jsonData?.id) {
                         if (this.state.editedData?.cover) {
                             this.setStatus("Draft created. Uploading cover image...", "info");

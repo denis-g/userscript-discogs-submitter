@@ -27,12 +27,13 @@ async function getData() {
     throw new Error(`[Discogs Submitter] Release ID not found`);
   }
 
-  const responseText = await networkRequest({
+  const response = await networkRequest<{ items: any[] }>({
     url: `https://www.junodownload.com/api/1.2/playlist/getplaylistdetails/?product_key=${releaseId}&output_type=json`,
     method: 'GET',
+    responseType: 'json',
   });
 
-  return JSON.parse(responseText).items;
+  return response.items;
 }
 
 /**

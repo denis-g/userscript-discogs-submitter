@@ -16,7 +16,7 @@ vi.mock('@/utils', async (importActual) => {
 describe('juno download provider', () => {
   it('should parse release data from API and DOM', async () => {
     vi.mocked(getReleaseIdFromUrl).mockReturnValue('123456');
-    vi.mocked(networkRequest).mockResolvedValue(JSON.stringify({
+    vi.mocked(networkRequest).mockResolvedValue({
       items: [
         {
           title: 'Track One',
@@ -29,7 +29,7 @@ describe('juno download provider', () => {
           label: { name: 'Label Name' },
         },
       ],
-    }));
+    });
 
     document.body.innerHTML = `
       <div id="product-page-digi">

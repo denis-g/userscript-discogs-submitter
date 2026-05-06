@@ -12,7 +12,7 @@ describe('7digital provider', () => {
       <div class="release-data-info">13 Apr 2026</div>
     `;
 
-    vi.mocked(networkRequest).mockResolvedValue(JSON.stringify({
+    vi.mocked(networkRequest).mockResolvedValue({
       tracks: [
         {
           title: 'Track One',
@@ -27,7 +27,7 @@ describe('7digital provider', () => {
           },
         },
       ],
-    }));
+    });
 
     const result = await sevendigital.parse();
 

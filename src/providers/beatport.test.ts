@@ -20,11 +20,11 @@ describe('beatport provider', () => {
       const url = typeof options.url === 'string' ? options.url : '';
 
       if (url.includes('refresh-anon-token')) {
-        return JSON.stringify({ access_token: 'fake_token' });
+        return { access_token: 'fake_token' };
       }
 
       if (url.includes('/catalog/releases/1368940/tracks')) {
-        return JSON.stringify({
+        return {
           results: [
             {
               name: 'Track One',
@@ -34,21 +34,21 @@ describe('beatport provider', () => {
               bpm: 124,
             },
           ],
-        });
+        };
       }
 
       if (url.includes('/catalog/releases/1368940')) {
-        return JSON.stringify({
+        return {
           name: 'Album Title',
           artists: [{ name: 'Artist Name' }],
           label: { name: 'Label Name' },
           catalog_number: 'CAT001',
           publish_date: '2026-04-13',
           image: { uri: 'cover.jpg' },
-        });
+        };
       }
 
-      return '{}';
+      return {};
     });
 
     const result = await beatport.parse();

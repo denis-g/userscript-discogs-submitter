@@ -23,32 +23,34 @@ async function getData() {
     throw new Error(`[Discogs Submitter] Release ID not found`);
   }
 
-  const accessTokenResponse = await networkRequest({
+  const accessTokenResponse = await networkRequest<{ access_token: string }>({
     url: `https://www.beatport.com/api/auth/refresh-anon-token`,
     method: 'POST',
+    responseType: 'json',
   });
-  const accessToken = JSON.parse(accessTokenResponse).access_token;
+  const accessToken = accessTokenResponse.access_token;
 
   if (!accessToken) {
     throw new Error('Beatport access token not found');
   }
 
-  const [metaResponse, tracksResponse] = await Promise.all([
-    networkRequest({
+  const [meta, tracksResponse] = await Promise.all([
+    networkRequest<any>({
       url: `https://api.beatport.com/v4/catalog/releases/${releaseId}`,
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
+      responseType: 'json',
     }),
-    networkRequest({
+    networkRequest<{ results: any[] }>({
       url: `https://api.beatport.com/v4/catalog/releases/${releaseId}/tracks?per_page=100`,
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
+      responseType: 'json',
     }),
   ]);
-  const meta = JSON.parse(metaResponse);
-  const tracks = JSON.parse(tracksResponse).results;
+  const tracks = tracksResponse.results;
 
   return { ...meta, tracks };
 }
