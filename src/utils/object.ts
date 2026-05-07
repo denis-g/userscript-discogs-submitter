@@ -27,6 +27,12 @@ export function setValueByPath(obj: any, path: string, value: any): void {
   }
 
   const parts = path.split('.');
+  const forbiddenKeys = new Set(['__proto__', 'prototype', 'constructor']);
+
+  if (parts.some(part => forbiddenKeys.has(part))) {
+    return;
+  }
+
   let current = obj;
 
   for (let i = 0; i < parts.length - 1; i++) {

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discogs Submitter
 // @namespace    discogs-submitter
-// @version      3.1.6
+// @version      3.1.7
 // @author       Denis G. <https://github.com/denis-g>
 // @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital, Amazon Music, Bleep, HDtracks and submit releases to Discogs.
 // @license      MIT
@@ -337,7 +337,7 @@
         const oxfordPattern = buildOxfordPattern(ARTIST_JOINERS);
 
         const name = "discogs-submitter";
-        const version = "3.1.6";
+        const version = "3.1.7";
         const funding = "https://buymeacoffee.com/denis_g";
         const homepage = "https://github.com/denis-g/userscript-discogs-submitter";
         const bugs = {"url":"https://github.com/denis-g/userscript-discogs-submitter/issues"};
@@ -742,6 +742,10 @@
                 return;
             }
             const parts = path.split(".");
+            const forbiddenKeys = new Set(["__proto__", "prototype", "constructor"]);
+            if (parts.some((part) => forbiddenKeys.has(part))) {
+                return;
+            }
             let current = obj;
             for (let i = 0; i < parts.length - 1; i++) {
                 const key = parts[i];
