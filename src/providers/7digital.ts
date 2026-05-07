@@ -3,15 +3,8 @@ import type {
   StoreAdapter,
 } from '@/types';
 import { networkRequest } from '@/core';
-import {
-  getTextFromTag,
-  matchUrls,
-  normalizeArtists,
-  normalizeDuration,
-  normalizeMainArtists,
-  normalizeReleaseDate,
-  normalizeTitle,
-} from '@/utils';
+import { normalizeArtists, normalizeDuration, normalizeMainArtists, normalizeReleaseDate, normalizeTitle } from '@/domain/normalizers';
+import { getTextFromTag, matchUrls } from '@/utils';
 
 /**
  * Fetches track details array from 7digital API.

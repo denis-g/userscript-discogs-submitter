@@ -3,17 +3,8 @@ import type {
   StoreAdapter,
   TrackData,
 } from '@/types';
-import {
-  cleanString,
-  getManyTextFromTags,
-  getTextFromTag,
-  matchUrls,
-  normalizeDuration,
-  normalizeMainArtists,
-  normalizeReleaseDate,
-  normalizeTitle,
-  splitArtistTitle,
-} from '@/utils';
+import { normalizeDuration, normalizeMainArtists, normalizeReleaseDate, normalizeTitle, splitArtistTitle } from '@/domain/normalizers';
+import { cleanString, getManyTextFromTags, getTextFromTag, matchUrls } from '@/utils';
 
 /**
  * Extracts catalog number from credits and about items.

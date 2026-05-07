@@ -2,16 +2,8 @@ import type {
   ArtistCredit,
   StoreAdapter,
 } from '@/types';
-import {
-  getManyTextFromTags,
-  getTextFromTag,
-  matchUrls,
-  normalizeArtists,
-  normalizeDuration,
-  normalizeMainArtists,
-  normalizeReleaseDate,
-  normalizeTitle,
-} from '@/utils';
+import { normalizeArtists, normalizeDuration, normalizeMainArtists, normalizeReleaseDate, normalizeTitle } from '@/domain/normalizers';
+import { getManyTextFromTags, getTextFromTag, matchUrls } from '@/utils';
 
 /**
  * Adapter configuration for the Bleep digital store.

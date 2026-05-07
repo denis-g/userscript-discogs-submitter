@@ -3,17 +3,8 @@ import type {
   StoreAdapter,
 } from '@/types';
 import { networkRequest } from '@/core';
-import {
-  cleanString,
-  getReleaseIdFromUrl,
-  getTextFromTag,
-  matchUrls,
-  normalizeArtists,
-  normalizeDuration,
-  normalizeMainArtists,
-  normalizeReleaseDate,
-  normalizeTitle,
-} from '@/utils';
+import { normalizeArtists, normalizeDuration, normalizeMainArtists, normalizeReleaseDate, normalizeTitle } from '@/domain/normalizers';
+import { cleanString, getReleaseIdFromUrl, getTextFromTag, matchUrls } from '@/utils';
 
 /**
  * Fetches playlist details array from JunoDownload API.

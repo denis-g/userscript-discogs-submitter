@@ -28,7 +28,7 @@ Thank you for your interest in contributing! This project follows strict enginee
 We follow a strict development protocol to ensure consistency and reliability.
 
 ### Autonomous Providers
-Each music store is unique. Keep scraping logic (selectors, JSON-LD parsing, regex for catalog numbers) inside the provider file. Use core utilities from `src/utils/` for normalization (artists, titles, dates, labels). Do not reinvent normalization logic.
+Each music store is unique. Keep scraping logic (selectors, JSON-LD parsing, regex for catalog numbers) inside the provider file. Use core utilities from `src/domain/normalizers/` for normalization (artists, titles, dates, labels). Do not reinvent normalization logic.
 
 ### Fresh State Mandate
 Before proposing or applying any changes to a file, always read its current content from the disk. Never rely on stale information from your editor or previous build cycles.
@@ -65,7 +65,7 @@ All exported functions, interfaces, and public methods MUST have JSDoc comments.
 Avoid `any`. Use TypeScript's strict mode to its full potential. If you need a new data structure, define it in `src/types/index.ts`.
 
 ### CSS Standards
-Our UI styles are located in `src/assets/*.css`. We follow these principles:
+Our UI styles are located in `src/ui/assets/css/*.css`. We follow these principles:
 *   **BEM Methodology:** Use BEM-like naming for classes (e.g., `discogs-submitter__header__title`).
 *   **Scoped Styling:** All classes must be prefixed with `discogs-submitter` to avoid collisions with the host website.
 *   **CSS Variables:** Use the predefined variables in `widget.css` for colors, gaps, and border-radius.
@@ -82,7 +82,7 @@ The project uses [Antfu ESLint Config](https://github.com/antfu/eslint-config) t
 We follow a **Test-Driven Development (TDD)** approach using **Vitest**. Every bug fix or new feature must include a corresponding test.
 
 ### Testing Guidelines:
-*   **Location:** Provider tests go in `src/providers/[name].test.ts`, utility tests in `src/utils/[name].test.ts`.
+*   **Location:** Provider tests go in `src/providers/[name].test.ts`, domain logic tests in `src/domain/normalizers/__tests__/[name].test.ts`, and utility tests in `src/utils/__tests__/[name].test.ts`.
 *   **DOM Mocking:** Since we parse real websites, use `JSDOM` (provided by Vitest environment) to mock the necessary HTML structures.
 *   **Regex Testing:** For new parsing patterns, add exhaustive test cases to ensure no regressions in artist/title detection.
 

@@ -1,8 +1,8 @@
 /**
- * Utility for handling standard behaviors in ContentEditable elements.
+ * Utility for handling standard behaviors in EditableHelper elements.
  * Prevents rich-text formatting and standardizes keyboard interaction.
  */
-export const ContentEditable = {
+export const EditableHelper = {
   /**
    * Handles the 'paste' event to ensure only plain text is inserted.
    *

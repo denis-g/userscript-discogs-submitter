@@ -1,7 +1,7 @@
-import injectButtonCss from '@/assets/css/inject-button.css?inline';
 import { USERSCRIPT } from '@/config';
 import { renderTemplate } from '@/core';
 
+import injectButtonCss from '@/ui/assets/css/inject-button.css?inline';
 import injectButtonTemplate from '@/ui/templates/inject-button.html?raw';
 
 /**

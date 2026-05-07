@@ -2,15 +2,8 @@ import type {
   ArtistCredit,
   StoreAdapter,
 } from '@/types';
-import {
-  getTextFromTag,
-  matchUrls,
-  normalizeArtists,
-  normalizeDuration,
-  normalizeMainArtists,
-  normalizeReleaseDate,
-  normalizeTitle,
-} from '@/utils';
+import { normalizeArtists, normalizeDuration, normalizeMainArtists, normalizeReleaseDate, normalizeTitle } from '@/domain/normalizers';
+import { getTextFromTag, matchUrls } from '@/utils';
 
 /**
  * Adapter configuration for the HDtracks digital store.

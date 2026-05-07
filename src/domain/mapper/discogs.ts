@@ -5,13 +5,13 @@ import type {
   DiscogsTrack,
   ReleaseData,
 } from '@/types';
-import { extractFormatFromTitle, groupExtraArtists, normalizeCountry } from '@/utils';
+import { extractFormatFromTitle, groupExtraArtists, normalizeCountry } from '@/domain/normalizers';
 
 /**
  * A shared adapter for transforming various digital store data into the Discogs release schema.
  * Handles the normalization and deduplication of artists, labels, and tracklists.
  */
-export const DiscogsAdapter = {
+export const DiscogsMapper = {
   /**
    * Transforms raw scraped store data into the strict JSON payload schema required by Discogs.
    *
@@ -29,11 +29,11 @@ export const DiscogsAdapter = {
    *
    * @example
    * ```typescript
-   * const payload = DiscogsAdapter.buildPayload(releaseData, window.location.href, { format: 'WAV' });
+   * const payload = DiscogsMapper.mapToPayload(releaseData, window.location.href, { format: 'WAV' });
    * console.log(payload.full_data);
    * ```
    */
-  buildPayload: (data: ReleaseData, sourceUrl: string, options?: BuildPayloadOptions): DiscogsPayload => {
+  mapToPayload: (data: ReleaseData, sourceUrl: string, options?: BuildPayloadOptions): DiscogsPayload => {
     const { format = 'WAV' } = options || {};
     const releaseArtistsArr = data.artists || [];
     const tracks = data.tracks || [];

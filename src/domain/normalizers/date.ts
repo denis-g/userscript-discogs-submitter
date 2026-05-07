@@ -1,3 +1,5 @@
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
 /**
  * Normalizes various raw date strings into standard `YYYY-MM-DD` or `YYYY` formats.
  *
@@ -13,9 +15,6 @@
  * console.log(normalizeReleaseDate('2009')); // '2009'
  * ```
  */
-
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
 export function normalizeReleaseDate(date: string | null | undefined): string | null {
   if (!date) {
     return null;

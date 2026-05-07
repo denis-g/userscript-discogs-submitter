@@ -63,8 +63,14 @@ export const TITLE_FORMAT: Record<string, string[]> = {
   ],
 };
 
+/**
+ * Derived list of all recognized release types used for UI selection dropdowns.
+ */
 export const RELEASE_TYPES = Object.keys(TITLE_FORMAT);
 
+/**
+ * Strict list of accepted audio file formats for Discogs submission.
+ */
 export const FILE_FORMATS = [
   'WAV',
   'FLAC',

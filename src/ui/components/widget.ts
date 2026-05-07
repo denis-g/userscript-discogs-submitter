@@ -6,19 +6,14 @@ import type {
   StoreFormatOptions,
 } from '@/types';
 import { FILE_FORMATS, RELEASE_TYPES, USERSCRIPT } from '@/config';
-import { DiscogsAdapter, networkRequest, renderTemplate } from '@/core';
-import { ContentEditable, Draggable, UiSelect } from '@/ui';
+import { networkRequest, renderTemplate } from '@/core';
+import { DiscogsMapper } from '@/domain/mapper';
+import { ALLOWED_COUNTRIES, extractFormatFromTitle, normalizeCountry, normalizeLabel } from '@/domain/normalizers';
+import { Draggable, EditableHelper, UiSelect } from '@/ui';
 import loaderTemplate from '@/ui/templates/loader.html?raw';
 import previewTemplate from '@/ui/templates/preview.html?raw';
 import widgetTemplate from '@/ui/templates/widget.html?raw';
-import {
-  ALLOWED_COUNTRIES,
-  extractFormatFromTitle,
-  getValueByPath,
-  normalizeCountry,
-  normalizeLabel,
-  setValueByPath,
-} from '@/utils';
+import { getValueByPath, setValueByPath } from '@/utils';
 
 interface RenderOptions {
   selectedFormat: string;
@@ -31,7 +26,7 @@ interface RenderOptions {
  * A shared utility for generating HTML fragments used in the widget UI.
  * Provides consistent rendering for rows, tracklists, and release previews.
  */
-export const Renderer = {
+export const PreviewRenderer = {
   /**
    * Renders a structured HTML summary to preview the parsed release data inside the widget.
    *
@@ -191,7 +186,7 @@ export class UiWidget {
     if (this.ui.widget) {
       this.ui.widget.classList.add('is-open');
 
-      this.executeParsing();
+      this.startParsing();
     }
   }
 
@@ -265,7 +260,7 @@ export class UiWidget {
    *
    * @returns A promise that resolves when the parsing and rendering are complete.
    */
-  private async executeParsing(): Promise<void> {
+  private async startParsing(): Promise<void> {
     if (!this.state.currentDigitalStore) {
       return;
     }
@@ -310,9 +305,9 @@ export class UiWidget {
       this.state.selectedDescriptions = extractFormatFromTitle(this.state.lastRawData?.title);
       this.state.formatText = '';
 
-      // Ensure notes and submission notes are initialized if DiscogsAdapter would generate them
+      // Ensure notes and submission notes are initialized if DiscogsMapper would generate them
       if (this.state.editedData && this.state.lastRawData) {
-        const tempPayload = DiscogsAdapter.buildPayload(this.state.editedData, unsafeWindow.location.href, {
+        const tempPayload = DiscogsMapper.mapToPayload(this.state.editedData, unsafeWindow.location.href, {
           format: this.state.selectedFormat || 'WAV',
           descriptions: this.state.selectedDescriptions,
         });
@@ -371,7 +366,7 @@ export class UiWidget {
       this.state.formatText = '';
     }
 
-    this.state.currentPayload = DiscogsAdapter.buildPayload(this.state.editedData, unsafeWindow.location.href, {
+    this.state.currentPayload = DiscogsMapper.mapToPayload(this.state.editedData, unsafeWindow.location.href, {
       format: this.state.selectedFormat || 'WAV',
       descriptions: this.state.selectedDescriptions,
       formatText: this.state.formatText,
@@ -382,7 +377,7 @@ export class UiWidget {
     const rawJsonString = JSON.stringify(previewObj, null, 2);
 
     if (this.ui.preview) {
-      await Renderer.releasePreview(previewObj, {
+      await PreviewRenderer.releasePreview(previewObj, {
         selectedFormat: this.state.selectedFormat || 'WAV',
         selectedDescriptions: this.state.selectedDescriptions,
         formatText: this.state.formatText,
@@ -745,7 +740,7 @@ export class UiWidget {
     // Contenteditable handlers using utility
     this.ui.preview?.addEventListener('keydown', (event) => {
       if ((event.target as HTMLElement).classList.contains('is-edit')) {
-        ContentEditable.handleKeydown(event);
+        EditableHelper.handleKeydown(event);
       }
     });
 
@@ -757,7 +752,7 @@ export class UiWidget {
 
     this.ui.preview?.addEventListener('paste', (event) => {
       if ((event.target as HTMLElement).classList.contains('is-edit')) {
-        ContentEditable.handlePaste(event);
+        EditableHelper.handlePaste(event);
       }
     });
 

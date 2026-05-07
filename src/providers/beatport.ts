@@ -3,18 +3,15 @@ import type {
   StoreAdapter,
 } from '@/types';
 import { networkRequest } from '@/core';
-import {
-  getReleaseIdFromUrl,
-  matchUrls,
-  normalizeArtists,
-  normalizeMainArtists,
-  normalizeTitle,
-} from '@/utils';
+import { normalizeArtists, normalizeMainArtists, normalizeTitle } from '@/domain/normalizers';
+import { getReleaseIdFromUrl, matchUrls } from '@/utils';
 
 /**
  * Fetches required tokens and loads store metadata arrays via API endpoints.
  *
  * @returns Parsed JSON with combined meta and tracks payload.
+ * @throws {Error} When the release ID cannot be extracted from the URL.
+ * @throws {Error} When the anonymous access token request fails.
  */
 async function getData() {
   const releaseId = getReleaseIdFromUrl();

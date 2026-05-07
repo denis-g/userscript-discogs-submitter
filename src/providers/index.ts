@@ -8,6 +8,10 @@ import { hdtracks } from './hdtracks';
 import { junodownload } from './junodownload';
 import { qobuz } from './qobuz';
 
+/**
+ * Central registry for all supported digital music store adapters.
+ * Used to automatically detect and route parsing logic based on the current active URL.
+ */
 export const DigitalStoreRegistry = {
   /**
    * List of all supported digital stores.

@@ -2,14 +2,8 @@ import type {
   ArtistCredit,
   StoreAdapter,
 } from '@/types';
-import {
-  getTextFromTag,
-  matchUrls,
-  normalizeArtists,
-  normalizeDuration,
-  normalizeMainArtists,
-  normalizeTitle,
-} from '@/utils';
+import { normalizeArtists, normalizeDuration, normalizeMainArtists, normalizeTitle } from '@/domain/normalizers';
+import { getTextFromTag, matchUrls } from '@/utils';
 
 /**
  * Scrapes metadata directly from JSON-LD schema injected in the DOM.

@@ -21,7 +21,7 @@ export default defineConfig({
         'description': `${pkg.description}`,
         'author': `${pkg.author}`,
         'license': `${pkg.license}`,
-        'icon': 'https://raw.githubusercontent.com/denis-g/userscript-discogs-submitter/master/src/assets/images/logo.svg',
+        'icon': 'https://raw.githubusercontent.com/denis-g/userscript-discogs-submitter/master/src/ui/assets/images/logo.svg',
         'updateURL': 'https://raw.githubusercontent.com/denis-g/userscript-discogs-submitter/master/discogs-submitter.user.js',
         'downloadURL': 'https://raw.githubusercontent.com/denis-g/userscript-discogs-submitter/master/discogs-submitter.user.js',
         'supportURL': `${pkg.bugs.url}`,

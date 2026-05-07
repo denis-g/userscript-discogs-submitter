@@ -1,19 +1,20 @@
-import buttonsCss from '@/assets/css/buttons.css?inline';
-import inputsCss from '@/assets/css/inputs.css?inline';
-import previewCss from '@/assets/css/preview.css?inline';
-import resetCss from '@/assets/css/reset.css?inline';
-import variablesCss from '@/assets/css/variables.css?inline';
-import widgetCss from '@/assets/css/widget.css?inline';
-import iconBug from '@/assets/images/icons/bug.svg?raw';
-import iconChevronDown from '@/assets/images/icons/chevron-down.svg?raw';
-import iconClose from '@/assets/images/icons/close.svg?raw';
-import iconMove from '@/assets/images/icons/move.svg?raw';
-import iconRotateLeft from '@/assets/images/icons/rotate-left.svg?raw';
-import iconSquareCheck from '@/assets/images/icons/square-check.svg?raw';
-import imageLogo from '@/assets/images/logo.svg?raw';
 import { USERSCRIPT } from '@/config';
 import { DigitalStoreRegistry } from '@/providers';
 import { InjectButton, UiWidget } from '@/ui';
+
+import buttonsCss from '@/ui/assets/css/buttons.css?inline';
+import inputsCss from '@/ui/assets/css/inputs.css?inline';
+import previewCss from '@/ui/assets/css/preview.css?inline';
+import resetCss from '@/ui/assets/css/reset.css?inline';
+import variablesCss from '@/ui/assets/css/variables.css?inline';
+import widgetCss from '@/ui/assets/css/widget.css?inline';
+import iconBug from '@/ui/assets/images/icons/bug.svg?raw';
+import iconChevronDown from '@/ui/assets/images/icons/chevron-down.svg?raw';
+import iconClose from '@/ui/assets/images/icons/close.svg?raw';
+import iconMove from '@/ui/assets/images/icons/move.svg?raw';
+import iconRotateLeft from '@/ui/assets/images/icons/rotate-left.svg?raw';
+import iconSquareCheck from '@/ui/assets/images/icons/square-check.svg?raw';
+import imageLogo from '@/ui/assets/images/logo.svg?raw';
 
 /**
  * The core widget controller for the Discogs Submitter userscript.
