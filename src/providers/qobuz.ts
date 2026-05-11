@@ -10,9 +10,9 @@ import { getTextFromTag, matchUrls } from '@/utils';
  *
  * @returns The parsed structured data or null.
  */
-async function getData(): Promise<any> {
+async function getData(): Promise<Record<string, any> | null> {
   const scripts = document.querySelectorAll('script[type="application/ld+json"]');
-  let data: any = null;
+  let data: Record<string, any> | null = null;
 
   Array.from(scripts).some((script) => {
     try {
@@ -55,20 +55,22 @@ export const qobuz: StoreAdapter = {
     target.appendChild(button);
 
     // Qobuz uses infinite scroll for tracks, we need to ensure they are loaded
-    const win = unsafeWindow as any;
+    const windowProxy = unsafeWindow as any;
 
-    if (typeof win.infiniteScroll === 'function') {
+    if (typeof windowProxy.infiniteScroll === 'function') {
       try {
-        win.infiniteScroll('/v4/ajax/album/load-tracks');
+        windowProxy.infiniteScroll('/v4/ajax/album/load-tracks');
       }
-      catch {
+      catch (error) {
+        console.warn('[Discogs Submitter] Qobuz infiniteScroll trigger failed:', error);
       }
     }
   },
 
   parse: async () => {
     const data = await getData();
-    let albumCover = getTextFromTag('.album-cover__image', null, 'src');
+    const smallCover = getTextFromTag('.album-cover__image', null, 'src');
+    const albumCover = smallCover?.replace(/_(600|300)\.jpg$/, '_max.jpg').replace('_600', '_max') || null;
     const albumExtraArtists: ArtistCredit[] = [];
     const albumArtists = normalizeMainArtists(getTextFromTag('.album-meta__title .artist-name'), albumExtraArtists);
     const albumTitle = normalizeTitle(getTextFromTag('.album-meta__title .album-title'), albumExtraArtists);
@@ -91,11 +93,8 @@ export const qobuz: StoreAdapter = {
       };
     });
 
-    if (albumCover) {
-      albumCover = albumCover.replace(/_(600|300)\.jpg$/, '_max.jpg').replace('_600', '_max');
-    }
-
     return {
+      thumb: smallCover,
       cover: albumCover,
       extraartists: albumExtraArtists,
       artists: albumArtists,

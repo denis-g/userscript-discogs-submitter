@@ -34,6 +34,11 @@ export function networkRequest<T = any>(options: Tampermonkey.Request, retries =
         timeout,
         anonymous: false,
         fetch: false,
+        cookiePartition: {
+          // Cloudflare may add cookie with domain equal to top-level site.
+          // To avoid blocking, we need to set cookie partition to top-level site.
+          topLevelSite: unsafeWindow.location.origin,
+        },
         ...options,
         onload: (response) => {
           if (response.status >= 200 && response.status < 300) {
@@ -49,9 +54,7 @@ export function networkRequest<T = any>(options: Tampermonkey.Request, retries =
           }
         },
         onerror: (response) => {
-          const statusText = (response as any).statusText || '';
-
-          reject(new Error(`Network Error: ${response.status} ${statusText}`.trim() || 'Connection failed'));
+          reject(new Error(`Network Error: ${response.status} ${response.statusText || ''}`.trim() || 'Connection failed'));
         },
         ontimeout: () => reject(new Error('Request timed out')),
       };

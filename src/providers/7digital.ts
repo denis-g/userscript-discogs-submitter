@@ -6,19 +6,42 @@ import { networkRequest } from '@/core';
 import { normalizeArtists, normalizeDuration, normalizeMainArtists, normalizeReleaseDate, normalizeTitle } from '@/domain/normalizers';
 import { getTextFromTag, matchUrls } from '@/utils';
 
+interface SevenDigitalArtist {
+  name: string;
+}
+
+interface SevenDigitalLabel {
+  name: string;
+}
+
+interface SevenDigitalRelease {
+  image: string;
+  title: string;
+  artist: SevenDigitalArtist;
+  label: SevenDigitalLabel;
+}
+
+interface SevenDigitalTrack {
+  release: SevenDigitalRelease;
+  artist: SevenDigitalArtist;
+  title: string;
+  version: string;
+  duration: string;
+}
+
 /**
  * Fetches track details array from 7digital API.
  *
  * @returns Array of parsed track items.
  */
-async function getData() {
+async function getData(): Promise<SevenDigitalTrack[]> {
   const releaseId = getTextFromTag('.release-info', null, 'data-releaseid');
 
   if (!releaseId) {
     throw new Error(`[Discogs Submitter] Release ID not found`);
   }
 
-  const response = await networkRequest<{ tracks: any[] }>({
+  const response = await networkRequest<{ tracks: SevenDigitalTrack[] }>({
     url: `https://api.7digital.com/1.2/release/tracks?releaseid=${releaseId}&pagesize=100&imagesize=800&usageTypes=download&oauth_consumer_key=7digital.com`,
     headers: {
       Accept: 'application/json',
@@ -35,6 +58,7 @@ async function getData() {
  */
 export const sevendigital: StoreAdapter = {
   id: '7digital',
+
   test: matchUrls(
     'https://*.7digital.com/artist/*/release/*',
   ),
@@ -51,13 +75,14 @@ export const sevendigital: StoreAdapter = {
 
   parse: async () => {
     const data = await getData();
+    const smallCover = data[0].release.image?.replace('_800', '_350');
     const albumCover = data[0].release.image;
     const albumExtraArtists: ArtistCredit[] = [];
     const albumArtists = normalizeMainArtists([data[0].release.artist.name], albumExtraArtists);
     const albumTitle = normalizeTitle(data[0].release.title, albumExtraArtists);
     const albumLabel = data[0].release.label.name;
     const albumReleased = normalizeReleaseDate(getTextFromTag('.release-data-label + .release-data-info'));
-    const albumTracks = data.map((track: any, index: number) => {
+    const albumTracks = data.map((track, index) => {
       const trackPosition = `${index + 1}`;
       const trackExtraArtists: ArtistCredit[] = [];
       const trackArtists = normalizeArtists(track.artist.name, trackExtraArtists);
@@ -74,6 +99,7 @@ export const sevendigital: StoreAdapter = {
     });
 
     return {
+      thumb: smallCover,
       cover: albumCover,
       extraartists: albumExtraArtists,
       artists: albumArtists,

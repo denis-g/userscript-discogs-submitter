@@ -37,7 +37,8 @@ export class UiSelect {
    * Constructs the custom UI based on the template.
    */
   private async buildUI(): Promise<void> {
-    const placeholder = this.select.dataset.placeholder || (this.state.isMultiple ? 'Select options...' : 'Select an option...');
+    const placeholder
+      = this.select.dataset.placeholder || (this.state.isMultiple ? 'Select options...' : 'Select an option...');
     const containerClass = `${this.state.isMultiple ? 'is-multiple' : 'is-single'}`;
     const data = {
       containerClass,
@@ -99,7 +100,8 @@ export class UiSelect {
       if (this.ui.count) {
         this.ui.count.textContent = '';
       }
-      this.ui.placeholder.textContent = this.select.dataset.placeholder || (this.state.isMultiple ? 'Select options...' : 'Select an option...');
+      this.ui.placeholder.textContent
+        = this.select.dataset.placeholder || (this.state.isMultiple ? 'Select options...' : 'Select an option...');
 
       this.ui.placeholder.classList.remove('is-selected');
     }
@@ -167,7 +169,7 @@ export class UiSelect {
 
   private selectOption(item: HTMLElement): void {
     const value = item.dataset.value ?? '';
-    const option = Array.from(this.select.options).find(opt => opt.value === value);
+    const option = Array.from(this.select.options).find(option => option.value === value);
 
     if (!option) {
       return;

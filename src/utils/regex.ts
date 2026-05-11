@@ -95,7 +95,8 @@ export function buildJoinerPattern(joiners: string[]): RegExp {
  * @example
  * ```typescript
  * const regex = buildOxfordPattern(['&']);
- * const result = 'Artist One, Artist Two, & Artist Three'.replace(regex, ' $1 '); // 'Artist One, Artist Two & Artist Three'
+ * const result = 'Artist One, Artist Two, & Artist Three'
+ *   .replace(regex, ' $1 '); // 'Artist One, Artist Two & Artist Three'
  * ```
  */
 export function buildOxfordPattern(joiners: string[]): RegExp | null {

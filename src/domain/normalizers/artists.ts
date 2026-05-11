@@ -7,7 +7,8 @@ import { capitalizeString, cleanString, extractBpm } from '@/utils';
  * or just ordinary descriptive text (prose).
  *
  * @param text - The string to check.
- * @returns True if it looks like a valid artist name, false if it is likely prose (e.g. "Includes digital bonus tracks").
+ * @returns True if it looks like a valid artist name, false if it is likely prose
+ *          (e.g. "Includes digital bonus tracks").
  *
  * @example
  * ```typescript

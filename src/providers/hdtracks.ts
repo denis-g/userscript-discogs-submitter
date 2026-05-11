@@ -56,6 +56,7 @@ export const hdtracks: StoreAdapter = {
     });
 
     return {
+      thumb: albumCover,
       cover: albumCover,
       extraartists: albumExtraArtists,
       artists: albumArtists,

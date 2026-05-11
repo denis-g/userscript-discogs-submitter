@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discogs Submitter
 // @namespace    discogs-submitter
-// @version      3.1.7
+// @version      3.2.1
 // @author       Denis G. <https://github.com/denis-g>
 // @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital, Amazon Music, Bleep, HDtracks and submit releases to Discogs.
 // @license      MIT
@@ -337,7 +337,7 @@
         const oxfordPattern = buildOxfordPattern(ARTIST_JOINERS);
 
         const name = "discogs-submitter";
-        const version = "3.1.7";
+        const version = "3.2.1";
         const funding = "https://buymeacoffee.com/denis_g";
         const homepage = "https://github.com/denis-g/userscript-discogs-submitter";
         const bugs = {"url":"https://github.com/denis-g/userscript-discogs-submitter/issues"};
@@ -384,6 +384,10 @@
                     timeout,
                     anonymous: false,
                     fetch: false,
+                    cookiePartition: {
+
+                        topLevelSite: unsafeWindow.location.origin
+                    },
                     ...options,
                     onload: (response) => {
                         if (response.status >= 200 && response.status < 300) {
@@ -397,8 +401,7 @@
                         }
                     },
                     onerror: (response) => {
-                        const statusText = response.statusText || "";
-                        reject(new Error(`Network Error: ${response.status} ${statusText}`.trim() || "Connection failed"));
+                        reject(new Error(`Network Error: ${response.status} ${response.statusText || ""}`.trim() || "Connection failed"));
                     },
                     ontimeout: () => reject(new Error("Request timed out"))
                 };
@@ -413,284 +416,14 @@
             return attempt(0);
         }
 
-        function chainProps(object, props) {
-            return !props ? object : props.split(".").reduce((o, k) => o?.[k], object);
-        }
-        const EVENT_NAME_RE = /^[A-Z][\w-]*$/i;
-        const HANDLER_NAME_RE = /^[A-Z_$][\w$]*$/i;
-        function parseDataEventDeclaration(declaration) {
-            const source = declaration.trim();
-            if (!source) {
-                throw new TypeError("Invalid data-event declaration: empty value");
-            }
-            return source.split("|").map((rawBinding) => {
-                const binding = rawBinding.trim();
-                const parts = binding.split(":").map((part) => part.trim());
-                const [eventName, handlerName] = parts;
-                if (parts.length !== 2 || !EVENT_NAME_RE.test(eventName) || !HANDLER_NAME_RE.test(handlerName)) {
-                    throw new TypeError(`Invalid data-event declaration: "${binding}"`);
-                }
-                return {
-                    eventName,
-                    handlerName
-                };
-            });
-        }
-        function bindCollectedEvents(bindings, events) {
-            if (!events || typeof events !== "object") {
-                throw new TypeError("options.events must be an object");
-            }
-            for (const { handlerName } of bindings) {
-                if (typeof events[handlerName] !== "function" && typeof events[handlerName]?.handleEvent !== "function") {
-                    throw new TypeError(`Missing event handler: ${handlerName}`);
-                }
-            }
-            const processedElements = new Set();
-            for (const { element, eventName, handlerName } of bindings) {
-                element.addEventListener(eventName, events[handlerName]);
-                processedElements.add(element);
-            }
-            for (const element of processedElements) {
-                element.removeAttribute("data-event");
-            }
-        }
-        function renderTemplate(template, data, domElement, { replace = false, events } = {}) {
-            if (replace) {
-                domElement.textContent = "";
-            }
-            let templateElement;
-            if (typeof template === "string") {
-                templateElement = document.createElement("template");
-                templateElement.innerHTML = template;
-            } else {
-                templateElement = template;
-            }
-            const fragment = templateElement.content.cloneNode(true);
-            const eventBindings = events == null ? null : [];
-            walk(fragment, data, eventBindings);
-            if (eventBindings && eventBindings.length > 0 && events) {
-                bindCollectedEvents(eventBindings, events);
-            }
-            domElement.append(fragment);
-        }
-        const processIf = (element, context, walk2, eventBindings) => {
-            if (!element.dataset.if) {
-                return false;
-            }
-            let expression = element.dataset.if.trim();
-            let invert = false;
-            if (expression.startsWith("!")) {
-                invert = true;
-                expression = expression.slice(1).trim();
-            }
-            const rawValue = chainProps(context, expression);
-            let condition = Boolean(rawValue);
-            if (invert) {
-                condition = !condition;
-            }
-            element.removeAttribute("data-if");
-            if (!condition) {
-                element.remove();
-                return true;
-            }
-            if (element.tagName === "VAR" || "unwrap" in element.dataset) {
-                const children = Array.from(element.childNodes);
-                const parent = element.parentElement;
-                if (parent) {
-                    element.before(...children);
-                    element.remove();
-                    for (const childNode of children) {
-                        walk2(childNode, context, eventBindings);
-                    }
-                } else {
-                    for (const childNode of children) {
-                        walk2(childNode, context, eventBindings);
-                    }
-                }
-                return true;
-            }
-            return false;
-        };
-        const processLoop = (element, context, walk2, eventBindings) => {
-            if (!element.dataset.loop) {
-                return false;
-            }
-            const loopExpression = element.dataset.loop;
-            const source = chainProps(context, loopExpression);
-            const processItem = (itemContext) => {
-                const clone = element.cloneNode(true);
-                clone.removeAttribute("data-loop");
-                walk2(clone, itemContext, eventBindings);
-                if (element.tagName === "VAR" || "unwrap" in element.dataset) {
-                    element.before(...Array.from(clone.childNodes));
-                } else {
-                    element.before(clone);
-                }
-            };
-            if (Array.isArray(source)) {
-                const length = source.length;
-                for (let index = 0; index < length; index++) {
-                    const item = source[index];
-                    const baseContext = item && typeof item === "object" ? { ...item } : { _value: item };
-                    const itemContext = {
-                        _value: item,
-                        ...baseContext,
-                        _index: index,
-                        _first: index === 0,
-                        _last: index === length - 1
-                    };
-                    processItem(itemContext);
-                }
-            } else if (source && typeof source === "object") {
-                const entries = Object.entries(source);
-                for (let index = 0; index < entries.length; index++) {
-                    const [key, value] = entries[index];
-                    const itemContext = Array.isArray(value) ? {
-                        _key: key,
-                        _value: value,
-                        _index: index
-                    } : value && typeof value === "object" ? {
-                        _value: value,
-                        ...value,
-                        _key: key,
-                        _index: index
-                    } : {
-                        _key: key,
-                        _value: value,
-                        _index: index
-                    };
-                    processItem(itemContext);
-                }
-            } else if (source != null) {
-                throw new TypeError(`data for "${loopExpression}" must be array or object`);
-            }
-            element.remove();
-            return true;
-        };
-        const processStyle = (element, context) => {
-            if (!element.dataset.style) {
-                return false;
-            }
-            element.dataset.style.split("|").forEach((pair) => {
-                const [property, path] = pair.split(":");
-                const value = chainProps(context, path);
-                if (value != null) {
-                    element.style.setProperty(property, String(value));
-                }
-            });
-            element.removeAttribute("data-style");
-            return false;
-        };
-        const processAttr = (element, context) => {
-            if (!element.dataset.attr) {
-                return false;
-            }
-            element.dataset.attr.split("|").forEach((binding) => {
-                const [key, path] = binding.split(":");
-                const value = chainProps(context, path);
-                if (value != null) {
-                    if (key === "class") {
-                        const classNames = String(value).trim().split(/\s+/).filter(Boolean);
-                        if (classNames.length) {
-                            element.classList.add(...classNames);
-                        }
-                    } else {
-                        element.setAttribute(key, String(value));
-                    }
-                }
-            });
-            element.removeAttribute("data-attr");
-            return false;
-        };
-        const processText = (element, context) => {
-            if (element.dataset.text == null) {
-                return false;
-            }
-            const path = element.dataset.text.trim();
-            const value = path === "" ? context && typeof context === "object" && "_value" in context ? context._value : context : chainProps(context, path);
-            element.textContent = value != null ? String(value) : "";
-            element.removeAttribute("data-text");
-            return false;
-        };
-        const processEvent = (element, context, walk2, eventBindings) => {
-            if (!eventBindings || !element.dataset.event) {
-                return false;
-            }
-            const parsed = parseDataEventDeclaration(element.dataset.event);
-            for (const { eventName, handlerName } of parsed) {
-                eventBindings.push({
-                    element,
-                    eventName,
-                    handlerName
-                });
-            }
-            return false;
-        };
-        const processVar = (element, context, walk2, eventBindings) => {
-            if (element.tagName === "VAR" && !element.firstElementChild) {
-                const path = element.textContent?.trim() || "";
-                const value = path === "" ? context && typeof context === "object" && "_value" in context ? context._value : context : chainProps(context, path);
-                element.replaceWith(document.createTextNode(value != null ? String(value) : ""));
-                return true;
-            }
-            if (element.tagName === "VAR" || "unwrap" in element.dataset) {
-                const children = Array.from(element.childNodes);
-                const parent = element.parentElement;
-                if (parent) {
-                    element.before(...children);
-                    element.remove();
-                    for (const childNode of children) {
-                        walk2(childNode, context, eventBindings);
-                    }
-                } else {
-                    for (const childNode of children) {
-                        walk2(childNode, context, eventBindings);
-                    }
-                }
-                return true;
-            }
-            return false;
-        };
-        function walk(node, context, eventBindings = null) {
-            if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
-                for (const child of Array.from(node.childNodes)) {
-                    walk(child, context, eventBindings);
-                }
-                return;
-            }
-            if (node.nodeType === Node.COMMENT_NODE) {
-                node.parentElement?.removeChild(node);
-                return;
-            }
-            if (node.nodeType === Node.ELEMENT_NODE) {
-                const element = node;
-                if (processIf(element, context, walk, eventBindings)) {
-                    return;
-                }
-                if (processLoop(element, context, walk, eventBindings)) {
-                    return;
-                }
-                processStyle(element, context);
-                processAttr(element, context);
-                processText(element, context);
-                processEvent(element, context, walk, eventBindings);
-                if (processVar(element, context, walk, eventBindings)) {
-                    return;
-                }
-                for (const child of Array.from(element.childNodes)) {
-                    walk(child, context, eventBindings);
-                }
-            }
-        }
-
         function getManyTextFromTags(target, parent = null, keepNewlines = false) {
             const context = parent || document;
             const results = Array.from(context.querySelectorAll(target));
             return results.map((element) => {
                 if (keepNewlines) {
                     const clone = element.cloneNode(true);
-                    clone.querySelectorAll("br").forEach((br) => {
-                        br.replaceWith("\n");
+                    clone.querySelectorAll("br").forEach((breakElement) => {
+                        breakElement.replaceWith("\n");
                     });
                     return cleanString(clone.textContent, false);
                 }
@@ -711,8 +444,8 @@
             let elementToProcess = result;
             if (keepNewlines) {
                 const clone = result.cloneNode(true);
-                clone.querySelectorAll("br").forEach((br) => {
-                    br.replaceWith("\n");
+                clone.querySelectorAll("br").forEach((breakElement) => {
+                    breakElement.replaceWith("\n");
                 });
                 elementToProcess = clone;
             }
@@ -731,13 +464,13 @@
             return null;
         }
 
-        function getValueByPath(obj, path) {
+        function getValueByPath(object, path) {
             if (!path) {
-                return obj;
+                return object;
             }
-            return path.split(".").reduce((o, k) => o?.[k], obj);
+            return path.split(".").reduce((accumulator, key) => accumulator?.[key], object);
         }
-        function setValueByPath(obj, path, value) {
+        function setValueByPath(object, path, value) {
             if (!path) {
                 return;
             }
@@ -746,10 +479,10 @@
             if (parts.some((part) => forbiddenKeys.has(part))) {
                 return;
             }
-            let current = obj;
-            for (let i = 0; i < parts.length - 1; i++) {
-                const key = parts[i];
-                const nextKey = parts[i + 1];
+            let current = object;
+            for (let index = 0; index < parts.length - 1; index++) {
+                const key = parts[index];
+                const nextKey = parts[index + 1];
                 if (!(key in current)) {
                     current[key] = /^\d+$/.test(nextKey) ? [] : {};
                 }
@@ -841,6 +574,274 @@
                 return path.split("/").filter(Boolean).at(-1) || null;
             } catch {
                 return url.split("/").filter(Boolean).at(-1) || null;
+            }
+        }
+
+        const EVENT_NAME_RE = /^[A-Z][\w-]*$/i;
+        const HANDLER_NAME_RE = /^[A-Z_$][\w$]*$/i;
+        function parseDataEventDeclaration(declaration) {
+            const source = declaration.trim();
+            if (!source) {
+                throw new TypeError("Invalid data-event declaration: empty value");
+            }
+            return source.split("|").map((rawBinding) => {
+                const binding = rawBinding.trim();
+                const parts = binding.split(":").map((part) => part.trim());
+                const [eventName, handlerName] = parts;
+                if (parts.length !== 2 || !EVENT_NAME_RE.test(eventName) || !HANDLER_NAME_RE.test(handlerName)) {
+                    throw new TypeError(`Invalid data-event declaration: "${binding}"`);
+                }
+                return {
+                    eventName,
+                    handlerName
+                };
+            });
+        }
+        function bindCollectedEvents(bindings, events) {
+            if (!events || typeof events !== "object") {
+                throw new TypeError("options.events must be an object");
+            }
+            for (const { handlerName } of bindings) {
+                const handler = events[handlerName];
+                if (typeof handler !== "function" && typeof handler?.handleEvent !== "function") {
+                    throw new TypeError(`Missing event handler: ${handlerName}`);
+                }
+            }
+            const processedElements = new Set();
+            for (const { element, eventName, handlerName } of bindings) {
+                element.addEventListener(eventName, events[handlerName]);
+                processedElements.add(element);
+            }
+            for (const element of processedElements) {
+                element.removeAttribute("data-event");
+            }
+        }
+        function renderTemplate(template, data, domElement, { replace = false, events } = {}) {
+            if (replace) {
+                domElement.textContent = "";
+            }
+            let templateElement;
+            if (typeof template === "string") {
+                templateElement = document.createElement("template");
+                templateElement.innerHTML = template;
+            } else {
+                templateElement = template;
+            }
+            const fragment = templateElement.content.cloneNode(true);
+            const eventBindings = events == null ? null : [];
+            walk(fragment, data, eventBindings);
+            if (eventBindings && eventBindings.length > 0 && events) {
+                bindCollectedEvents(eventBindings, events);
+            }
+            domElement.append(fragment);
+        }
+        const processIf = (element, context, walk2, eventBindings) => {
+            if (!element.dataset.if) {
+                return false;
+            }
+            let expression = element.dataset.if.trim();
+            let invert = false;
+            if (expression.startsWith("!")) {
+                invert = true;
+                expression = expression.slice(1).trim();
+            }
+            const rawValue = getValueByPath(context, expression);
+            let condition = Boolean(rawValue);
+            if (invert) {
+                condition = !condition;
+            }
+            element.removeAttribute("data-if");
+            if (!condition) {
+                element.remove();
+                return true;
+            }
+            if (element.tagName === "VAR" || "unwrap" in element.dataset) {
+                const children = Array.from(element.childNodes);
+                const parent = element.parentElement;
+                if (parent) {
+                    element.before(...children);
+                    element.remove();
+                    for (const childNode of children) {
+                        walk2(childNode, context, eventBindings);
+                    }
+                } else {
+                    for (const childNode of children) {
+                        walk2(childNode, context, eventBindings);
+                    }
+                }
+                return true;
+            }
+            return false;
+        };
+        const processLoop = (element, context, walk2, eventBindings) => {
+            if (!element.dataset.loop) {
+                return false;
+            }
+            const loopExpression = element.dataset.loop;
+            const source = getValueByPath(context, loopExpression);
+            const processItem = (itemContext) => {
+                const clone = element.cloneNode(true);
+                clone.removeAttribute("data-loop");
+                walk2(clone, itemContext, eventBindings);
+                if (element.tagName === "VAR" || "unwrap" in element.dataset) {
+                    element.before(...Array.from(clone.childNodes));
+                } else {
+                    element.before(clone);
+                }
+            };
+            if (Array.isArray(source)) {
+                const length = source.length;
+                for (let index = 0; index < length; index++) {
+                    const item = source[index];
+                    const baseContext = item && typeof item === "object" ? { ...item } : { _value: item };
+                    const itemContext = {
+                        _value: item,
+                        ...baseContext,
+                        _index: index,
+                        _first: index === 0,
+                        _last: index === length - 1
+                    };
+                    processItem(itemContext);
+                }
+            } else if (source && typeof source === "object") {
+                const entries = Object.entries(source);
+                for (let index = 0; index < entries.length; index++) {
+                    const [key, value] = entries[index];
+                    const itemContext = Array.isArray(value) ? {
+                        _key: key,
+                        _value: value,
+                        _index: index
+                    } : value && typeof value === "object" ? {
+                        _value: value,
+                        ...value,
+                        _key: key,
+                        _index: index
+                    } : {
+                        _key: key,
+                        _value: value,
+                        _index: index
+                    };
+                    processItem(itemContext);
+                }
+            } else if (source != null) {
+                throw new TypeError(`data for "${loopExpression}" must be array or object`);
+            }
+            element.remove();
+            return true;
+        };
+        const processStyle = (element, context) => {
+            if (!element.dataset.style) {
+                return false;
+            }
+            element.dataset.style.split("|").forEach((pair) => {
+                const [property, path] = pair.split(":");
+                const value = getValueByPath(context, path);
+                if (value != null) {
+                    element.style.setProperty(property, String(value));
+                }
+            });
+            element.removeAttribute("data-style");
+            return false;
+        };
+        const processAttr = (element, context) => {
+            if (!element.dataset.attr) {
+                return false;
+            }
+            element.dataset.attr.split("|").forEach((binding) => {
+                const [key, path] = binding.split(":");
+                const value = getValueByPath(context, path);
+                if (value != null) {
+                    if (key === "class") {
+                        const classNames = String(value).trim().split(/\s+/).filter(Boolean);
+                        if (classNames.length) {
+                            element.classList.add(...classNames);
+                        }
+                    } else {
+                        element.setAttribute(key, String(value));
+                    }
+                }
+            });
+            element.removeAttribute("data-attr");
+            return false;
+        };
+        const processText = (element, context) => {
+            if (element.dataset.text == null) {
+                return false;
+            }
+            const path = element.dataset.text.trim();
+            const value = path === "" ? context && typeof context === "object" && "_value" in context ? context._value : context : getValueByPath(context, path);
+            element.textContent = value != null ? String(value) : "";
+            element.removeAttribute("data-text");
+            return false;
+        };
+        const processEvent = (element, context, walk2, eventBindings) => {
+            if (!eventBindings || !element.dataset.event) {
+                return false;
+            }
+            const parsed = parseDataEventDeclaration(element.dataset.event);
+            for (const { eventName, handlerName } of parsed) {
+                eventBindings.push({
+                    element,
+                    eventName,
+                    handlerName
+                });
+            }
+            return false;
+        };
+        const processVar = (element, context, walk2, eventBindings) => {
+            if (element.tagName === "VAR" && !element.firstElementChild) {
+                const path = element.textContent?.trim() || "";
+                const value = path === "" ? context && typeof context === "object" && "_value" in context ? context._value : context : getValueByPath(context, path);
+                element.replaceWith(document.createTextNode(value != null ? String(value) : ""));
+                return true;
+            }
+            if (element.tagName === "VAR" || "unwrap" in element.dataset) {
+                const children = Array.from(element.childNodes);
+                const parent = element.parentElement;
+                if (parent) {
+                    element.before(...children);
+                    element.remove();
+                    for (const childNode of children) {
+                        walk2(childNode, context, eventBindings);
+                    }
+                } else {
+                    for (const childNode of children) {
+                        walk2(childNode, context, eventBindings);
+                    }
+                }
+                return true;
+            }
+            return false;
+        };
+        function walk(node, context, eventBindings = null) {
+            if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+                for (const child of Array.from(node.childNodes)) {
+                    walk(child, context, eventBindings);
+                }
+                return;
+            }
+            if (node.nodeType === Node.COMMENT_NODE) {
+                node.parentElement?.removeChild(node);
+                return;
+            }
+            if (node.nodeType === Node.ELEMENT_NODE) {
+                const element = node;
+                if (processIf(element, context, walk, eventBindings)) {
+                    return;
+                }
+                if (processLoop(element, context, walk, eventBindings)) {
+                    return;
+                }
+                processStyle(element, context);
+                processAttr(element, context);
+                processText(element, context);
+                processEvent(element, context, walk, eventBindings);
+                if (processVar(element, context, walk, eventBindings)) {
+                    return;
+                }
+                for (const child of Array.from(element.childNodes)) {
+                    walk(child, context, eventBindings);
+                }
             }
         }
 
@@ -1557,6 +1558,7 @@
             },
             parse: async () => {
                 const data = await getData$3();
+                const smallCover = data[0].release.image?.replace("_800", "_350");
                 const albumCover = data[0].release.image;
                 const albumExtraArtists = [];
                 const albumArtists = normalizeMainArtists([data[0].release.artist.name], albumExtraArtists);
@@ -1578,6 +1580,7 @@
                     };
                 });
                 return {
+                    thumb: smallCover,
                     cover: albumCover,
                     extraartists: albumExtraArtists,
                     artists: albumArtists,
@@ -1636,6 +1639,7 @@
                     });
                 }
                 return {
+                    thumb: albumCover,
                     cover: albumCover,
                     extraartists: albumExtraArtists,
                     artists: albumArtists,
@@ -1731,6 +1735,7 @@
                 target.insertAdjacentElement("afterend", button);
             },
             parse: async () => {
+                const smallCover = getTextFromTag("a.popupImage img", null, "src");
                 const albumCover = getTextFromTag("a.popupImage", null, "href");
                 const albumExtraArtists = [];
                 const about = getManyTextFromTags(".tralbum-about", null, true);
@@ -1750,7 +1755,7 @@
                 const albumTracks = Array.from(document.querySelectorAll("#track_table .track_row_view")).map((track, index) => {
                     const trackPosition = `${index + 1}`;
                     const trackExtraArtists = [];
-                    const { artists: trackArtists, title: trackTitle, bpm: trackBpm } = splitArtistTitle(getTextFromTag(".track-title", track), albumArtists, trackExtraArtists);
+                    const { artists: trackArtists, title: trackTitle, bpm: trackBpm } = splitArtistTitle(getTextFromTag(".title > span, .title > a", track), albumArtists, trackExtraArtists);
                     const trackDuration = normalizeDuration(getTextFromTag(".time, .time.secondaryText", track));
                     return {
                         pos: trackPosition,
@@ -1788,6 +1793,7 @@
                     }
                 }
                 return {
+                    thumb: smallCover,
                     cover: albumCover,
                     extraartists: albumExtraArtists,
                     artists: albumArtists,
@@ -1848,12 +1854,13 @@
             },
             parse: async () => {
                 const data = await getData$2();
+                const smallCover = data.image.dynamic_uri?.replace("{w}", "350")?.replace("{h}", "350");
                 const albumCover = data.image.uri;
                 const albumExtraArtists = [];
                 const albumArtists = normalizeMainArtists(data.artists.map((artist) => artist.name), albumExtraArtists);
                 const albumTitle = normalizeTitle(data.name, albumExtraArtists);
-                const albumLabel = data.label.name || null;
-                const labelNumber = data.catalog_number || null;
+                const albumLabel = data.label.name;
+                const labelNumber = data.catalog_number;
                 const albumReleased = data.publish_date;
                 const albumTracks = data.tracks.map((track, index) => {
                     const trackPosition = `${index + 1}`;
@@ -1872,6 +1879,7 @@
                     };
                 });
                 return {
+                    thumb: smallCover,
                     cover: albumCover,
                     extraartists: albumExtraArtists,
                     artists: albumArtists,
@@ -1899,6 +1907,7 @@
             parse: async () => {
                 const albumMainArtistsRaw = getManyTextFromTags(".product-page .product-details .main-artists a");
                 const albumMainArtistsSource = albumMainArtistsRaw.length > 0 ? albumMainArtistsRaw : getTextFromTag(".product-page .product-details .artist a");
+                const smallCover = getTextFromTag(".product-page .main-product-image img", null, "src")?.replace("/b/", "/s/") || null;
                 const albumCover = getTextFromTag(".product-page .main-product-image img", null, "src");
                 const albumExtraArtists = [];
                 const albumArtists = normalizeMainArtists(albumMainArtistsSource, albumExtraArtists);
@@ -1916,7 +1925,7 @@
                     const trackDuration = normalizeDuration(getTextFromTag(".track-duration", track));
                     if (trackFeaturedArtists.length > 0) {
                         normalizeArtists(trackFeaturedArtists).forEach((artist) => {
-                            if (!trackExtraArtists.some((ea) => ea.name === artist.name && ea.role === "Featuring")) {
+                            if (!trackExtraArtists.some((extraArtist) => extraArtist.name === artist.name && extraArtist.role === "Featuring")) {
                                 trackExtraArtists.push({ ...artist, role: "Featuring" });
                             }
                         });
@@ -1932,12 +1941,13 @@
                 const featuredArtists = getManyTextFromTags(".product-page .product-details .featured-artists a");
                 if (featuredArtists?.length) {
                     normalizeArtists(featuredArtists).forEach((artist) => {
-                        if (!albumExtraArtists.some((ea) => ea.name === artist.name && ea.role === "Featuring")) {
+                        if (!albumExtraArtists.some((extraArtist) => extraArtist.name === artist.name && extraArtist.role === "Featuring")) {
                             albumExtraArtists.push({ ...artist, role: "Featuring" });
                         }
                     });
                 }
                 return {
+                    thumb: smallCover,
                     cover: albumCover,
                     extraartists: albumExtraArtists,
                     artists: albumArtists,
@@ -1985,6 +1995,7 @@
                     };
                 });
                 return {
+                    thumb: albumCover,
                     cover: albumCover,
                     extraartists: albumExtraArtists,
                     artists: albumArtists,
@@ -2002,7 +2013,7 @@
                 throw new Error(`[Discogs Submitter] Release ID not found`);
             }
             const response = await networkRequest({
-                url: `https://www.junodownload.com/api/1.2/playlist/getplaylistdetails/?product_key=${releaseId}&output_type=json`,
+                url: `https://www.junodownload.com/api/1.2/playlist/getplaylistdetails/?product_key=${releaseId}&limit=100&output_type=json`,
                 method: "GET",
                 responseType: "json"
             });
@@ -2022,9 +2033,10 @@
             },
             parse: async () => {
                 const data = await getData$1();
+                const smallCover = getTextFromTag(".product-image-for-modal", null, "src");
                 const albumCover = getTextFromTag(".product-image-for-modal", null, "data-src-full");
                 const albumExtraArtists = [];
-                const albumArtists = normalizeMainArtists(data[0].releaseArtists.map((item) => item.name), albumExtraArtists);
+                const albumArtists = normalizeMainArtists(data[0].releaseArtists.map((artist) => artist.name), albumExtraArtists);
                 const albumTitle = normalizeTitle(data[0].releaseTitle, albumExtraArtists);
                 const albumLabel = data[0].label.name;
                 const albumReleased = normalizeReleaseDate(getTextFromTag('#product-page-digi [itemprop="datePublished"]'));
@@ -2041,7 +2053,7 @@
                 const albumTracks = data.map((track, index) => {
                     const trackPosition = `${index + 1}`;
                     const trackExtraArtists = [];
-                    const trackArtists = normalizeArtists(track.artists.map((item) => item.name), trackExtraArtists);
+                    const trackArtists = normalizeArtists(track.artists.map((artist) => artist.name), trackExtraArtists);
                     const trackTitle = normalizeTitle(track.version ? `${track.title} (${track.version})` : track.title, trackExtraArtists);
                     const trackDuration = normalizeDuration(track.length);
                     const trackBpm = track.bpm;
@@ -2055,6 +2067,7 @@
                     };
                 });
                 return {
+                    thumb: smallCover,
                     cover: albumCover,
                     extraartists: albumExtraArtists,
                     artists: albumArtists,
@@ -2095,17 +2108,19 @@
             target: ".album-meta",
             injectButton: (button, target) => {
                 target.appendChild(button);
-                const win = unsafeWindow;
-                if (typeof win.infiniteScroll === "function") {
+                const windowProxy = unsafeWindow;
+                if (typeof windowProxy.infiniteScroll === "function") {
                     try {
-                        win.infiniteScroll("/v4/ajax/album/load-tracks");
-                    } catch {
+                        windowProxy.infiniteScroll("/v4/ajax/album/load-tracks");
+                    } catch (error) {
+                        console.warn("[Discogs Submitter] Qobuz infiniteScroll trigger failed:", error);
                     }
                 }
             },
             parse: async () => {
                 const data = await getData();
-                let albumCover = getTextFromTag(".album-cover__image", null, "src");
+                const smallCover = getTextFromTag(".album-cover__image", null, "src");
+                const albumCover = smallCover?.replace(/_(600|300)\.jpg$/, "_max.jpg").replace("_600", "_max") || null;
                 const albumExtraArtists = [];
                 const albumArtists = normalizeMainArtists(getTextFromTag(".album-meta__title .artist-name"), albumExtraArtists);
                 const albumTitle = normalizeTitle(getTextFromTag(".album-meta__title .album-title"), albumExtraArtists);
@@ -2126,10 +2141,8 @@
                         duration: trackDuration
                     };
                 });
-                if (albumCover) {
-                    albumCover = albumCover.replace(/_(600|300)\.jpg$/, "_max.jpg").replace("_600", "_max");
-                }
                 return {
+                    thumb: smallCover,
                     cover: albumCover,
                     extraartists: albumExtraArtists,
                     artists: albumArtists,
@@ -2155,9 +2168,9 @@
             detectByLocation: () => DigitalStoreRegistry.list.find((provider) => provider.test(unsafeWindow.location.href))
         };
 
-        const injectButtonCss = ".discogs-submitter__inject__button{all:unset;display:inline-flex;vertical-align:middle;align-items:center;justify-content:center;gap:10px;cursor:pointer;user-select:none;padding:calc(var(--ds-gap) / 2);background:var(--ds-color-white);border:2px solid var(--ds-color-gray-dark);border-radius:calc(var(--ds-radius) * 2);outline:2px solid var(--ds-color-gray-dark);transition:all .3s ease;&:hover{outline:2px solid var(--ds-color-white);.discogs-submitter__inject__button__icon{animation:ds-spinner 1s linear infinite}}&.is-disabled{opacity:.5;pointer-events:none}}.discogs-submitter__inject__button__icon{display:block;width:1.25em;height:1.25em}.discogs-submitter__inject__button__label{color:var(--ds-color-black);font-family:var(--ds-font-sans)!important;font-size:14px;font-weight:700;line-height:1.2;text-transform:none;text-shadow:none;white-space:nowrap}.discogs-submitter__inject__button{&.is-bandcamp{margin-bottom:1.5em;box-sizing:border-box}&.is-qobuz{margin-top:20px;text-transform:none}&.is-qobuz{.discogs-submitter__inject__button__icon{margin-top:-4px}}&.is-junodownload{margin-top:20px}&.is-beatport{margin-top:8px}&.is-amazonmusic{margin-top:24px;margin-right:100%}&.is-bleep{margin:1.429rem 0 0}&.is-hdtracks{margin:15px 0 0}}";
+        const injectButtonCss = ".discogs-submitter__inject__button{all:unset;display:inline-flex;justify-content:center;align-items:center;vertical-align:middle;gap:10px;transition:all .3s ease;cursor:pointer;outline:1px solid rgba(var(--ds-color-white),1);border:1px solid rgba(var(--ds-color-black),1);border-radius:calc(var(--ds-radius) * 2);background:rgba(var(--ds-color-white),1);padding:calc(var(--ds-gap) / 2);color:rgba(var(--ds-color-black),1);font-weight:700;font-size:14px;line-height:1.2;font-family:var(--ds-font-sans);user-select:none;text-shadow:none;text-transform:none;white-space:nowrap;&:hover{outline-color:rgba(var(--ds-color-black),1);border-color:rgba(var(--ds-color-white),1);background:rgba(var(--ds-color-black),1);color:rgba(var(--ds-color-white),1);.discogs-submitter__inject__button__icon{animation:ds-spinner 1s linear infinite}}&.is-disabled{opacity:.5;pointer-events:none}}.discogs-submitter__inject__button__icon{flex:0 0 auto;width:1.25em;height:1.25em}.discogs-submitter__inject__button{&.is-bandcamp{box-sizing:border-box;margin-bottom:1.5em}&.is-qobuz{margin-top:20px;text-transform:none}&.is-qobuz{.discogs-submitter__inject__button__icon{margin-top:-4px}}&.is-junodownload{margin-top:20px}&.is-beatport{margin-top:8px}&.is-amazonmusic{margin-top:24px;margin-right:100%}&.is-bleep{margin:1.429rem 0 0}&.is-hdtracks{margin:15px 0 0}}";
 
-        const injectButtonTemplate = "<div class=\"discogs-submitter__inject__button\" role=\"button\">\n  <svg class=\"discogs-submitter__inject__button__icon\" aria-hidden=\"true\"><use href=\"#ds-logo\"></use></svg>\n  <span class=\"discogs-submitter__inject__button__label\"><var>scriptName</var></span>\n</div>\n";
+        const injectButtonTemplate = "<div class=\"discogs-submitter__inject__button\" role=\"button\">\n  <svg class=\"discogs-submitter__inject__button__icon\" aria-hidden=\"true\"><use href=\"#ds-logo\"></use></svg>\n\n  <span class=\"discogs-submitter__inject__button__label\"><var>scriptName</var></span>\n</div>\n";
 
         class InjectButton {
             element = null;
@@ -2206,9 +2219,9 @@
             }
         }
 
-        const selectItemTemplateRaw = "<div data-attr=\"class:itemClass|data-value:value\" class=\"discogs-submitter__select__list__item\">\n  <var data-if=\"isMultiple\">\n    <svg class=\"discogs-submitter__checkbox\" role=\"checkbox\"><use href=\"#ds-square-check\"></use></svg>\n    <span><var>text</var></span>\n  </var>\n\n  <var data-if=\"!isMultiple\">\n    <var>text</var>\n  </var>\n</div>\n";
+        const selectItemTemplateRaw = "<div class=\"discogs-submitter__select__list__item\" data-attr=\"class:itemClass|data-value:value\">\n  <var data-if=\"isMultiple\">\n    <svg class=\"discogs-submitter__checkbox\" role=\"checkbox\"><use href=\"#ds-square-check\"></use></svg>\n    <span><var>text</var></span>\n  </var>\n\n  <var data-if=\"!isMultiple\">\n    <var>text</var>\n  </var>\n</div>\n";
 
-        const selectTemplateRaw = "<div data-attr=\"class:containerClass\" class=\"discogs-submitter__select\">\n  <div class=\"discogs-submitter__select__label\">\n    <div class=\"discogs-submitter__select__placeholder\"><var>placeholder</var></div>\n    <var data-if=\"isMultiple\">\n      <div class=\"discogs-submitter__select__count\"><var>count</var></div>\n    </var>\n    <svg class=\"discogs-submitter__select__arrow\" aria-hidden=\"true\"><use href=\"#ds-icon-chevron-down\"></use></svg>\n  </div>\n\n  <div class=\"discogs-submitter__select__list\" role=\"listbox\"></div>\n</div>\n";
+        const selectTemplateRaw = "<div class=\"discogs-submitter__select\" data-attr=\"class:containerClass\">\n  <div class=\"discogs-submitter__select__label\">\n    <div class=\"discogs-submitter__select__placeholder\"><var>placeholder</var></div>\n    <var data-if=\"isMultiple\">\n      <div class=\"discogs-submitter__select__count\"><var>count</var></div>\n    </var>\n\n    <svg class=\"discogs-submitter__select__arrow\" aria-hidden=\"true\"><use href=\"#ds-icon-chevron-down\"></use></svg>\n  </div>\n\n  <div class=\"discogs-submitter__select__list\" role=\"listbox\"></div>\n</div>\n";
 
         class UiSelect {
             constructor(select) {
@@ -2323,7 +2336,7 @@
             }
             selectOption(item) {
                 const value = item.dataset.value ?? "";
-                const option = Array.from(this.select.options).find((opt) => opt.value === value);
+                const option = Array.from(this.select.options).find((option2) => option2.value === value);
                 if (!option) {
                     return;
                 }
@@ -2446,7 +2459,7 @@ ${validBpmTracks.map((track) => `${track.pos}: ${track.bpm}`).join("\n")}` : "";
                     notes: data.notes ?? infoBpm,
                     submissionNotes: data.submissionNotes || `${sourceUrl}
 ---
-A digital release in ${format} format has been added.`
+A digital release has been added.`
                 };
                 return {
                     _previewObject: payload,
@@ -2456,14 +2469,16 @@ A digital release in ${format} format has been added.`
             }
         };
 
-        const loaderTemplate = "<var data-if=\"cover\">\n  <img data-attr=\"src:cover\" class=\"discogs-submitter__loader__cover\" alt=\"Loading...\" />\n</var>\n<var data-if=\"!cover\">\n  <svg class=\"discogs-submitter__loader__icon\" aria-hidden=\"true\"><use href=\"#ds-logo\"></use></svg>\n</var>\n";
+        const coverTemplate = "<var data-if=\"thumb\">\n  <img class=\"discogs-submitter__header__cover__image\" data-attr=\"src:thumb\" alt=\"\" />\n</var>\n\n<var data-if=\"!thumb\">\n  <svg class=\"discogs-submitter__header__cover__logo\" aria-hidden=\"true\"><use href=\"#ds-logo\"></use></svg>\n</var>\n";
 
-        const previewTemplate = "<div class=\"discogs-submitter__results\">\n  <div class=\"discogs-submitter__results__row\">\n    <div class=\"discogs-submitter__results__head\">Image</div>\n    <div class=\"discogs-submitter__results__body\">\n      <var data-if=\"cover\">\n        <a data-attr=\"href:cover\" target=\"_blank\"><small>Preview</small></a>\n      </var>\n      <var data-if=\"!cover\">\n        <small>No cover</small>\n      </var>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row\">\n    <div class=\"discogs-submitter__results__head\">Artists</div>\n    <div class=\"discogs-submitter__results__body is-multiple\">\n      <var data-loop=\"releaseArtists\">\n        <div class=\"discogs-submitter__results__field\">\n          <span class=\"discogs-submitter__input is-edit \" contenteditable=\"plaintext-only\" data-field=\"artists.name\" data-text=\"name\" data-attr=\"data-index:_index\" placeholder=\"Artist...\"></span>\n          <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"artists.name\" data-attr=\"data-index:_index\" title=\"Restore original artist\"><use href=\"#ds-rotate-left\"></use></svg>\n        </div>\n        <var data-if=\"!_last\">\n          <var data-if=\"join\"><var>join</var></var>\n        </var>\n      </var>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row\">\n    <div class=\"discogs-submitter__results__head\">Title</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <span class=\"discogs-submitter__input is-edit\" contenteditable=\"plaintext-only\" data-field=\"title\" data-text=\"rawTitle\" placeholder=\"Title...\"></span>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"title\" title=\"Restore original title\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row is-half\">\n    <div class=\"discogs-submitter__results__head\">Label</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <span class=\"discogs-submitter__input is-edit\" contenteditable=\"plaintext-only\" data-field=\"label\" data-text=\"rawLabel\" placeholder=\"Label...\"></span>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"label\" title=\"Restore original label\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row is-half\">\n    <div class=\"discogs-submitter__results__head\">Catalog</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <span class=\"discogs-submitter__input is-edit\" contenteditable=\"plaintext-only\" data-field=\"number\" data-text=\"rawNumber\" placeholder=\"Catalog...\"></span>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"number\" title=\"Restore original catalog\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row is-half\">\n    <div class=\"discogs-submitter__results__head\">Released</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <span class=\"discogs-submitter__input is-edit\" contenteditable=\"plaintext-only\" data-field=\"released\" data-text=\"rawReleased\" placeholder=\"Date...\"></span>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"released\" title=\"Restore original release date\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row is-half\">\n    <div class=\"discogs-submitter__results__head\">Country</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <select class=\"is-edit is-country\" autocomplete=\"off\" data-field=\"country\" data-placeholder=\"Country...\">\n          <option value=\"\">–</option>\n          <optgroup data-unwrap data-loop=\"availableCountries\">\n            <option data-attr=\"value:_value\" data-if=\"isSelected\" data-text=\"_value\" selected></option>\n            <option data-attr=\"value:_value\" data-if=\"!isSelected\" data-text=\"_value\"></option>\n          </optgroup>\n        </select>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"country\" title=\"Restore original country\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row\">\n    <div class=\"discogs-submitter__results__head\">Format</div>\n    <div class=\"discogs-submitter__results__body is-multiple\">\n      <var data-loop=\"format\">\n        <var>qty</var> x <var>name</var>,\n      </var>\n      <div class=\"discogs-submitter__results__field\">\n        <select class=\"is-format\" autocomplete=\"off\" tabindex=\"-1\" data-placeholder=\"Format...\">\n          <optgroup data-unwrap data-loop=\"availableFormats\">\n            <option data-attr=\"value:_value\" data-if=\"isSelected\" data-text=\"_value\" selected></option>\n            <option data-attr=\"value:_value\" data-if=\"!isSelected\" data-text=\"_value\"></option>\n          </optgroup>\n        </select>\n      </div>\n      <div class=\"discogs-submitter__results__field\">\n        <select class=\"is-description\" multiple autocomplete=\"off\" tabindex=\"-1\" data-placeholder=\"Description...\">\n          <optgroup data-unwrap data-loop=\"availableDescriptions\">\n            <option data-attr=\"value:_value\" data-if=\"isSelected\" data-text=\"_value\" selected></option>\n            <option data-attr=\"value:_value\" data-if=\"!isSelected\" data-text=\"_value\"></option>\n          </optgroup>\n        </select>\n      </div>\n      <div class=\"discogs-submitter__results__field\">\n        <span class=\"discogs-submitter__input is-edit is-format-text\" contenteditable=\"plaintext-only\" data-field=\"formatText\" data-text=\"formatText\" placeholder=\"Free Text...\"></span>\n      </div>\n    </div>\n  </div>\n\n  <div data-attr=\"class:rowClass\" class=\"discogs-submitter__results__row is-tracklist\">\n    <div class=\"discogs-submitter__results__head\">#</div>\n    <var data-if=\"hasTrackArtists\">\n      <div class=\"discogs-submitter__results__head\">Artist</div>\n    </var>\n    <div class=\"discogs-submitter__results__head\">Title / Credits</div>\n    <div class=\"discogs-submitter__results__head\">Duration</div>\n  </div>\n\n  <var data-if=\"!tracks.length\">\n    <div class=\"discogs-submitter__results__row\">\n      <div class=\"discogs-submitter__results__body\">⚠️ No tracks found.</div>\n    </div>\n  </var>\n\n  <var data-loop=\"tracks\">\n    <div data-attr=\"class:rowClass\" class=\"discogs-submitter__results__row is-tracklist\" data-attr=\"data-index:_index\">\n      <div class=\"discogs-submitter__results__body\"><var>pos</var></div>\n      <var data-if=\"hasTrackArtists\">\n        <div class=\"discogs-submitter__results__body is-multiple\">\n          <var data-loop=\"trackArtists\">\n            <div class=\"discogs-submitter__results__field\">\n              <span class=\"discogs-submitter__input is-edit is-track-artists\" contenteditable=\"plaintext-only\" data-field=\"tracks.artists.name\" data-text=\"name\" data-attr=\"data-index:_trackIndex|data-subindex:_index\" placeholder=\"Artist...\"></span>\n              <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"tracks.artists.name\" data-attr=\"data-index:_trackIndex|data-subindex:_index\" title=\"Restore original artist\"><use href=\"#ds-rotate-left\"></use></svg>\n            </div>\n            <var data-if=\"!_last\">\n              <var data-if=\"join\"><var>join</var></var>\n            </var>\n          </var>\n        </div>\n      </var>\n      <div class=\"discogs-submitter__results__body\">\n        <div class=\"discogs-submitter__results__field\">\n          <span class=\"discogs-submitter__input is-edit is-track-title\" contenteditable=\"plaintext-only\" data-field=\"tracks.title\" data-text=\"title\" data-attr=\"data-index:_index\" placeholder=\"Title...\"></span>\n          <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"tracks.title\" data-attr=\"data-index:_index\" title=\"Restore original title\"><use href=\"#ds-rotate-left\"></use></svg>\n        </div>\n        <var data-if=\"trackExtraartists.length\">\n          <var data-loop=\"trackExtraartists\">\n            <div class=\"discogs-submitter__results__body is-multiple is-inner\">\n              <small><var>role</var> – </small>\n              <div class=\"discogs-submitter__results__field\">\n                <span class=\"discogs-submitter__input is-edit is-track-extraartists\" contenteditable=\"plaintext-only\" data-field=\"tracks.extraartists.name\" data-text=\"name\" data-attr=\"data-index:_trackIndex|data-subindex:_index\" placeholder=\"Artist...\"></span>\n                <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"tracks.extraartists.name\" data-attr=\"data-index:_trackIndex|data-subindex:_index\" title=\"Restore original credit\"><use href=\"#ds-rotate-left\"></use></svg>\n              </div>\n            </div>\n          </var>\n        </var>\n      </div>\n      <div class=\"discogs-submitter__results__body\"><var>duration</var></div>\n    </div>\n  </var>\n\n  <var data-if=\"showExtraArtists\">\n    <div class=\"discogs-submitter__results__row is-notes\">\n      <div class=\"discogs-submitter__results__head\">Credits</div>\n      <div class=\"discogs-submitter__results__body is-multiple\">\n        <var data-loop=\"rawExtraArtists\">\n          <var>role</var> –\n          <div class=\"discogs-submitter__results__field\">\n            <span class=\"discogs-submitter__input is-edit\" contenteditable=\"plaintext-only\" data-field=\"extraartists.name\" data-text=\"name\" data-attr=\"data-index:_index\" placeholder=\"Artist...\"></span>\n            <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"extraartists.name\" data-attr=\"data-index:_index\" title=\"Restore original credit\"><use href=\"#ds-rotate-left\"></use></svg>\n          </div>\n          <br/>\n        </var>\n      </div>\n    </div>\n  </var>\n\n  <div class=\"discogs-submitter__results__row is-notes\">\n    <div class=\"discogs-submitter__results__head\">Notes</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <span class=\"discogs-submitter__textarea is-edit\" contenteditable=\"plaintext-only\" data-field=\"notes\" data-text=\"rawNotes\" placeholder=\"Notes...\"></span>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"notes\" title=\"Restore original notes\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row is-notes\">\n    <div class=\"discogs-submitter__results__head\">Submission Notes</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <span class=\"discogs-submitter__textarea is-edit\" contenteditable=\"plaintext-only\" data-field=\"submissionNotes\" data-text=\"rawSubmissionNotes\" placeholder=\"Submission Notes...\"></span>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"submissionNotes\" title=\"Restore original submission notes\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n</div>\n";
+        const loaderTemplate = "<var data-if=\"thumb\">\n  <img class=\"discogs-submitter__loader__cover\" data-attr=\"src:thumb\" alt=\"\" />\n</var>\n\n<var data-if=\"!thumb\">\n  <svg class=\"discogs-submitter__loader__icon\" aria-hidden=\"true\"><use href=\"#ds-logo\"></use></svg>\n</var>\n\n<div class=\"discogs-submitter__loader__label\"><var>label</var></div>\n";
 
-        const widgetTemplate = "<div class=\"discogs-submitter__header\">\n  <svg class=\"discogs-submitter__header__logo\" aria-hidden=\"true\"><use href=\"#ds-logo\"></use></svg>\n  <span class=\"discogs-submitter__header__title\"><var>scriptName</var> <small>v<var>scriptVersion</var></small></span>\n  <svg class=\"discogs-submitter__button is-icon is-large is-move\" title=\"Grab to move\" role=\"button\"><use href=\"#ds-icon-move\"></use></svg>\n  <svg class=\"discogs-submitter__button is-icon is-large is-close\" title=\"Close widget\" role=\"button\"><use href=\"#ds-icon-close\"></use></svg>\n</div>\n\n<div class=\"discogs-submitter__preview\"></div>\n\n<div class=\"discogs-submitter__footer\">\n  <div class=\"discogs-submitter__status\">\n    <div class=\"discogs-submitter__status__text\">Waiting...</div>\n    <svg class=\"discogs-submitter__button is-icon is-debug\" title=\"Copy debug\" hidden role=\"button\"><use href=\"#ds-icon-bug\"></use></svg>\n  </div>\n\n  <div class=\"discogs-submitter__actions\">\n    <div class=\"discogs-submitter__button is-full is-large is-primary\" role=\"button\" hidden>Submit to Discogs</div>\n  </div>\n\n  <div class=\"discogs-submitter__copyright\">\n    <a class=\"discogs-submitter__copyright__link\" data-attr=\"href:homepage\" target=\"_blank\">Homepage</a>\n    <a class=\"discogs-submitter__copyright__link\" data-attr=\"href:supportURL\" target=\"_blank\">Report Bug</a>\n    <a class=\"discogs-submitter__copyright__link\" data-attr=\"href:funding\" target=\"_blank\">Made with <span>♥</span> for music</a>\n  </div>\n</div>\n\n<div class=\"discogs-submitter__loader\"></div>\n";
+        const previewTemplate = "<div class=\"discogs-submitter__results\">\n  <div class=\"discogs-submitter__results__row\">\n    <div class=\"discogs-submitter__results__head\">Artists</div>\n    <div class=\"discogs-submitter__results__body is-multiple\">\n      <var data-loop=\"releaseArtists\">\n        <div class=\"discogs-submitter__results__field\">\n          <span class=\"discogs-submitter__input is-edit\" contenteditable=\"plaintext-only\" spellcheck=\"false\" data-field=\"artists.name\" data-text=\"name\" data-attr=\"data-index:_index\" placeholder=\"Artist...\"></span>\n          <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"artists.name\" data-attr=\"data-index:_index\" title=\"Restore original artist\"><use href=\"#ds-rotate-left\"></use></svg>\n        </div>\n        <var data-if=\"!_last\">\n          <var data-if=\"join\"><var>join</var></var>\n        </var>\n      </var>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row\">\n    <div class=\"discogs-submitter__results__head\">Title</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <span class=\"discogs-submitter__input is-edit\" contenteditable=\"plaintext-only\" spellcheck=\"false\" data-field=\"title\" data-text=\"rawTitle\" placeholder=\"Title...\"></span>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"title\" title=\"Restore original title\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row is-half\">\n    <div class=\"discogs-submitter__results__head\">Label</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <span class=\"discogs-submitter__input is-edit\" contenteditable=\"plaintext-only\" spellcheck=\"false\" data-field=\"label\" data-text=\"rawLabel\" placeholder=\"Label...\"></span>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"label\" title=\"Restore original label\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row is-half\">\n    <div class=\"discogs-submitter__results__head\">Catalog</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <span class=\"discogs-submitter__input is-edit\" contenteditable=\"plaintext-only\" spellcheck=\"false\" data-field=\"number\" data-text=\"rawNumber\" placeholder=\"Catalog...\"></span>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"number\" title=\"Restore original catalog\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row is-half\">\n    <div class=\"discogs-submitter__results__head\">Released</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <span class=\"discogs-submitter__input is-edit\" contenteditable=\"plaintext-only\" spellcheck=\"false\" data-field=\"released\" data-text=\"rawReleased\" placeholder=\"Date...\"></span>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"released\" title=\"Restore original release date\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row is-half\">\n    <div class=\"discogs-submitter__results__head\">Country</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <select class=\"is-edit is-country\" autocomplete=\"off\" data-field=\"country\" data-placeholder=\"Country...\">\n          <option value=\"\">–</option>\n          <optgroup data-unwrap data-loop=\"availableCountries\">\n            <option data-attr=\"value:_value\" data-if=\"isSelected\" data-text=\"_value\" selected></option>\n            <option data-attr=\"value:_value\" data-if=\"!isSelected\" data-text=\"_value\"></option>\n          </optgroup>\n        </select>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"country\" title=\"Restore original country\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row\">\n    <div class=\"discogs-submitter__results__head\">Format</div>\n    <div class=\"discogs-submitter__results__body is-multiple\">\n      <var data-loop=\"format\"> <var>qty</var> x <var>name</var>, </var>\n      <div class=\"discogs-submitter__results__field\">\n        <select class=\"is-format\" autocomplete=\"off\" tabindex=\"-1\" data-placeholder=\"Format...\">\n          <optgroup data-unwrap data-loop=\"availableFormats\">\n            <option data-attr=\"value:_value\" data-if=\"isSelected\" data-text=\"_value\" selected></option>\n            <option data-attr=\"value:_value\" data-if=\"!isSelected\" data-text=\"_value\"></option>\n          </optgroup>\n        </select>\n      </div>\n      <div class=\"discogs-submitter__results__field\">\n        <select class=\"is-description\" multiple autocomplete=\"off\" tabindex=\"-1\" data-placeholder=\"Description...\">\n          <optgroup data-unwrap data-loop=\"availableDescriptions\">\n            <option data-attr=\"value:_value\" data-if=\"isSelected\" data-text=\"_value\" selected></option>\n            <option data-attr=\"value:_value\" data-if=\"!isSelected\" data-text=\"_value\"></option>\n          </optgroup>\n        </select>\n      </div>\n      <div class=\"discogs-submitter__results__field\">\n        <span class=\"discogs-submitter__input is-edit is-format-text\" contenteditable=\"plaintext-only\" spellcheck=\"false\" data-field=\"formatText\" data-text=\"formatText\" placeholder=\"Free Text...\"></span>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row is-tracklist\" data-attr=\"class:rowClass\">\n    <div class=\"discogs-submitter__results__head\">#</div>\n    <var data-if=\"hasTrackArtists\">\n      <div class=\"discogs-submitter__results__head\">Artist</div>\n    </var>\n    <div class=\"discogs-submitter__results__head\">Title / Credits</div>\n    <div class=\"discogs-submitter__results__head\">Duration</div>\n  </div>\n\n  <var data-if=\"!tracks.length\">\n    <div class=\"discogs-submitter__results__row\">\n      <div class=\"discogs-submitter__results__body\">⚠️ No tracks found.</div>\n    </div>\n  </var>\n\n  <var data-loop=\"tracks\">\n    <div class=\"discogs-submitter__results__row is-tracklist\" data-attr=\"class:rowClass\" data-attr=\"data-index:_index\">\n      <div class=\"discogs-submitter__results__body\"><var>pos</var></div>\n      <var data-if=\"hasTrackArtists\">\n        <div class=\"discogs-submitter__results__body is-multiple\">\n          <var data-loop=\"trackArtists\">\n            <div class=\"discogs-submitter__results__field\">\n              <span class=\"discogs-submitter__input is-edit is-track-artists\" contenteditable=\"plaintext-only\" spellcheck=\"false\" data-field=\"tracks.artists.name\" data-text=\"name\" data-attr=\"data-index:_trackIndex|data-subindex:_index\" placeholder=\"Artist...\"></span>\n              <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"tracks.artists.name\" data-attr=\"data-index:_trackIndex|data-subindex:_index\" title=\"Restore original artist\"><use href=\"#ds-rotate-left\"></use></svg>\n            </div>\n            <var data-if=\"!_last\">\n              <var data-if=\"join\"><var>join</var></var>\n            </var>\n          </var>\n        </div>\n      </var>\n      <div class=\"discogs-submitter__results__body\">\n        <div class=\"discogs-submitter__results__field\">\n          <span class=\"discogs-submitter__input is-edit is-track-title\" contenteditable=\"plaintext-only\" spellcheck=\"false\" data-field=\"tracks.title\" data-text=\"title\" data-attr=\"data-index:_index\" placeholder=\"Title...\"></span>\n          <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"tracks.title\" data-attr=\"data-index:_index\" title=\"Restore original title\"><use href=\"#ds-rotate-left\"></use></svg>\n        </div>\n        <var data-if=\"trackExtraartists.length\">\n          <var data-loop=\"trackExtraartists\">\n            <div class=\"discogs-submitter__results__body is-multiple is-inner\">\n              <small><var>role</var> – </small>\n              <div class=\"discogs-submitter__results__field\">\n                <span class=\"discogs-submitter__input is-edit is-track-extraartists\" contenteditable=\"plaintext-only\" spellcheck=\"false\" data-field=\"tracks.extraartists.name\" data-text=\"name\" data-attr=\"data-index:_trackIndex|data-subindex:_index\" placeholder=\"Artist...\"></span>\n                <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"tracks.extraartists.name\" data-attr=\"data-index:_trackIndex|data-subindex:_index\" title=\"Restore original credit\"><use href=\"#ds-rotate-left\"></use></svg>\n              </div>\n            </div>\n          </var>\n        </var>\n      </div>\n      <div class=\"discogs-submitter__results__body\"><var>duration</var></div>\n    </div>\n  </var>\n\n  <var data-if=\"showExtraArtists\">\n    <div class=\"discogs-submitter__results__row is-notes\">\n      <div class=\"discogs-submitter__results__head\">Credits</div>\n      <div class=\"discogs-submitter__results__body is-multiple\">\n        <var data-loop=\"rawExtraArtists\">\n          <var>role</var> –\n          <div class=\"discogs-submitter__results__field\">\n            <span class=\"discogs-submitter__input is-edit\" contenteditable=\"plaintext-only\" data-field=\"extraartists.name\" data-text=\"name\" data-attr=\"data-index:_index\" placeholder=\"Artist...\"></span>\n            <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"extraartists.name\" data-attr=\"data-index:_index\" title=\"Restore original credit\"><use href=\"#ds-rotate-left\"></use></svg>\n          </div>\n          <br />\n        </var>\n      </div>\n    </div>\n  </var>\n\n  <div class=\"discogs-submitter__results__row is-notes\">\n    <div class=\"discogs-submitter__results__head\">Notes</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <span class=\"discogs-submitter__textarea is-edit\" contenteditable=\"plaintext-only\" spellcheck=\"false\" data-field=\"notes\" data-text=\"rawNotes\" placeholder=\"Notes...\"></span>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"notes\" title=\"Restore original notes\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row is-notes\">\n    <div class=\"discogs-submitter__results__head\">Submission Notes</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <span class=\"discogs-submitter__textarea is-edit\" contenteditable=\"plaintext-only\" spellcheck=\"false\" data-field=\"submissionNotes\" data-text=\"rawSubmissionNotes\" placeholder=\"Submission Notes...\"></span>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" data-field=\"submissionNotes\" title=\"Restore original submission notes\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n</div>\n";
+
+        const widgetTemplate = "<div class=\"discogs-submitter__header\">\n  <div class=\"discogs-submitter__header__cover\"></div>\n  <div class=\"discogs-submitter__header__content\">\n    <span class=\"discogs-submitter__header__title\"><var>scriptName</var> <small>v<var>scriptVersion</var></small></span>\n    <svg class=\"discogs-submitter__button is-icon is-large is-move\" title=\"Grab to move\" role=\"button\"><use href=\"#ds-icon-grip-lines\"></use></svg>\n    <svg class=\"discogs-submitter__button is-icon is-large is-close\" title=\"Close widget\" role=\"button\"><use href=\"#ds-icon-close\"></use></svg>\n  </div>\n</div>\n\n<div class=\"discogs-submitter__content\"></div>\n\n<div class=\"discogs-submitter__footer\">\n  <div class=\"discogs-submitter__status\">\n    <div class=\"discogs-submitter__status__text\">Waiting...</div>\n    <svg class=\"discogs-submitter__button is-icon is-debug\" hidden title=\"Copy debug\" role=\"button\"><use href=\"#ds-icon-bug\"></use></svg>\n  </div>\n\n  <div class=\"discogs-submitter__actions\">\n    <div class=\"discogs-submitter__button is-full is-large is-primary\" role=\"button\" hidden>Submit to Discogs</div>\n  </div>\n\n  <div class=\"discogs-submitter__copyright\">\n    <a class=\"discogs-submitter__copyright__link\" data-attr=\"href:homepage\" target=\"_blank\">Homepage</a>\n    <a class=\"discogs-submitter__copyright__link\" data-attr=\"href:supportURL\" target=\"_blank\">Report Bug</a>\n    <a class=\"discogs-submitter__copyright__link\" data-attr=\"href:funding\" target=\"_blank\">Made with <span>♥</span> for music</a>\n  </div>\n</div>\n\n<div class=\"discogs-submitter__loader\"></div>\n";
 
         const PreviewRenderer = {
-            releasePreview: async (release, options, domEl, editedData) => {
+            releasePreview: async (release, options, domElement, editedData) => {
                 const { selectedFormat, selectedDescriptions, formatText, supports } = options;
                 const tracks = release.tracks || [];
                 const hasTrackArtists = tracks.some((track) => (track.artists || []).length > 0);
@@ -2523,7 +2538,7 @@ A digital release in ${format} format has been added.`
                         };
                     })
                 };
-                renderTemplate(previewTemplate, data, domEl, { replace: true });
+                renderTemplate(previewTemplate, data, domElement, { replace: true });
             }
         };
         class UiWidget {
@@ -2559,14 +2574,22 @@ A digital release in ${format} format has been added.`
                 document.body.appendChild(container);
                 this.ui.widget = container;
                 this.ui.header = container.querySelector(".discogs-submitter__header");
+                this.ui.cover = container.querySelector(".discogs-submitter__header__cover");
                 this.ui.headerButtonMove = container.querySelector(".discogs-submitter__header .discogs-submitter__button.is-move");
-                this.ui.headerButtonClose = container.querySelector(".discogs-submitter__header .discogs-submitter__button.is-close");
+                this.ui.headerButtonClose = container.querySelector(
+                    ".discogs-submitter__header .discogs-submitter__button.is-close"
+                );
                 this.ui.status = container.querySelector(".discogs-submitter__status");
                 this.ui.statusText = container.querySelector(".discogs-submitter__status__text");
-                this.ui.statusButtonDebug = container.querySelector(".discogs-submitter__status .discogs-submitter__button.is-debug");
-                this.ui.preview = container.querySelector(".discogs-submitter__preview");
-                this.ui.actionsButtonSubmit = container.querySelector(".discogs-submitter__actions .discogs-submitter__button.is-primary");
+                this.ui.statusButtonDebug = container.querySelector(
+                    ".discogs-submitter__status .discogs-submitter__button.is-debug"
+                );
+                this.ui.content = container.querySelector(".discogs-submitter__content");
+                this.ui.actionsButtonSubmit = container.querySelector(
+                    ".discogs-submitter__actions .discogs-submitter__button.is-primary"
+                );
                 this.ui.loader = container.querySelector(".discogs-submitter__loader");
+                this.updateHeaderCover();
             }
             open(store) {
                 this.state.currentDigitalStore = store;
@@ -2582,20 +2605,35 @@ A digital release in ${format} format has been added.`
                 this.state.currentPayload = null;
                 this.state.lastRawData = null;
                 this.state.editedData = null;
-                if (this.ui.preview) {
-                    this.ui.preview.innerHTML = "";
+                if (this.ui.content) {
+                    this.ui.content.innerHTML = "";
                 }
                 this.setStatus("Ready to parse...", "info");
                 if (this.ui.actionsButtonSubmit) {
                     this.ui.actionsButtonSubmit.setAttribute("hidden", "true");
                 }
+                this.updateHeaderCover();
             }
-            setLoader(isActive) {
+            updateHeaderCover() {
+                if (!this.ui.cover) {
+                    return;
+                }
+                renderTemplate(coverTemplate, { thumb: this.state.editedData?.thumb }, this.ui.cover, { replace: true });
+            }
+            setLoader(isActive, label = "Please wait...") {
                 if (this.ui.loader) {
                     this.ui.loader.classList.toggle("is-loading", isActive);
                     if (isActive) {
-                        renderTemplate(loaderTemplate, { cover: this.state.editedData?.cover }, this.ui.loader, { replace: true });
+                        renderTemplate(loaderTemplate, { thumb: this.state.editedData?.thumb, label }, this.ui.loader, {
+                            replace: true
+                        });
                     }
+                }
+            }
+            setLoaderLabel(message) {
+                const labelElement = this.ui.loader?.querySelector(".discogs-submitter__loader__label");
+                if (labelElement) {
+                    labelElement.textContent = message;
                 }
             }
             setStatus(message, status = "info") {
@@ -2623,8 +2661,8 @@ A digital release in ${format} format has been added.`
                 if (this.ui.actionsButtonSubmit) {
                     this.ui.actionsButtonSubmit.setAttribute("hidden", "true");
                 }
-                if (this.ui.preview) {
-                    this.ui.preview.innerHTML = "";
+                if (this.ui.content) {
+                    this.ui.content.innerHTML = "";
                 }
                 if (this.ui.status) {
                     delete this.ui.status.dataset.rawJson;
@@ -2658,15 +2696,13 @@ A digital release in ${format} format has been added.`
                         }
                     }
                     this.renderPayload();
-                    const storeWarning = this.getStoreWarning();
-                    const successMsg = storeWarning ? `Parsed successfully! Ready to submit.<br />${storeWarning}` : "Parsed successfully! Ready to submit.";
-                    this.setStatus(successMsg, "success");
+                    this.setStatus(this.getParsedStatusMessage(), "success");
                 } catch (error) {
                     this.state.currentPayload = null;
                     this.state.lastRawData = null;
                     this.state.editedData = null;
-                    const errMsg = error.message || String(error);
-                    this.setStatus(errMsg, "error");
+                    const errorMessage = error.message || String(error);
+                    this.setStatus(errorMessage, "error");
                     if (this.ui.status) {
                         this.ui.status.dataset.rawJson = `URL: ${unsafeWindow.location.href}
 Version: ${USERSCRIPT.VERSION}
@@ -2692,19 +2728,28 @@ ${error.stack || error}`;
                     formatText: this.state.formatText,
                     country: this.state.editedData.country || ""
                 });
-                const previewObj = this.state.currentPayload._previewObject;
-                const rawJsonString = JSON.stringify(previewObj, null, 2);
-                if (this.ui.preview) {
-                    await PreviewRenderer.releasePreview(previewObj, {
-                        selectedFormat: this.state.selectedFormat || "WAV",
-                        selectedDescriptions: this.state.selectedDescriptions,
-                        formatText: this.state.formatText,
-                        supports: this.state.currentDigitalStore.supports || { formats: [] }
-                    }, this.ui.preview, this.state.editedData);
-                    UiSelect.init(this.ui.preview.querySelector(".is-format"));
-                    UiSelect.init(this.ui.preview.querySelector(".is-description"));
-                    UiSelect.init(this.ui.preview.querySelector(".is-country"));
+                const previewObject = this.state.currentPayload._previewObject;
+                const rawJsonString = JSON.stringify(previewObject, null, 2);
+                if (this.ui.content) {
+                    await PreviewRenderer.releasePreview(
+                        previewObject,
+                        {
+                            selectedFormat: this.state.selectedFormat || "WAV",
+                            selectedDescriptions: this.state.selectedDescriptions,
+                            formatText: this.state.formatText,
+                            supports: this.state.currentDigitalStore.supports || { formats: [] }
+                        },
+                        this.ui.content,
+                        this.state.editedData
+                    );
+                    UiSelect.init(this.ui.content.querySelector(".is-format"));
+                    UiSelect.init(this.ui.content.querySelector(".is-description"));
+                    UiSelect.init(this.ui.content.querySelector(".is-country"));
                 }
+                if (this.ui.widget && this.state.editedData.thumb) {
+                    document.documentElement.style.setProperty("--ds-thumb-url", `url('${this.state.editedData.thumb}')`);
+                }
+                this.updateHeaderCover();
                 if (this.ui.status) {
                     this.ui.status.dataset.rawJson = rawJsonString;
                 }
@@ -2745,25 +2790,30 @@ ${error.stack || error}`;
                 if (!this.state.currentPayload) {
                     return;
                 }
-                this.setLoader(true);
-                this.setStatus("Sending to Discogs...", "info");
-                this.ui.actionsButtonSubmit?.classList.add("is-disabled");
+                this.ui.actionsButtonSubmit?.setAttribute("hidden", "true");
+                this.setLoader(true, "Sending to Discogs...");
+                let coverUploadFailed = false;
+                let releaseId = null;
                 try {
                     const formData = new FormData();
                     formData.append("full_data", this.state.currentPayload.full_data);
                     formData.append("sub_notes", this.state.currentPayload.sub_notes);
-                    const jsonData = await networkRequest({
+                    const jsonData = await this.runSubmitStep("Sending to Discogs...", () => networkRequest({
                         method: "POST",
                         url: "https://www.discogs.com/submission/release/create",
                         data: formData,
                         responseType: "json"
-                    });
-                    if (jsonData?.id) {
-                        if (this.state.editedData?.cover) {
-                            this.setStatus("Draft created. Uploading cover image...", "info");
-                            try {
+                    }));
+                    if (!jsonData?.id) {
+                        throw new Error("Response missing release ID");
+                    }
+                    releaseId = jsonData.id;
+                    if (this.state.editedData?.cover) {
+                        const coverUrl = this.state.editedData.cover;
+                        try {
+                            await this.runSubmitStep("Draft created. Uploading cover image...", async () => {
                                 const coverBlob = await networkRequest({
-                                    url: this.state.editedData.cover,
+                                    url: coverUrl,
                                     method: "GET",
                                     responseType: "blob"
                                 });
@@ -2772,44 +2822,55 @@ ${error.stack || error}`;
                                 imageFormData.append("pos", "1");
                                 await networkRequest({
                                     method: "POST",
-                                    url: `https://www.discogs.com/release/${jsonData.id}/images/upload`,
+                                    url: `https://www.discogs.com/release/${releaseId}/images/upload`,
                                     data: imageFormData
                                 });
-                                this.setStatus("Draft and cover uploaded successfully!<br /><strong><em>Please review your draft before publishing on Discogs!</em></strong>", "success");
-                                if (this.ui.actionsButtonSubmit) {
-                                    this.ui.actionsButtonSubmit.setAttribute("hidden", "true");
-                                }
-                                GM_openInTab(`https://www.discogs.com/release/edit/${jsonData.id}`, true);
-                                setTimeout(() => this.ui.widget?.classList.remove("is-open"), 5e3);
-                            } catch (imageError) {
-                                console.error("[Discogs Submitter] Cover upload failed:", imageError);
-                                this.setStatus(`Draft created, but cover upload failed!<br /><strong><em>Please review your draft before publishing on Discogs!</em></strong>`, "warning");
-                                if (this.ui.actionsButtonSubmit) {
-                                    this.ui.actionsButtonSubmit.setAttribute("hidden", "true");
-                                }
-                                GM_openInTab(`https://www.discogs.com/release/edit/${jsonData.id}`, true);
-                            }
-                        } else {
-                            this.setStatus(`Draft successfully created! ID: ${jsonData.id}.<br /><strong><em>Please review your draft before publishing on Discogs!</em></strong>`, "success");
-                            if (this.ui.actionsButtonSubmit) {
-                                this.ui.actionsButtonSubmit.setAttribute("hidden", "true");
-                            }
-                            GM_openInTab(`https://www.discogs.com/release/edit/${jsonData.id}`, true);
-                            setTimeout(() => this.ui.widget?.classList.remove("is-open"), 5e3);
+                            });
+                        } catch (imageError) {
+                            console.error("[Discogs Submitter] Cover upload failed:", imageError);
+                            coverUploadFailed = true;
                         }
+                    }
+                    GM_openInTab(`https://www.discogs.com/release/edit/${releaseId}`, true);
+                    if (coverUploadFailed) {
+                        this.setStatus(
+                            `Draft created, but cover upload failed!<br /><strong><em>Please review your draft before publishing on Discogs!</em></strong>`,
+                            "warning"
+                        );
                     } else {
-                        throw new Error("Response missing release ID");
+                        this.restoreReadyState();
                     }
                 } catch (error) {
-                    let errMsg = error.message || String(error);
-                    if (errMsg.includes("404")) {
-                        errMsg = "This usually means you are not logged in or use Containers, Incognito, or strict tracking protection.";
+                    let errorMessage = error.message || String(error);
+                    if (errorMessage.includes("404")) {
+                        errorMessage = "This usually means you are not logged in or use Containers, Incognito, or strict tracking protection.";
                     }
-                    this.setStatus(`Failed to create Discogs draft:<br />${errMsg}`, "error");
+                    this.setStatus(`Failed to create Discogs draft:<br />${errorMessage}`, "error");
                 } finally {
                     this.setLoader(false);
-                    this.ui.actionsButtonSubmit?.classList.remove("is-disabled");
+                    this.ui.actionsButtonSubmit?.removeAttribute("hidden");
                 }
+            }
+            async runSubmitStep(message, operation) {
+                const MIN_DURATION_MS = 5e3;
+                this.setLoaderLabel(message);
+                const startTime = Date.now();
+                const result = await operation();
+                const elapsed = Date.now() - startTime;
+                if (elapsed < MIN_DURATION_MS) {
+                    await new Promise((resolve) => setTimeout(resolve, MIN_DURATION_MS - elapsed));
+                }
+                return result;
+            }
+            getParsedStatusMessage() {
+                const storeWarning = this.getStoreWarning();
+                return storeWarning ? `Parsed successfully! Ready to submit.<br />${storeWarning}` : "Parsed successfully! Ready to submit.";
+            }
+            restoreReadyState() {
+                if (!this.state.lastRawData) {
+                    return;
+                }
+                this.setStatus(this.getParsedStatusMessage(), "success");
             }
             getStoreWarning() {
                 const storeId = this.state.currentDigitalStore?.id;
@@ -2833,14 +2894,14 @@ ${error.stack || error}`;
                     await this.renderPayload();
                 }
             }
-            getResolvedPath(el) {
-                const field = el.dataset.field;
+            getResolvedPath(element) {
+                const field = element.dataset.field;
                 if (!field) {
                     return "";
                 }
-                const indexStr = el.dataset.index;
-                const indices = indexStr ? indexStr.split("|").map((v) => Number.parseInt(v, 10)) : [];
-                const subindex = el.dataset.subindex ? Number.parseInt(el.dataset.subindex, 10) : null;
+                const indexStr = element.dataset.index;
+                const indices = indexStr ? indexStr.split("|").map((segment) => Number.parseInt(segment, 10)) : [];
+                const subindex = element.dataset.subindex ? Number.parseInt(element.dataset.subindex, 10) : null;
                 if (field === "formatText") {
                     return "formatText";
                 }
@@ -2860,8 +2921,8 @@ ${error.stack || error}`;
                 }
                 return field;
             }
-            updateEditedData(el, value) {
-                const path = this.getResolvedPath(el);
+            updateEditedData(element, value) {
+                const path = this.getResolvedPath(element);
                 if (!path || !this.state.editedData) {
                     return;
                 }
@@ -2888,8 +2949,8 @@ ${error.stack || error}`;
                     }
                 }
             }
-            async handleRestore(el) {
-                const path = this.getResolvedPath(el);
+            async handleRestore(element) {
+                const path = this.getResolvedPath(element);
                 if (!path || !this.state.lastRawData || !this.state.editedData) {
                     return;
                 }
@@ -2909,34 +2970,38 @@ ${error.stack || error}`;
             }
             bindEvents() {
                 this.ui.headerButtonClose?.addEventListener("click", () => this.ui.widget?.classList.remove("is-open"));
-                this.ui.preview?.addEventListener("change", (event) => void this.handlePreviewChange(event));
-                this.ui.preview?.addEventListener("click", async (event) => {
+                this.ui.content?.addEventListener("change", (event) => void this.handlePreviewChange(event));
+                this.ui.content?.addEventListener("click", async (event) => {
                     const target = event.target;
                     const fieldButton = target.closest(".discogs-submitter__results__field .discogs-submitter__button");
                     if (fieldButton) {
                         await this.handleRestore(fieldButton);
                     }
                 });
-                this.ui.preview?.addEventListener("keydown", (event) => {
+                this.ui.content?.addEventListener("keydown", (event) => {
                     if (event.target.classList.contains("is-edit")) {
                         EditableHelper.handleKeydown(event);
                     }
                 });
-                this.ui.preview?.addEventListener("keyup", (event) => {
+                this.ui.content?.addEventListener("keyup", (event) => {
                     if (event.target.classList.contains("is-edit")) {
                         event.stopPropagation();
                     }
                 });
-                this.ui.preview?.addEventListener("paste", (event) => {
+                this.ui.content?.addEventListener("paste", (event) => {
                     if (event.target.classList.contains("is-edit")) {
                         EditableHelper.handlePaste(event);
                     }
                 });
-                this.ui.preview?.addEventListener("blur", (event) => {
-                    if (event.target.classList.contains("is-edit")) {
-                        void this.handlePreviewChange(event);
-                    }
-                }, true);
+                this.ui.content?.addEventListener(
+                    "blur",
+                    (event) => {
+                        if (event.target.classList.contains("is-edit")) {
+                            void this.handlePreviewChange(event);
+                        }
+                    },
+                    true
+                );
                 this.ui.statusButtonDebug?.addEventListener("click", () => this.handleDebugCopy());
                 this.ui.actionsButtonSubmit?.addEventListener("click", () => this.handleSubmit());
             }
@@ -2973,7 +3038,7 @@ ${error.stack || error}`;
                 this.handle.addEventListener("mousedown", this.handleMouseDown);
                 this.handle.addEventListener("touchstart", this.handleMouseDown, { passive: false });
             }
-            getCoords(event) {
+            getCoordinates(event) {
                 if ("touches" in event && event.touches.length > 0) {
                     return {
                         x: event.touches[0].pageX,
@@ -2992,10 +3057,10 @@ ${error.stack || error}`;
                 event.preventDefault();
                 this.isDragging = true;
                 this.onStateChange?.(true);
-                const coords = this.getCoords(event);
-                const rect = this.element.getBoundingClientRect();
-                this.offset.x = coords.x - rect.left;
-                this.offset.y = coords.y - rect.top;
+                const coordinates = this.getCoordinates(event);
+                const rectangle = this.element.getBoundingClientRect();
+                this.offset.x = coordinates.x - rectangle.left;
+                this.offset.y = coordinates.y - rectangle.top;
                 document.addEventListener("mousemove", this.handleMouseMove);
                 document.addEventListener("touchmove", this.handleMouseMove, { passive: false });
                 document.addEventListener("mouseup", this.handleMouseUp);
@@ -3005,10 +3070,10 @@ ${error.stack || error}`;
                 if (!this.isDragging) {
                     return;
                 }
-                const coords = this.getCoords(event);
-                const rootRect = this.element.getBoundingClientRect();
-                const left = Math.min(Math.max(0, coords.x - this.offset.x), window.innerWidth - rootRect.width);
-                const top = Math.min(Math.max(0, coords.y - this.offset.y), window.innerHeight - rootRect.height);
+                const coordinates = this.getCoordinates(event);
+                const rootRectangle = this.element.getBoundingClientRect();
+                const left = Math.min(Math.max(0, coordinates.x - this.offset.x), window.innerWidth - rootRectangle.width);
+                const top = Math.min(Math.max(0, coordinates.y - this.offset.y), window.innerHeight - rootRectangle.height);
                 this.element.style.left = `${left}px`;
                 this.element.style.top = `${top}px`;
             }
@@ -3042,17 +3107,19 @@ ${error.stack || error}`;
             }
         };
 
-        const buttonsCss = ".discogs-submitter__button{display:inline-flex;align-items:center;justify-content:center;color:var(--ds-color-black);font-weight:700;text-align:center;padding:calc(var(--ds-gap) / 4);background:var(--ds-color-gray-light);border-radius:calc(var(--ds-radius) / 4);cursor:pointer;user-select:none;transition:all .3s ease;&.is-icon{width:1.75em;height:1.75em;fill:currentColor;border:none;&,&.is-large{padding:0;border-radius:100%}&:hover{color:var(--ds-color-white);background:var(--ds-color-black)}}&.is-full{display:flex;width:100%}&.is-large{font-size:16px;padding:calc(var(--ds-gap) / 2);border-radius:var(--ds-radius)}&.is-primary{color:var(--ds-color-white);background:var(--ds-color-primary);&:hover{color:var(--ds-color-white);background:var(--ds-color-black)}}&.is-disabled{opacity:.5;pointer-events:none}}";
+        const buttonsCss = ".discogs-submitter__button{display:inline-flex;justify-content:center;align-items:center;transition:all .3s ease;cursor:pointer;border-radius:calc(var(--ds-radius) / 4);background:rgba(var(--ds-palette-secondary-color),.1);padding:calc(var(--ds-gap) / 4);color:currentColor;font-weight:700;user-select:none;text-align:center;&.is-icon{fill:currentColor;border:none;width:1.75em;height:1.75em;&,&.is-large{border-radius:100%;padding:0}&:hover{background:rgba(var(--ds-palette-secondary-color),1);color:rgba(var(--ds-palette-primary-color),1)}}&.is-full{display:flex;width:100%}&.is-large{border-radius:var(--ds-radius);padding:calc(var(--ds-gap) / 2);font-size:18px}&.is-primary{background:rgba(var(--ds-color-primary),1);color:rgba(var(--ds-color-white),1);&:hover{background:rgba(var(--ds-palette-secondary-color),1);color:rgba(var(--ds-palette-primary-color),1)}}&.is-disabled{opacity:.5;pointer-events:none}}";
 
-        const inputsCss = ".discogs-submitter__select,.discogs-submitter__input,.discogs-submitter__textarea{position:relative;z-index:1;display:inline-block;min-width:20px;min-height:1.2em;font-family:inherit;font-size:inherit;line-height:normal;padding:calc(var(--ds-gap) / 8) calc(var(--ds-gap) / 4);background:var(--ds-color-white);border:none;border-radius:calc(var(--ds-radius) / 4);outline:.1px solid var(--ds-color-gray);transition:all .3s ease;&::-webkit-placeholder{color:var(--ds-color-gray);opacity:1}&::-moz-placeholder{color:var(--ds-color-gray);opacity:1}&::placeholder{color:var(--ds-color-gray);opacity:1}&:focus{z-index:2;background:var(--ds-color-white);outline:2px solid var(--ds-color-gray)}}.discogs-submitter__input,.discogs-submitter__textarea{white-space:pre-wrap;word-break:break-word;&[contenteditable]{&:empty:before{content:attr(placeholder);color:var(--ds-color-gray);pointer-events:none}}}.discogs-submitter__textarea{resize:vertical}.discogs-submitter__select{--min-width: 60px;--max-width: 160px;position:relative;display:inline-block;vertical-align:middle;min-width:var(--min-width);max-width:var(--max-width);user-select:none;&.is-open{z-index:2;background:var(--ds-color-white);outline:2px solid var(--ds-color-gray);.discogs-submitter__select__arrow{transform:rotate(180deg)}.discogs-submitter__select__list{visibility:visible;transform:translateY(4px) scale(1);opacity:1}}}.discogs-submitter__select__arrow{width:1em;height:1em;transition:all .3s ease}.discogs-submitter__select__placeholder{width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--ds-color-gray);transition:all .3s ease;&.is-selected{color:var(--ds-color-black)}}.discogs-submitter__select__count{white-space:nowrap;font-size:9px}.discogs-submitter__select__label{position:relative;z-index:2;display:flex;flex-wrap:nowrap;align-items:center;gap:calc(var(--ds-gap) / 6)}.discogs-submitter__select__list{visibility:hidden;z-index:1;position:absolute;top:calc(100% + 2px);left:0;min-width:var(--min-width);max-width:var(--max-width);max-height:200px;overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--ds-color-gray-medium) transparent;background:var(--ds-color-white);box-shadow:0 6px 12px 4px #0000004d;outline:2px solid var(--ds-color-gray);border-radius:calc(var(--ds-radius) / 4);transform:translateY(10px) scale(.9);transform-origin:0 0;opacity:0;transition:all .3s ease}.discogs-submitter__select__list__item{color:var(--ds-color-black);padding:2px 4px;display:flex;flex-wrap:nowrap;align-items:center;gap:calc(var(--ds-gap) / 4);transition:all .3s ease;cursor:pointer;&:not(:last-child){border-bottom:1px solid var(--ds-color-gray-medium)}&:hover{color:var(--ds-color-white);background:var(--ds-color-primary);.discogs-submitter__checkbox{fill:var(--ds-color-white)}}&.is-selected{background:var(--ds-color-gray-light);.discogs-submitter__checkbox{fill:var(--ds-color-primary)}&:hover{background:var(--ds-color-primary);.discogs-submitter__checkbox{fill:var(--ds-color-white)}}}&.is-showing{transform:scale(0);opacity:0;animation:ds-scale-up .3s ease forwards}.discogs-submitter__checkbox{flex:0 0 auto}}.discogs-submitter__checkbox{width:1.75em;height:1.75em;fill:var(--ds-color-gray-medium);transition:all .3s ease}@keyframes ds-scale-up{0%{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}";
+        const inputsCss = ".discogs-submitter__select,.discogs-submitter__input,.discogs-submitter__textarea{display:inline-block;position:relative;z-index:1;transition:all .3s ease;border:1px solid rgba(var(--ds-palette-secondary-color),.5);border-radius:calc(var(--ds-radius) / 4);background:rgba(var(--ds-palette-secondary-color),.1);padding:calc(var(--ds-gap) / 8) calc(var(--ds-gap) / 4);min-width:20px;min-height:1.2em;font-size:inherit;line-height:normal;font-family:inherit}.discogs-submitter__input,.discogs-submitter__textarea{white-space:pre-wrap;word-break:break-word;&:focus{z-index:2;outline:.1px solid rgba(var(--ds-palette-secondary-color),1);border-color:rgba(var(--ds-palette-secondary-color),1);background:rgba(var(--ds-palette-primary-color),1);color:rgba(var(--ds-palette-secondary-color),1)}&[contenteditable]{&:empty:before{pointer-events:none;content:attr(placeholder);color:rgba(var(--ds-palette-secondary-color),.4)}}}.discogs-submitter__textarea{resize:vertical}.discogs-submitter__select{--min-width: 60px;--max-width: 160px;display:inline-block;position:relative;vertical-align:middle;min-width:var(--min-width);max-width:var(--max-width);user-select:none;&.is-open{z-index:2;outline-width:.1px;outline:1px solid rgba(var(--ds-palette-secondary-color),1);border-color:rgba(var(--ds-palette-secondary-color),1);background:rgba(var(--ds-palette-primary-color),1);.discogs-submitter__select__placeholder{&.is-selected{color:rgba(var(--ds-palette-secondary-color),1)}&:not(.is-selected){color:rgba(var(--ds-palette-secondary-color),.4)}}.discogs-submitter__select__arrow{transform:rotate(180deg)}.discogs-submitter__select__list{transform:translateY(6px) scale(1);visibility:visible;opacity:1}}}.discogs-submitter__select__arrow{transition:all .3s ease;fill:currentColor;width:1em;height:1em}.discogs-submitter__select__placeholder{transition:all .3s ease;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;&:not(.is-selected){color:rgba(var(--ds-palette-secondary-color),.4)}}.discogs-submitter__select__count{font-size:9px;white-space:nowrap}.discogs-submitter__select__label{display:flex;position:relative;flex-wrap:nowrap;align-items:center;gap:calc(var(--ds-gap) / 6);z-index:2}.discogs-submitter__select__list{position:absolute;top:100%;left:-2px;visibility:hidden;z-index:1;min-width:calc(var(--min-width) + 4px);max-width:calc(var(--max-width) + 4px);max-height:200px;overflow-y:auto;-webkit-overflow-scrolling:touch;transform:translateY(10px) scale(.9);transform-origin:0 0;opacity:0;transition:all .3s ease;outline:1px solid rgba(var(--ds-palette-secondary-color),1);border:1px solid rgba(var(--ds-palette-secondary-color),1);border-radius:calc(var(--ds-radius) / 4);background:rgba(var(--ds-palette-primary-color),1);scrollbar-color:rgba(var(--ds-palette-secondary-color),.5) transparent;scrollbar-width:thin;color:rgba(var(--ds-palette-secondary-color),1)}.discogs-submitter__select__list__item{display:flex;flex-wrap:nowrap;align-items:center;gap:calc(var(--ds-gap) / 4);transition:all .3s ease;cursor:pointer;padding:2px 4px;&:not(:last-child){border-bottom:1px solid rgba(var(--ds-palette-secondary-color),.1)}&:hover{background:rgba(var(--ds-palette-secondary-color),.5);color:rgba(var(--ds-palette-primary-color),1)}&.is-selected{background:rgba(var(--ds-color-primary),1);color:rgba(var(--ds-palette-primary-color),1);&:hover{background:rgba(var(--ds-palette-secondary-color),.5);color:rgba(var(--ds-palette-primary-color),1)}}&.is-showing{transform:scale(0);opacity:0;animation:ds-scale-up .3s ease forwards}.discogs-submitter__checkbox{flex:0 0 auto}}.discogs-submitter__checkbox{transition:all .3s ease;fill:currentColor;width:1.75em;height:1.75em}@keyframes ds-scale-up{0%{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}";
 
-        const previewCss = ".discogs-submitter__results{display:flex;flex-wrap:wrap;gap:0 var(--ds-gap);font-family:var(--ds-font-monospace);font-size:10px;line-height:normal}.discogs-submitter__results__row{width:100%;display:grid;gap:calc(var(--ds-gap) / 2);grid-template-columns:60px 1fr;padding:2px 0;border-bottom:1px dotted rgba(0,0,0,.2);&.is-half{width:calc(50% - var(--ds-gap) / 2)}&.is-tracklist{grid-template-columns:20px 1fr 1fr 50px;&.is-no-artist{grid-template-columns:20px 1fr 50px}>.discogs-submitter__results__head{text-align:left}>.discogs-submitter__results__body:last-child{text-align:right}}&.is-notes{grid-template-columns:1fr;gap:calc(var(--ds-gap) / 6);>.discogs-submitter__results__head{text-align:left}}}.discogs-submitter__results__head{font-weight:700;text-align:right}.discogs-submitter__results__body{display:flex;flex-direction:column;align-items:start;gap:calc(var(--ds-gap) / 6);a{color:var(--ds-color-primary)}small{font-size:9px}&.is-multiple{display:block;.discogs-submitter__results__field{display:inline-flex;vertical-align:middle;width:auto}}&.is-inner{padding-left:calc(var(--ds-gap) / 2)}}.discogs-submitter__results__field{display:flex;flex-wrap:nowrap;align-items:start;gap:calc(var(--ds-gap) / 6);width:100%;.discogs-submitter__textarea{width:100%;min-height:60px}.discogs-submitter__button{flex:0 0 auto;padding:calc(var(--ds-gap) / 6)}}";
+        const loaderCss = ".discogs-submitter__loader{display:flex;position:absolute;top:0;left:0;flex-direction:column;justify-content:center;align-items:center;gap:var(--ds-gap);visibility:hidden;opacity:0;z-index:-1;backdrop-filter:blur(5px);transition:all 1s ease;background:rgba(var(--ds-palette-primary-color),.8);width:100%;height:100%;&.is-loading{visibility:visible;opacity:1;z-index:10}}.discogs-submitter__loader__icon{animation:ds-spinner .5s linear infinite;width:4em;height:4em}.discogs-submitter__loader__cover{animation:ds-pulse 2s ease-in-out infinite;outline:.1px solid rgba(var(--ds-palette-secondary-color),1);border:.1px solid rgba(var(--ds-palette-primary-color),1);border-radius:calc(var(--ds-radius) / 2);background:var(--ds-thumb-url) no-repeat 50%;background-size:cover;width:8em;height:8em;object-fit:cover}.discogs-submitter__loader__label{color:rgba(var(--ds-palette-secondary-color),1);font-size:12px}";
 
-        const resetCss = ".discogs-submitter{*,*:after,*:before{color-scheme:light;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;box-sizing:border-box}a{text-decoration:none}em{font-style:oblique}strong{font-weight:700}[hidden]{display:none!important}}";
+        const previewCss = ".discogs-submitter__results{display:flex;flex-wrap:wrap;gap:0 var(--ds-gap);font-size:10px;line-height:normal;font-family:var(--ds-font-monospace)}.discogs-submitter__results__row{display:grid;grid-template-columns:60px 1fr;gap:calc(var(--ds-gap) / 2);border-bottom:1px dotted rgba(var(--ds-palette-secondary-color),.25);padding:2px 0;width:100%;&.is-half{width:calc(50% - var(--ds-gap) / 2)}&.is-tracklist{grid-template-columns:20px 1fr 1fr 50px;&.is-no-artist{grid-template-columns:20px 1fr 50px}>.discogs-submitter__results__head{text-align:left}>.discogs-submitter__results__body:last-child{text-align:right}}&.is-notes{grid-template-columns:1fr;gap:calc(var(--ds-gap) / 6);>.discogs-submitter__results__head{text-align:left}}}.discogs-submitter__results__head{padding-top:3px;font-weight:700;text-align:right}.discogs-submitter__results__body{display:flex;flex-direction:column;align-items:start;gap:calc(var(--ds-gap) / 6);small{font-size:9px}&.is-multiple{display:block;.discogs-submitter__results__field{display:inline-flex;vertical-align:middle;width:auto}}&.is-inner{padding-left:calc(var(--ds-gap) / 2)}}.discogs-submitter__results__field{display:flex;flex-wrap:nowrap;align-items:start;gap:calc(var(--ds-gap) / 6);width:100%;.discogs-submitter__textarea{width:100%;min-height:60px}.discogs-submitter__button{flex:0 0 auto;padding:calc(var(--ds-gap) / 6)}}";
 
-        const variablesCss = ":root{--ds-gap: 20px;--ds-radius: 12px;--ds-color-white: #fafafa;--ds-color-black: #212121;--ds-color-gray: #666;--ds-color-gray-dark: #333;--ds-color-gray-medium: #c7c7c7;--ds-color-gray-light: #eee;--ds-color-primary: #148a66;--ds-color-success: #28a745;--ds-color-error: #dc3545;--ds-color-warning: #ffc107;--ds-color-info: #17a2b8;--ds-font-sans: \"Helvetica Neue\", Helvetica, Arial, sans-serif;--ds-font-monospace: \"SFMono-Regular\", Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace}";
+        const resetCss = ".discogs-submitter{font-weight:400;font-size:14px;line-height:1.2;font-family:var(--ds-font-sans)!important;text-shadow:none;text-transform:none;*,*:after,*:before{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;box-sizing:border-box;text-rendering:optimizeLegibility}a{text-decoration:none}em{font-style:oblique}strong{font-weight:700}[hidden]{display:none!important}}";
 
-        const widgetCss = ".discogs-submitter{contain:layout;overflow:hidden;display:none;flex-direction:column;justify-content:start;gap:var(--ds-gap);position:fixed;z-index:999999;top:var(--ds-gap);right:var(--ds-gap);width:calc(100% - (var(--ds-gap) * 2));max-width:500px;padding:var(--ds-gap) var(--ds-gap) calc(var(--ds-gap) / 2);color:var(--ds-color-black);font-family:var(--ds-font-sans)!important;font-size:14px;font-weight:400;line-height:1.2;text-transform:none;text-shadow:none;background:var(--ds-color-white);border:2px solid var(--ds-color-gray-dark);border-radius:var(--ds-radius);outline:2px solid var(--ds-color-white);opacity:0;transition:opacity .5s ease,box-shadow .8s ease;&.is-open{display:flex;opacity:1;box-shadow:0 0 10px #0009,0 0 30px #000c}&.is-webarchive{top:calc(var(--wm-toolbar-height) + var(--ds-gap))}}.discogs-submitter__loader{position:absolute;z-index:-1;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;opacity:0;transition:all 1s ease;&.is-loading{z-index:10;opacity:1}&:before{content:\"\";position:absolute;top:0;left:0;width:100%;height:100%;background:var(--ds-color-white);opacity:.75}}.discogs-submitter__loader__icon{width:70px;height:70px;animation:ds-spinner .5s linear infinite}.discogs-submitter__loader__cover{width:200px;height:200px;object-fit:cover;border-radius:var(--ds-radius);box-shadow:0 5px 15px #0000004d;animation:ds-pulse 2s ease-in-out infinite}.discogs-submitter__header{display:flex;align-items:center;gap:calc(var(--ds-gap) / 2);font-size:20px;font-weight:600;.discogs-submitter__button{color:var(--ds-color-black);&,&:hover{background:none}&.is-move{cursor:grab;&:hover{color:var(--ds-color-info)}&.is-draggable{cursor:grabbing}}&.is-close{&:hover{color:var(--ds-color-error)}}}}.discogs-submitter__header__logo{flex:0 0 auto;width:1.25em;height:1.25em}.discogs-submitter__header__title{margin-right:auto;small{font-size:8px}}.discogs-submitter__preview{margin:0 calc(var(--ds-gap) * -1);padding:0 var(--ds-gap);overflow:auto;max-height:40dvh;scrollbar-width:thin;scrollbar-color:var(--ds-color-gray-dark) transparent;-webkit-overflow-scrolling:touch;&::-webkit-scrollbar{width:6px}}.discogs-submitter__status{--status-color: var(--ds-color-gray-dark);overflow:hidden;position:relative;z-index:1;display:flex;align-items:start;gap:var(--ds-gap);margin-bottom:var(--ds-gap);padding:calc(var(--ds-gap) / 2);border-left:4px solid var(--status-color);border-radius:calc(var(--ds-radius) / 2);transition:all .3s ease;&:after{content:\"\";position:absolute;z-index:-1;top:0;left:0;width:100%;height:100%;background:var(--status-color);opacity:.1;transition:all .3s ease}&.is-success{--status-color: var(--ds-color-success)}&.is-error{--status-color: var(--ds-color-error)}&.is-info{--status-color: var(--ds-color-info)}&.is-warning{--status-color: var(--ds-color-warning)}.discogs-submitter__button{flex:0 0 auto;margin-left:auto;&.is-debug{color:var(--ds-color-gray-dark);background:none;&.is-success{color:var(--ds-color-success)}&.is-error{color:var(--ds-color-error)}}}}.discogs-submitter__actions{display:flex;flex-wrap:nowrap;gap:var(--ds-gap)}.discogs-submitter__copyright{display:flex;justify-content:center;gap:var(--ds-gap);font-size:10px;margin:var(--ds-gap) 0 0}.discogs-submitter__copyright__link{color:currentColor;text-decoration:none;&:hover{text-decoration:underline}span{display:inline-block;vertical-align:middle;font-family:var(--ds-font-monospace);color:var(--ds-color-error);animation:ds-pulse 1s ease-in-out infinite}}@keyframes ds-spinner{0%{transform:rotate(0)}to{transform:rotate(360deg)}}@keyframes ds-pulse{0%{transform:scale(1)}50%{transform:scale(1.2)}to{transform:scale(1)}}";
+        const variablesCss = ":root{--ds-font-sans: \"Helvetica Neue\", Helvetica, Arial, sans-serif;--ds-font-monospace: \"SFMono-Regular\", Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace;--ds-gap: 20px;--ds-radius: 12px;--ds-color-primary: 20, 138, 102;--ds-color-success: 40, 167, 69;--ds-color-error: 220, 53, 69;--ds-color-warning: 255, 193, 7;--ds-color-info: 23, 162, 184;--ds-color-white: 255, 255, 255;--ds-color-black: 0, 0, 0;--ds-palette-secondary-color: var(--ds-color-black);--ds-palette-primary-color: var(--ds-color-white)}";
+
+        const widgetCss = ".discogs-submitter{display:flex;position:fixed;top:var(--ds-gap);right:var(--ds-gap);flex-direction:column;justify-content:start;gap:var(--ds-gap);transform:scale(.9);transform-origin:0 0;visibility:hidden;opacity:0;z-index:999999;transition:all .5s ease,left 0s linear,top 0s linear;box-shadow:0 0 0 1px rgba(var(--ds-palette-secondary-color),.5),0 0 15px 10px rgba(var(--ds-color-black),.5);border:1px solid rgba(var(--ds-palette-primary-color),1);border-radius:var(--ds-radius);background:rgba(var(--ds-palette-primary-color),1);padding:var(--ds-gap) var(--ds-gap) calc(var(--ds-gap) / 2);width:calc(100% - (var(--ds-gap) * 2));max-width:500px;overflow:hidden;color:rgba(var(--ds-palette-secondary-color),1);&:after{position:absolute;top:0;left:0;transform:scale(105%);z-index:-1;mask-image:linear-gradient(to bottom,rgba(var(--ds-color-black),1),rgba(var(--ds-color-black),.025) 150px);filter:blur(4px);background:var(--ds-thumb-url) no-repeat 50%;background-size:cover;width:100%;height:100%;overflow:hidden;content:\"\"}&.is-open{transform:scale(1);visibility:visible;opacity:1}&.is-webarchive{top:calc(var(--wm-toolbar-height) + var(--ds-gap))}}.discogs-submitter__header{display:flex;font-weight:600;font-size:20px;.discogs-submitter__button{&,&:hover{background:none}&.is-move{cursor:grab;&:hover{color:rgba(var(--ds-color-info),1)}&.is-draggable{cursor:grabbing}}&.is-close{&:hover{color:rgba(var(--ds-color-error),1)}}}}.discogs-submitter__header__cover{width:2em;height:2em}.discogs-submitter__header__cover__logo,.discogs-submitter__header__cover__image{width:100%;height:100%}.discogs-submitter__header__cover__image{opacity:1;outline:1px solid rgba(var(--ds-palette-secondary-color),1);border:1px solid rgba(var(--ds-palette-primary-color),1);border-radius:calc(var(--ds-radius) / 2);object-fit:cover}.discogs-submitter__header__content{display:flex;flex:1 1 auto;gap:calc(var(--ds-gap) / 2);margin-left:var(--ds-gap)}.discogs-submitter__header__title{align-self:center;filter:drop-shadow(0 0 10px rgba(var(--ds-color-white),1));margin-right:auto;small{font-size:8px}}.discogs-submitter__content{margin:0 calc(var(--ds-gap) * -1);padding:0 var(--ds-gap);max-height:40dvh;overflow:auto;scrollbar-color:rgba(var(--ds-palette-secondary-color),1) transparent;scrollbar-width:thin;-webkit-overflow-scrolling:touch;&::-webkit-scrollbar{width:6px}}.discogs-submitter__status{--status-color: rgba(var(--ds-palette-secondary-color), 1);display:flex;position:relative;align-items:start;gap:var(--ds-gap);z-index:1;transition:all .3s ease;margin-bottom:var(--ds-gap);border-left:4px solid var(--status-color);border-radius:calc(var(--ds-radius) / 2);padding:calc(var(--ds-gap) / 2);overflow:hidden;&:after{position:absolute;top:0;left:0;opacity:.1;z-index:-1;transition:all .3s ease;background:var(--status-color);width:100%;height:100%;content:\"\"}&.is-success{--status-color: rgba(var(--ds-color-success), 1)}&.is-error{--status-color: rgba(var(--ds-color-error), 1)}&.is-info{--status-color: rgba(var(--ds-color-info), 1)}&.is-warning{--status-color: rgba(var(--ds-color-warning), 1)}.discogs-submitter__button{flex:0 0 auto;margin-left:auto;&.is-debug{background:none;color:rgba(var(--ds-color-black),1);&.is-success{color:rgba(var(--ds-color-success),1)}&.is-error{color:rgba(var(--ds-color-error),1)}}}}.discogs-submitter__actions{display:flex;flex-wrap:nowrap;gap:var(--ds-gap)}.discogs-submitter__copyright{display:flex;justify-content:center;gap:var(--ds-gap);margin:var(--ds-gap) 0 0;font-size:10px}.discogs-submitter__copyright__link{color:currentColor;text-decoration:none;&:hover{text-decoration:underline}span{display:inline-block;vertical-align:middle;animation:ds-pulse 1s ease-in-out infinite;color:rgba(var(--ds-color-error),1);font-family:var(--ds-font-monospace)}}@keyframes ds-spinner{0%{transform:rotate(0)}to{transform:rotate(360deg)}}@keyframes ds-pulse{0%{transform:scale(1)}50%{transform:scale(1.2)}to{transform:scale(1)}}";
 
         const iconBug = "<svg viewBox=\"0 0 640 640\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m224 160c0-53 43-96 96-96s96 43 96 96v3.6c0 15.7-12.7 28.4-28.4 28.4h-135.1c-15.7 0-28.4-12.7-28.4-28.4v-3.6zm345.6 12.8c10.6 14.1 7.7 34.2-6.4 44.8l-97.8 73.3c5.3 8.9 9.3 18.7 11.8 29.1h98.8c17.7 0 32 14.3 32 32s-14.3 32-32 32h-96v32c0 2.6-.1 5.3-.2 7.9l83.4 62.5c14.1 10.6 17 30.7 6.4 44.8s-30.7 17-44.8 6.4l-63.1-47.3c-23.2 44.2-66.5 76.2-117.7 83.9v-230.2c0-13.3-10.7-24-24-24s-24 10.7-24 24v230.2c-51.2-7.7-94.5-39.7-117.7-83.9l-63.1 47.3c-14.1 10.6-34.2 7.7-44.8-6.4s-7.7-34.2 6.4-44.8l83.4-62.5c-.1-2.6-.2-5.2-.2-7.9v-32h-96c-17.7 0-32-14.3-32-32s14.3-32 32-32h98.8c2.5-10.4 6.5-20.2 11.8-29.1l-97.8-73.3c-14.1-10.6-17-30.7-6.4-44.8s30.7-17 44.8-6.4l108.8 81.6c12.3-5.1 25.8-8 40-8h112c14.2 0 27.7 2.8 40 8l108.8-81.6c14.1-10.6 34.2-7.7 44.8 6.4z\"/></svg>";
 
@@ -3060,7 +3127,7 @@ ${error.stack || error}`;
 
         const iconClose = "<svg viewBox=\"0 0 640 640\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m183.1 137.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l137.4 137.3-137.3 137.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0l137.3-137.4 137.4 137.3c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-137.4-137.3 137.3-137.4c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-137.3 137.4z\"/></svg>";
 
-        const iconMove = "<svg viewBox=\"0 0 640 640\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m152 160c22.1 0 40 17.9 40 40v48c0 22.1-17.9 40-40 40h-48c-22.1 0-40-17.9-40-40v-48c0-22.1 17.9-40 40-40zm192 128h-48c-22.1 0-40-17.9-40-40v-48c0-22.1 17.9-40 40-40h48c22.1 0 40 17.9 40 40v48c0 22.1-17.9 40-40 40zm192 0h-48c-22.1 0-40-17.9-40-40v-48c0-22.1 17.9-40 40-40h48c22.1 0 40 17.9 40 40v48c0 22.1-17.9 40-40 40zm0 192h-48c-22.1 0-40-17.9-40-40v-48c0-22.1 17.9-40 40-40h48c22.1 0 40 17.9 40 40v48c0 22.1-17.9 40-40 40zm-192-128c22.1 0 40 17.9 40 40v48c0 22.1-17.9 40-40 40h-48c-22.1 0-40-17.9-40-40v-48c0-22.1 17.9-40 40-40zm-192 128h-48c-22.1 0-40-17.9-40-40v-48c0-22.1 17.9-40 40-40h48c22.1 0 40 17.9 40 40v48c0 22.1-17.9 40-40 40z\"/></svg>";
+        const iconGripLines = "<svg viewBox=\"0 0 640 640\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m128 352c-17.7 0-32 14.3-32 32s14.3 32 32 32h384c17.7 0 32-14.3 32-32s-14.3-32-32-32zm0-128c-17.7 0-32 14.3-32 32s14.3 32 32 32h384c17.7 0 32-14.3 32-32s-14.3-32-32-32z\"/></svg>";
 
         const iconRotateLeft = "<svg viewBox=\"0 0 640 640\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m88 256h144c9.7 0 18.5-5.8 22.2-14.8s1.7-19.3-5.2-26.2l-46.7-46.7c75.3-58.6 184.3-53.3 253.5 15.9 75 75 75 196.5 0 271.5s-196.5 75-271.5 0c-10.2-10.2-19-21.3-26.4-33-9.5-14.9-29.3-19.3-44.2-9.8s-19.3 29.3-9.8 44.2c9.8 15.6 21.5 30.4 35.1 43.9 100 100 262 100 362 0s100-262 0-362c-94.2-94.3-243.7-99.7-344.3-16.2l-51.7-51.8c-6.9-6.8-17.2-8.9-26.2-5.2s-14.8 12.5-14.8 22.2v144c0 13.3 10.7 24 24 24z\"/></svg>";
 
@@ -3090,7 +3157,15 @@ ${error.stack || error}`;
                 if (!document.getElementById(`${USERSCRIPT.ID}-styles`)) {
                     const style = document.createElement("style");
                     style.id = `${USERSCRIPT.ID}-styles`;
-                    style.textContent = variablesCss + resetCss + inputsCss + buttonsCss + widgetCss + previewCss;
+                    style.textContent = `
+        ${variablesCss}
+        ${resetCss}
+        ${inputsCss}
+        ${buttonsCss}
+        ${widgetCss}
+        ${previewCss}
+        ${loaderCss}
+      `;
                     document.head.appendChild(style);
                 }
             }
@@ -3103,7 +3178,7 @@ ${error.stack || error}`;
                 svgSprite.style.display = "none";
                 const rawIcons = {
                     "ds-logo": imageLogo,
-                    "ds-icon-move": iconMove,
+                    "ds-icon-grip-lines": iconGripLines,
                     "ds-icon-close": iconClose,
                     "ds-icon-bug": iconBug,
                     "ds-icon-chevron-down": iconChevronDown,

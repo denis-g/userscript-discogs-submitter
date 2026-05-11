@@ -1,15 +1,10 @@
-import type {
-  DiscogsPayload,
-  DiscogsPayloadData,
-  ReleaseData,
-  StoreAdapter,
-  StoreFormatOptions,
-} from '@/types';
+import type { DiscogsPayload, DiscogsPayloadData, ReleaseData, StoreAdapter, StoreFormatOptions } from '@/types';
 import { FILE_FORMATS, RELEASE_TYPES, USERSCRIPT } from '@/config';
 import { networkRequest, renderTemplate } from '@/core';
 import { DiscogsMapper } from '@/domain/mapper';
 import { ALLOWED_COUNTRIES, extractFormatFromTitle, normalizeCountry, normalizeLabel } from '@/domain/normalizers';
 import { Draggable, EditableHelper, UiSelect } from '@/ui';
+import coverTemplate from '@/ui/templates/cover.html?raw';
 import loaderTemplate from '@/ui/templates/loader.html?raw';
 import previewTemplate from '@/ui/templates/preview.html?raw';
 import widgetTemplate from '@/ui/templates/widget.html?raw';
@@ -32,11 +27,16 @@ export const PreviewRenderer = {
    *
    * @param release - The prepared preview data object (DiscogsPayloadData).
    * @param options - UI configuration (format, descriptions, etc.).
-   * @param domEl - Container where the preview will be rendered.
+   * @param domElement - Container where the preview will be rendered.
    * @param editedData - The full release data (including user edits) used to populate fields.
    * @returns A promise that resolves when the rendering is complete.
    */
-  releasePreview: async (release: DiscogsPayloadData, options: RenderOptions, domEl: HTMLElement, editedData: ReleaseData): Promise<void> => {
+  releasePreview: async (
+    release: DiscogsPayloadData,
+    options: RenderOptions,
+    domElement: HTMLElement,
+    editedData: ReleaseData,
+  ): Promise<void> => {
     const { selectedFormat, selectedDescriptions, formatText, supports } = options;
     const tracks = release.tracks || [];
     const hasTrackArtists = tracks.some(track => (track.artists || []).length > 0);
@@ -102,7 +102,7 @@ export const PreviewRenderer = {
       }),
     };
 
-    renderTemplate(previewTemplate, data, domEl, { replace: true });
+    renderTemplate(previewTemplate, data, domElement, { replace: true });
   },
 };
 
@@ -159,14 +159,23 @@ export class UiWidget {
 
     this.ui.widget = container;
     this.ui.header = container.querySelector('.discogs-submitter__header');
+    this.ui.cover = container.querySelector('.discogs-submitter__header__cover');
     this.ui.headerButtonMove = container.querySelector('.discogs-submitter__header .discogs-submitter__button.is-move');
-    this.ui.headerButtonClose = container.querySelector('.discogs-submitter__header .discogs-submitter__button.is-close');
+    this.ui.headerButtonClose = container.querySelector(
+      '.discogs-submitter__header .discogs-submitter__button.is-close',
+    );
     this.ui.status = container.querySelector('.discogs-submitter__status');
     this.ui.statusText = container.querySelector('.discogs-submitter__status__text');
-    this.ui.statusButtonDebug = container.querySelector('.discogs-submitter__status .discogs-submitter__button.is-debug');
-    this.ui.preview = container.querySelector('.discogs-submitter__preview');
-    this.ui.actionsButtonSubmit = container.querySelector('.discogs-submitter__actions .discogs-submitter__button.is-primary');
+    this.ui.statusButtonDebug = container.querySelector(
+      '.discogs-submitter__status .discogs-submitter__button.is-debug',
+    );
+    this.ui.content = container.querySelector('.discogs-submitter__content');
+    this.ui.actionsButtonSubmit = container.querySelector(
+      '.discogs-submitter__actions .discogs-submitter__button.is-primary',
+    );
     this.ui.loader = container.querySelector('.discogs-submitter__loader');
+
+    this.updateHeaderCover();
   }
 
   /**
@@ -202,8 +211,8 @@ export class UiWidget {
     this.state.lastRawData = null;
     this.state.editedData = null;
 
-    if (this.ui.preview) {
-      this.ui.preview.innerHTML = '';
+    if (this.ui.content) {
+      this.ui.content.innerHTML = '';
     }
 
     this.setStatus('Ready to parse...', 'info');
@@ -211,20 +220,50 @@ export class UiWidget {
     if (this.ui.actionsButtonSubmit) {
       this.ui.actionsButtonSubmit.setAttribute('hidden', 'true');
     }
+
+    this.updateHeaderCover();
+  }
+
+  /**
+   * Renders the header cover slot using the thumbnail URL from the current edited state.
+   * Falls back to the logo when no thumbnail is available.
+   */
+  private updateHeaderCover(): void {
+    if (!this.ui.cover) {
+      return;
+    }
+
+    renderTemplate(coverTemplate, { thumb: this.state.editedData?.thumb }, this.ui.cover, { replace: true });
   }
 
   /**
    * Toggles the loading indicator state.
    *
    * @param isActive - Whether the loader should be visible.
+   * @param label - Optional initial label shown inside the loader. Defaults to "Please wait...".
    */
-  private setLoader(isActive: boolean): void {
+  private setLoader(isActive: boolean, label: string = 'Please wait...'): void {
     if (this.ui.loader) {
       this.ui.loader.classList.toggle('is-loading', isActive);
 
       if (isActive) {
-        renderTemplate(loaderTemplate, { cover: this.state.editedData?.cover }, this.ui.loader, { replace: true });
+        renderTemplate(loaderTemplate, { thumb: this.state.editedData?.thumb, label }, this.ui.loader, {
+          replace: true,
+        });
       }
+    }
+  }
+
+  /**
+   * Updates the loader label in-place without re-rendering the loader DOM.
+   *
+   * @param message - The new label text.
+   */
+  private setLoaderLabel(message: string): void {
+    const labelElement = this.ui.loader?.querySelector('.discogs-submitter__loader__label');
+
+    if (labelElement) {
+      labelElement.textContent = message;
     }
   }
 
@@ -272,8 +311,8 @@ export class UiWidget {
       this.ui.actionsButtonSubmit.setAttribute('hidden', 'true');
     }
 
-    if (this.ui.preview) {
-      this.ui.preview.innerHTML = '';
+    if (this.ui.content) {
+      this.ui.content.innerHTML = '';
     }
 
     if (this.ui.status) {
@@ -288,9 +327,7 @@ export class UiWidget {
         data.country = 'Worldwide';
       }
       else {
-        data.country = ALLOWED_COUNTRIES.includes(data.country)
-          ? data.country
-          : normalizeCountry(data.country);
+        data.country = ALLOWED_COUNTRIES.includes(data.country) ? data.country : normalizeCountry(data.country);
       }
 
       const primaryArtistName = (data.artists?.[0]?.name || '').trim();
@@ -325,21 +362,16 @@ export class UiWidget {
 
       this.renderPayload();
 
-      const storeWarning = this.getStoreWarning();
-      const successMsg = storeWarning
-        ? `Parsed successfully! Ready to submit.<br />${storeWarning}`
-        : 'Parsed successfully! Ready to submit.';
-
-      this.setStatus(successMsg, 'success');
+      this.setStatus(this.getParsedStatusMessage(), 'success');
     }
     catch (error) {
       this.state.currentPayload = null;
       this.state.lastRawData = null;
       this.state.editedData = null;
 
-      const errMsg = (error as Error).message || String(error);
+      const errorMessage = (error as Error).message || String(error);
 
-      this.setStatus(errMsg, 'error');
+      this.setStatus(errorMessage, 'error');
 
       if (this.ui.status) {
         this.ui.status.dataset.rawJson = `URL: ${unsafeWindow.location.href}\nVersion: ${USERSCRIPT.VERSION}\nError Trace:\n${(error as Error).stack || error}`;
@@ -373,22 +405,33 @@ export class UiWidget {
       country: this.state.editedData.country || '',
     });
 
-    const previewObj = this.state.currentPayload._previewObject;
-    const rawJsonString = JSON.stringify(previewObj, null, 2);
+    const previewObject = this.state.currentPayload._previewObject;
+    const rawJsonString = JSON.stringify(previewObject, null, 2);
 
-    if (this.ui.preview) {
-      await PreviewRenderer.releasePreview(previewObj, {
-        selectedFormat: this.state.selectedFormat || 'WAV',
-        selectedDescriptions: this.state.selectedDescriptions,
-        formatText: this.state.formatText,
-        supports: this.state.currentDigitalStore.supports || { formats: [] },
-      }, this.ui.preview, this.state.editedData);
+    if (this.ui.content) {
+      await PreviewRenderer.releasePreview(
+        previewObject,
+        {
+          selectedFormat: this.state.selectedFormat || 'WAV',
+          selectedDescriptions: this.state.selectedDescriptions,
+          formatText: this.state.formatText,
+          supports: this.state.currentDigitalStore.supports || { formats: [] },
+        },
+        this.ui.content,
+        this.state.editedData,
+      );
 
-      // Initialize custom selects for Format, Description and Country
-      UiSelect.init(this.ui.preview.querySelector('.is-format'));
-      UiSelect.init(this.ui.preview.querySelector('.is-description'));
-      UiSelect.init(this.ui.preview.querySelector('.is-country'));
+      // Initialize custom selects
+      UiSelect.init(this.ui.content.querySelector('.is-format'));
+      UiSelect.init(this.ui.content.querySelector('.is-description'));
+      UiSelect.init(this.ui.content.querySelector('.is-country'));
     }
+
+    if (this.ui.widget && this.state.editedData.thumb) {
+      document.documentElement.style.setProperty('--ds-thumb-url', `url('${this.state.editedData.thumb}')`);
+    }
+
+    this.updateHeaderCover();
 
     if (this.ui.status) {
       this.ui.status.dataset.rawJson = rawJsonString;
@@ -453,10 +496,11 @@ export class UiWidget {
       return;
     }
 
-    this.setLoader(true);
-    this.setStatus('Sending to Discogs...', 'info');
+    this.ui.actionsButtonSubmit?.setAttribute('hidden', 'true');
+    this.setLoader(true, 'Sending to Discogs...');
 
-    this.ui.actionsButtonSubmit?.classList.add('is-disabled');
+    let coverUploadFailed = false;
+    let releaseId: number | null = null;
 
     try {
       const formData = new FormData();
@@ -464,20 +508,27 @@ export class UiWidget {
       formData.append('full_data', this.state.currentPayload.full_data);
       formData.append('sub_notes', this.state.currentPayload.sub_notes);
 
-      const jsonData = await networkRequest<{ id: number }>({
-        method: 'POST',
-        url: 'https://www.discogs.com/submission/release/create',
-        data: formData,
-        responseType: 'json',
-      });
+      const jsonData = await this.runSubmitStep('Sending to Discogs...', () =>
+        networkRequest<{ id: number }>({
+          method: 'POST',
+          url: 'https://www.discogs.com/submission/release/create',
+          data: formData,
+          responseType: 'json',
+        }));
 
-      if (jsonData?.id) {
-        if (this.state.editedData?.cover) {
-          this.setStatus('Draft created. Uploading cover image...', 'info');
+      if (!jsonData?.id) {
+        throw new Error('Response missing release ID');
+      }
 
-          try {
+      releaseId = jsonData.id;
+
+      if (this.state.editedData?.cover) {
+        const coverUrl = this.state.editedData.cover;
+
+        try {
+          await this.runSubmitStep('Draft created. Uploading cover image...', async () => {
             const coverBlob = await networkRequest<Blob>({
-              url: this.state.editedData.cover,
+              url: coverUrl,
               method: 'GET',
               responseType: 'blob',
             });
@@ -488,62 +539,95 @@ export class UiWidget {
 
             await networkRequest({
               method: 'POST',
-              url: `https://www.discogs.com/release/${jsonData.id}/images/upload`,
+              url: `https://www.discogs.com/release/${releaseId}/images/upload`,
               data: imageFormData,
             });
-
-            this.setStatus('Draft and cover uploaded successfully!<br /><strong><em>Please review your draft before publishing on Discogs!</em></strong>', 'success');
-
-            if (this.ui.actionsButtonSubmit) {
-              this.ui.actionsButtonSubmit.setAttribute('hidden', 'true');
-            }
-
-            GM_openInTab(`https://www.discogs.com/release/edit/${jsonData.id}`, true);
-
-            setTimeout(() => this.ui.widget?.classList.remove('is-open'), 5000);
-          }
-          catch (imageError) {
-            console.error('[Discogs Submitter] Cover upload failed:', imageError);
-
-            this.setStatus(`Draft created, but cover upload failed!<br /><strong><em>Please review your draft before publishing on Discogs!</em></strong>`, 'warning');
-
-            if (this.ui.actionsButtonSubmit) {
-              this.ui.actionsButtonSubmit.setAttribute('hidden', 'true');
-            }
-
-            GM_openInTab(`https://www.discogs.com/release/edit/${jsonData.id}`, true);
-          }
+          });
         }
-        else {
-          this.setStatus(`Draft successfully created! ID: ${jsonData.id}.<br /><strong><em>Please review your draft before publishing on Discogs!</em></strong>`, 'success');
+        catch (imageError) {
+          console.error('[Discogs Submitter] Cover upload failed:', imageError);
 
-          if (this.ui.actionsButtonSubmit) {
-            this.ui.actionsButtonSubmit.setAttribute('hidden', 'true');
-          }
-
-          GM_openInTab(`https://www.discogs.com/release/edit/${jsonData.id}`, true);
-
-          setTimeout(() => this.ui.widget?.classList.remove('is-open'), 5000);
+          coverUploadFailed = true;
         }
       }
+
+      GM_openInTab(`https://www.discogs.com/release/edit/${releaseId}`, true);
+
+      if (coverUploadFailed) {
+        this.setStatus(
+          `Draft created, but cover upload failed!<br /><strong><em>Please review your draft before publishing on Discogs!</em></strong>`,
+          'warning',
+        );
+      }
       else {
-        throw new Error('Response missing release ID');
+        this.restoreReadyState();
       }
     }
     catch (error) {
-      let errMsg = (error as Error).message || String(error);
+      let errorMessage = (error as Error).message || String(error);
 
-      if (errMsg.includes('404')) {
-        errMsg = 'This usually means you are not logged in or use Containers, Incognito, or strict tracking protection.';
+      if (errorMessage.includes('404')) {
+        errorMessage
+          = 'This usually means you are not logged in or use Containers, Incognito, or strict tracking protection.';
       }
 
-      this.setStatus(`Failed to create Discogs draft:<br />${errMsg}`, 'error');
+      this.setStatus(`Failed to create Discogs draft:<br />${errorMessage}`, 'error');
     }
     finally {
       this.setLoader(false);
 
-      this.ui.actionsButtonSubmit?.classList.remove('is-disabled');
+      this.ui.actionsButtonSubmit?.removeAttribute('hidden');
     }
+  }
+
+  /**
+   * Runs a submission stage with its label shown in the loader for a guaranteed minimum duration.
+   * Prevents rapid messages from flashing past the user when the underlying network call is fast.
+   *
+   * @template T - Return type of the awaited operation.
+   * @param message - The label to display in the loader for the duration of this step.
+   * @param operation - The async operation to execute.
+   * @returns The resolved value of the operation.
+   */
+  private async runSubmitStep<T>(message: string, operation: () => Promise<T>): Promise<T> {
+    const MIN_DURATION_MS = 5000;
+
+    this.setLoaderLabel(message);
+
+    const startTime = Date.now();
+    const result = await operation();
+    const elapsed = Date.now() - startTime;
+
+    if (elapsed < MIN_DURATION_MS) {
+      await new Promise<void>(resolve => setTimeout(resolve, MIN_DURATION_MS - elapsed));
+    }
+
+    return result;
+  }
+
+  /**
+   * Builds the "ready to submit" status message, including any store-specific warning.
+   *
+   * @returns The HTML message shown after a successful parse.
+   */
+  private getParsedStatusMessage(): string {
+    const storeWarning = this.getStoreWarning();
+
+    return storeWarning
+      ? `Parsed successfully! Ready to submit.<br />${storeWarning}`
+      : 'Parsed successfully! Ready to submit.';
+  }
+
+  /**
+   * Restores the post-parse "ready to submit" status after a submission completes.
+   * No-op if there is no parsed data (e.g., widget was reset).
+   */
+  private restoreReadyState(): void {
+    if (!this.state.lastRawData) {
+      return;
+    }
+
+    this.setStatus(this.getParsedStatusMessage(), 'success');
   }
 
   /**
@@ -581,9 +665,10 @@ export class UiWidget {
       await this.renderPayload();
     }
     else if (target.classList.contains('is-edit') && this.state.editedData) {
-      const value = (target.contentEditable === 'plaintext-only' || target.contentEditable === 'true')
-        ? target.textContent?.trim() || ''
-        : (target as HTMLInputElement | HTMLTextAreaElement).value;
+      const value
+        = target.contentEditable === 'plaintext-only' || target.contentEditable === 'true'
+          ? target.textContent?.trim() || ''
+          : (target as HTMLInputElement | HTMLTextAreaElement).value;
 
       this.updateEditedData(target, value);
       await this.renderPayload();
@@ -593,19 +678,19 @@ export class UiWidget {
   /**
    * Resolves the full data path from element attributes.
    *
-   * @param el - The element containing path metadata.
+   * @param element - The element containing path metadata.
    * @returns The resolved dot-notation path.
    */
-  private getResolvedPath(el: HTMLElement): string {
-    const field = el.dataset.field;
+  private getResolvedPath(element: HTMLElement): string {
+    const field = element.dataset.field;
 
     if (!field) {
       return '';
     }
 
-    const indexStr = el.dataset.index;
-    const indices = indexStr ? indexStr.split('|').map(v => Number.parseInt(v, 10)) : [];
-    const subindex = el.dataset.subindex ? Number.parseInt(el.dataset.subindex, 10) : null;
+    const indexStr = element.dataset.index;
+    const indices = indexStr ? indexStr.split('|').map(segment => Number.parseInt(segment, 10)) : [];
+    const subindex = element.dataset.subindex ? Number.parseInt(element.dataset.subindex, 10) : null;
 
     // Special case: formatText is in state, not editedData
     if (field === 'formatText') {
@@ -636,11 +721,11 @@ export class UiWidget {
   /**
    * Updates the edited state using a path-based mechanism.
    *
-   * @param el - The element that triggered the update.
+   * @param element - The element that triggered the update.
    * @param value - The new value.
    */
-  private updateEditedData(el: HTMLElement, value: string): void {
-    const path = this.getResolvedPath(el);
+  private updateEditedData(element: HTMLElement, value: string): void {
+    const path = this.getResolvedPath(element);
 
     if (!path || !this.state.editedData) {
       return;
@@ -690,10 +775,10 @@ export class UiWidget {
   /**
    * Restores original parsed data for a specific field.
    *
-   * @param el - The element that triggered the restore.
+   * @param element - The element that triggered the restore.
    */
-  private async handleRestore(el: HTMLElement): Promise<void> {
-    const path = this.getResolvedPath(el);
+  private async handleRestore(element: HTMLElement): Promise<void> {
+    const path = this.getResolvedPath(element);
 
     if (!path || !this.state.lastRawData || !this.state.editedData) {
       return;
@@ -706,9 +791,10 @@ export class UiWidget {
       const oldValue = getValueByPath(this.state.editedData, path);
       const originalValue = getValueByPath(this.state.lastRawData, path);
       // For objects (like entire tracks), we need deep copy
-      const valueToRestore = (typeof originalValue === 'object' && originalValue !== null)
-        ? JSON.parse(JSON.stringify(originalValue))
-        : originalValue;
+      const valueToRestore
+        = typeof originalValue === 'object' && originalValue !== null
+          ? JSON.parse(JSON.stringify(originalValue))
+          : originalValue;
 
       setValueByPath(this.state.editedData, path, valueToRestore);
 
@@ -726,9 +812,9 @@ export class UiWidget {
   private bindEvents(): void {
     this.ui.headerButtonClose?.addEventListener('click', () => this.ui.widget?.classList.remove('is-open'));
 
-    this.ui.preview?.addEventListener('change', event => void this.handlePreviewChange(event));
+    this.ui.content?.addEventListener('change', event => void this.handlePreviewChange(event));
 
-    this.ui.preview?.addEventListener('click', async (event) => {
+    this.ui.content?.addEventListener('click', async (event) => {
       const target = event.target as HTMLElement;
       const fieldButton = target.closest('.discogs-submitter__results__field .discogs-submitter__button');
 
@@ -738,30 +824,34 @@ export class UiWidget {
     });
 
     // Contenteditable handlers using utility
-    this.ui.preview?.addEventListener('keydown', (event) => {
+    this.ui.content?.addEventListener('keydown', (event) => {
       if ((event.target as HTMLElement).classList.contains('is-edit')) {
         EditableHelper.handleKeydown(event);
       }
     });
 
-    this.ui.preview?.addEventListener('keyup', (event) => {
+    this.ui.content?.addEventListener('keyup', (event) => {
       if ((event.target as HTMLElement).classList.contains('is-edit')) {
         event.stopPropagation();
       }
     });
 
-    this.ui.preview?.addEventListener('paste', (event) => {
+    this.ui.content?.addEventListener('paste', (event) => {
       if ((event.target as HTMLElement).classList.contains('is-edit')) {
         EditableHelper.handlePaste(event);
       }
     });
 
     // Trigger handlePreviewChange on blur for contenteditable
-    this.ui.preview?.addEventListener('blur', (event) => {
-      if ((event.target as HTMLElement).classList.contains('is-edit')) {
-        void this.handlePreviewChange(event);
-      }
-    }, true);
+    this.ui.content?.addEventListener(
+      'blur',
+      (event) => {
+        if ((event.target as HTMLElement).classList.contains('is-edit')) {
+          void this.handlePreviewChange(event);
+        }
+      },
+      true,
+    );
 
     this.ui.statusButtonDebug?.addEventListener('click', () => this.handleDebugCopy());
     this.ui.actionsButtonSubmit?.addEventListener('click', () => this.handleSubmit());

@@ -14,8 +14,12 @@ describe('bandcamp provider', () => {
       </div>
       <table id="track_table">
         <tr class="track_row_view">
-          <td class="track-title">Track One</td>
+          <td class="title"><span>Track One</span></td>
           <td class="time">5:00</td>
+        </tr>
+        <tr class="track_row_view">
+          <td class="title"><a href="#">Track Two</a></td>
+          <td class="time">4:00</td>
         </tr>
       </table>
       <div class="tralbum-credits">
@@ -29,9 +33,11 @@ describe('bandcamp provider', () => {
     expect(result.artists[0].name).toBe('Artist Name');
     expect(result.label).toBe('Label Name');
     expect(result.released).toBe('2026-04-13');
-    expect(result.tracks).toHaveLength(1);
+    expect(result.tracks).toHaveLength(2);
     expect(result.tracks[0].title).toBe('Track One');
     expect(result.tracks[0].duration).toBe('5:00');
+    expect(result.tracks[1].title).toBe('Track Two');
+    expect(result.tracks[1].duration).toBe('4:00');
   });
 
   it('should handle missing label by falling back to publisher', async () => {

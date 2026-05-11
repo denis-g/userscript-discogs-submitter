@@ -119,7 +119,7 @@ export const DiscogsMapper = {
         duration: track.duration || '',
       })),
       notes: data.notes ?? infoBpm,
-      submissionNotes: data.submissionNotes || `${sourceUrl}\n---\nA digital release in ${format} format has been added.`,
+      submissionNotes: data.submissionNotes || `${sourceUrl}\n---\nA digital release has been added.`,
     };
 
     return {

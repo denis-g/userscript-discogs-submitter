@@ -1,17 +1,18 @@
 :root {
-  --ds-gap: 20px;
-  --ds-radius: 12px;
-  --ds-color-white: #fafafa;
-  --ds-color-black: #212121;
-  --ds-color-gray: #666;
-  --ds-color-gray-dark: #333;
-  --ds-color-gray-medium: #c7c7c7;
-  --ds-color-gray-light: #eee;
-  --ds-color-primary: #148a66;
-  --ds-color-success: #28a745;
-  --ds-color-error: #dc3545;
-  --ds-color-warning: #ffc107;
-  --ds-color-info: #17a2b8;
   --ds-font-sans: 'Helvetica Neue', Helvetica, Arial, sans-serif;
   --ds-font-monospace: 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  --ds-gap: 20px;
+  --ds-radius: 12px;
+
+  --ds-color-primary: 20, 138, 102;
+  --ds-color-success: 40, 167, 69;
+  --ds-color-error: 220, 53, 69;
+  --ds-color-warning: 255, 193, 7;
+  --ds-color-info: 23, 162, 184;
+
+  --ds-color-white: 255, 255, 255;
+  --ds-color-black: 0, 0, 0;
+
+  --ds-palette-secondary-color: var(--ds-color-black);
+  --ds-palette-primary-color: var(--ds-color-white);
 }

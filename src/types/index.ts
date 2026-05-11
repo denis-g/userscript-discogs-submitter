@@ -140,6 +140,8 @@ export interface DiscogsPayloadData {
  * The standardized raw release data parsed from a digital store.
  */
 export interface ReleaseData {
+  /** The direct URL to the thumbnail cover image. */
+  thumb: string | null;
   /** The direct URL to the full-resolution cover image. */
   cover: string | null;
   /** The overall release title. */

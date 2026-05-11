@@ -10,7 +10,7 @@
  * console.log(isBandcamp('https://artist.bandcamp.com/album')); // true
  * ```
  */
-export function matchUrls(...patterns: string[]): (_url: string) => boolean {
+export function matchUrls(...patterns: string[]): (url: string) => boolean {
   const regexes = patterns.map(pattern =>
     new RegExp(`^${pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\\*/g, '.*')}$`, 'i'),
   );
@@ -26,8 +26,8 @@ export function matchUrls(...patterns: string[]): (_url: string) => boolean {
  *
  * @example
  * ```typescript
- * const id = getReleaseIdFromUrl('https://example.com/release/title/12345');
- * console.log(id); // '12345'
+ * const identifier = getReleaseIdFromUrl('https://example.com/release/title/12345');
+ * console.log(identifier); // '12345'
  * ```
  */
 export function getReleaseIdFromUrl(url: string = unsafeWindow.location.href): string | null {

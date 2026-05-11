@@ -10,6 +10,23 @@ export default antfu(
     stylistic: {
       indent: 2,
       semi: true,
+      overrides: {
+        'style/max-len': ['off'],
+      },
+    },
+    formatters: {
+      css: true,
+      prettierOptions: {
+        printWidth: 120,
+        plugins: ['prettier-plugin-css-order'],
+        overrides: [{
+          files: ['src/**/*.css'],
+          options: {
+            cssDeclarationSorterOrder: 'frakto',
+            cssDeclarationSorterKeepOverrides: false,
+          },
+        }],
+      },
     },
     jsonc: true,
     markdown: true,
@@ -22,7 +39,7 @@ export default antfu(
   },
   {
     files: [
-      'src/**/*',
+      'src/**/*.{js,ts}',
     ],
     languageOptions: {
       globals: {
@@ -33,10 +50,16 @@ export default antfu(
       },
     },
     rules: {
-      // some regexes are dynamic by design
+      // Increase max-len to 999 for code and 120 for comments
+      'style/max-len': [
+        'error',
+        { code: 999, comments: 120 },
+      ],
+      // Disable prefer-static-regex
       'e18e/prefer-static-regex': 'off',
-      // personal preferences
+      // Always use curly braces for all control flow statements
       'curly': ['error', 'all'],
+      // Always use consistent spacing around statements
       '@stylistic/padding-line-between-statements': [
         'error',
         { blankLine: 'always', prev: '*', next: ['class', 'const', 'export', 'import', 'let', 'var'] },

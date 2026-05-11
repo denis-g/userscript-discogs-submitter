@@ -135,6 +135,7 @@ export const bandcamp: StoreAdapter = {
   },
 
   parse: async () => {
+    const smallCover = getTextFromTag('a.popupImage img', null, 'src');
     const albumCover = getTextFromTag('a.popupImage', null, 'href');
     const albumExtraArtists: ArtistCredit[] = [];
     const about = getManyTextFromTags('.tralbum-about', null, true);
@@ -157,7 +158,7 @@ export const bandcamp: StoreAdapter = {
     const albumTracks: TrackData[] = Array.from(document.querySelectorAll('#track_table .track_row_view')).map((track, index) => {
       const trackPosition = `${index + 1}`;
       const trackExtraArtists: ArtistCredit[] = [];
-      const { artists: trackArtists, title: trackTitle, bpm: trackBpm } = splitArtistTitle(getTextFromTag('.track-title', track), albumArtists, trackExtraArtists);
+      const { artists: trackArtists, title: trackTitle, bpm: trackBpm } = splitArtistTitle(getTextFromTag('.title > span, .title > a', track), albumArtists, trackExtraArtists);
       const trackDuration = normalizeDuration(getTextFromTag('.time, .time.secondaryText', track));
 
       return {
@@ -204,6 +205,7 @@ export const bandcamp: StoreAdapter = {
     }
 
     return {
+      thumb: smallCover,
       cover: albumCover,
       extraartists: albumExtraArtists,
       artists: albumArtists,

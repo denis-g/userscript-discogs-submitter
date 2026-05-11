@@ -3,7 +3,7 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 /**
  * Normalizes various raw date strings into standard `YYYY-MM-DD` or `YYYY` formats.
  *
- * Supports patterns from specific stores (e.g. Bandcamp's `DD Mmm YYYY`, 7digital's `DD/MM/YYYY`, Juno's `DD Mmm, YYYY`).
+ * Supports patterns from specific stores (e.g. Bandcamp's `DD Mmm YYYY`).
  *
  * @param date - The raw date string scraped from a store.
  * @returns A normalized date string, or null if the input is falsy. Falls back to original string if no patterns match.

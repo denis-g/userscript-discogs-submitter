@@ -1,12 +1,18 @@
 .discogs-submitter {
+  font-weight: normal;
+  font-size: 14px;
+  line-height: 1.2;
+  font-family: var(--ds-font-sans) !important;
+  text-shadow: none;
+  text-transform: none;
+
   *,
   *::after,
   *::before {
-    color-scheme: light;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeLegibility;
     box-sizing: border-box;
+    text-rendering: optimizeLegibility;
   }
 
   a {

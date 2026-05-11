@@ -13,7 +13,11 @@ import { cleanString } from '@/utils';
  * const texts = getManyTextFromTags('.artist-name');
  * ```
  */
-export function getManyTextFromTags(target: string, parent: HTMLElement | Document | Element | null = null, keepNewlines = false): string[] {
+export function getManyTextFromTags(
+  target: string,
+  parent: HTMLElement | Document | Element | null = null,
+  keepNewlines = false,
+): string[] {
   const context = parent || document;
   const results = Array.from(context.querySelectorAll(target));
 
@@ -22,8 +26,8 @@ export function getManyTextFromTags(target: string, parent: HTMLElement | Docume
       if (keepNewlines) {
         const clone = element.cloneNode(true) as HTMLElement;
 
-        clone.querySelectorAll('br').forEach((br) => {
-          br.replaceWith('\n');
+        clone.querySelectorAll('br').forEach((breakElement) => {
+          breakElement.replaceWith('\n');
         });
 
         return cleanString(clone.textContent, false);
@@ -41,7 +45,7 @@ export function getManyTextFromTags(target: string, parent: HTMLElement | Docume
  * @param parent - The contextual node to query inside. Defaults to `document`.
  * @param attribute - Specific attribute to extract instead of text content (e.g. `href`, `content`).
  * @param keepNewlines - Preserves `<br>` tags by replacing them with `\n` before extracting (default: false).
- * @param visible - Whether to only extract visible elements (default: false).
+ * @param visible - Whether to only extract text from immediate child text nodes (default: false).
  * @returns The extracted and cleaned string, or null if the element is missing or empty.
  *
  * @example
@@ -49,7 +53,13 @@ export function getManyTextFromTags(target: string, parent: HTMLElement | Docume
  * const url = getTextFromTag('meta[property="og:image"]', document, 'content');
  * ```
  */
-export function getTextFromTag(target: string, parent: HTMLElement | Document | Element | ShadowRoot | null = null, attribute = '', keepNewlines = false, visible = false): string | null {
+export function getTextFromTag(
+  target: string,
+  parent: HTMLElement | Document | Element | ShadowRoot | null = null,
+  attribute = '',
+  keepNewlines = false,
+  visible = false,
+): string | null {
   const context = parent || document;
   const result = context.querySelector(target);
   let output = null;
@@ -69,8 +79,8 @@ export function getTextFromTag(target: string, parent: HTMLElement | Document | 
   if (keepNewlines) {
     const clone = result.cloneNode(true) as HTMLElement;
 
-    clone.querySelectorAll('br').forEach((br) => {
-      br.replaceWith('\n');
+    clone.querySelectorAll('br').forEach((breakElement) => {
+      breakElement.replaceWith('\n');
     });
 
     elementToProcess = clone;

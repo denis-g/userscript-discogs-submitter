@@ -73,6 +73,7 @@ export const amazonmusic: StoreAdapter = {
     }
 
     return {
+      thumb: albumCover,
       cover: albumCover,
       extraartists: albumExtraArtists,
       artists: albumArtists,

@@ -4,6 +4,7 @@ import { InjectButton, UiWidget } from '@/ui';
 
 import buttonsCss from '@/ui/assets/css/buttons.css?inline';
 import inputsCss from '@/ui/assets/css/inputs.css?inline';
+import loaderCss from '@/ui/assets/css/loader.css?inline';
 import previewCss from '@/ui/assets/css/preview.css?inline';
 import resetCss from '@/ui/assets/css/reset.css?inline';
 import variablesCss from '@/ui/assets/css/variables.css?inline';
@@ -11,7 +12,7 @@ import widgetCss from '@/ui/assets/css/widget.css?inline';
 import iconBug from '@/ui/assets/images/icons/bug.svg?raw';
 import iconChevronDown from '@/ui/assets/images/icons/chevron-down.svg?raw';
 import iconClose from '@/ui/assets/images/icons/close.svg?raw';
-import iconMove from '@/ui/assets/images/icons/move.svg?raw';
+import iconGripLines from '@/ui/assets/images/icons/grip-lines.svg?raw';
 import iconRotateLeft from '@/ui/assets/images/icons/rotate-left.svg?raw';
 import iconSquareCheck from '@/ui/assets/images/icons/square-check.svg?raw';
 import imageLogo from '@/ui/assets/images/logo.svg?raw';
@@ -54,7 +55,15 @@ class Widget {
       const style = document.createElement('style');
 
       style.id = `${USERSCRIPT.ID}-styles`;
-      style.textContent = variablesCss + resetCss + inputsCss + buttonsCss + widgetCss + previewCss;
+      style.textContent = `
+        ${variablesCss}
+        ${resetCss}
+        ${inputsCss}
+        ${buttonsCss}
+        ${widgetCss}
+        ${previewCss}
+        ${loaderCss}
+      `;
 
       document.head.appendChild(style);
     }
@@ -75,7 +84,7 @@ class Widget {
 
     const rawIcons: Record<string, string> = {
       'ds-logo': imageLogo,
-      'ds-icon-move': iconMove,
+      'ds-icon-grip-lines': iconGripLines,
       'ds-icon-close': iconClose,
       'ds-icon-bug': iconBug,
       'ds-icon-chevron-down': iconChevronDown,

@@ -32,7 +32,7 @@ export class Draggable {
   /**
    * Extracts coordinates from mouse or touch event.
    */
-  private getCoords(event: MouseEvent | TouchEvent): { x: number; y: number } {
+  private getCoordinates(event: MouseEvent | TouchEvent): { x: number; y: number } {
     if ('touches' in event && event.touches.length > 0) {
       return {
         x: (event as TouchEvent).touches[0].pageX,
@@ -61,11 +61,11 @@ export class Draggable {
 
     this.onStateChange?.(true);
 
-    const coords = this.getCoords(event);
-    const rect = this.element.getBoundingClientRect();
+    const coordinates = this.getCoordinates(event);
+    const rectangle = this.element.getBoundingClientRect();
 
-    this.offset.x = coords.x - rect.left;
-    this.offset.y = coords.y - rect.top;
+    this.offset.x = coordinates.x - rectangle.left;
+    this.offset.y = coordinates.y - rectangle.top;
 
     document.addEventListener('mousemove', this.handleMouseMove);
     document.addEventListener('touchmove', this.handleMouseMove, { passive: false });
@@ -81,10 +81,10 @@ export class Draggable {
       return;
     }
 
-    const coords = this.getCoords(event);
-    const rootRect = this.element.getBoundingClientRect();
-    const left = Math.min(Math.max(0, coords.x - this.offset.x), window.innerWidth - rootRect.width);
-    const top = Math.min(Math.max(0, coords.y - this.offset.y), window.innerHeight - rootRect.height);
+    const coordinates = this.getCoordinates(event);
+    const rootRectangle = this.element.getBoundingClientRect();
+    const left = Math.min(Math.max(0, coordinates.x - this.offset.x), window.innerWidth - rootRectangle.width);
+    const top = Math.min(Math.max(0, coordinates.y - this.offset.y), window.innerHeight - rootRectangle.height);
 
     this.element.style.left = `${left}px`;
     this.element.style.top = `${top}px`;

@@ -1,19 +1,4 @@
-/**
- * Traverses an object via dot-notation path.
- *
- * @param object - Base object that contains the data.
- * @param props - Dot-separated path (e.g. "user.address.city").
- * @returns The resolved value or `undefined` if any segment is missing.
- *
- * @example
- * ```typescript
- * const data = { user: { name: 'John' } };
- * const name = chainProps(data, 'user.name'); // 'John'
- * ```
- */
-function chainProps(object: any, props: string): any {
-  return !props ? object : props.split('.').reduce((o, k) => o?.[k], object);
-}
+import { getValueByPath } from '@/utils';
 
 const EVENT_NAME_RE = /^[A-Z][\w-]*$/i;
 const HANDLER_NAME_RE = /^[A-Z_$][\w$]*$/i;
@@ -86,7 +71,9 @@ function bindCollectedEvents(bindings: EventBinding[], events: Record<string, Ev
 
   // Validate all handlers before mutating the rendered tree.
   for (const { handlerName } of bindings) {
-    if (typeof events[handlerName] !== 'function' && typeof (events[handlerName] as any)?.handleEvent !== 'function') {
+    const handler = events[handlerName] as EventListenerOrEventListenerObject | undefined;
+
+    if (typeof handler !== 'function' && typeof (handler as EventListenerObject | undefined)?.handleEvent !== 'function') {
       throw new TypeError(`Missing event handler: ${handlerName}`);
     }
   }
@@ -129,12 +116,7 @@ function bindCollectedEvents(bindings: EventBinding[], events: Record<string, Ev
  * renderTemplate(template, { name: 'World' }, document.body);
  * ```
  */
-export function renderTemplate(
-  template: HTMLTemplateElement | string,
-  data: any,
-  domElement: HTMLElement,
-  { replace = false, events }: RenderOptions = {},
-): void {
+export function renderTemplate(template: HTMLTemplateElement | string, data: any, domElement: HTMLElement, { replace = false, events }: RenderOptions = {}): void {
   // Optionally clear existing content
   if (replace) {
     domElement.textContent = '';
@@ -200,7 +182,7 @@ const processIf: DirectiveProcessor = (element, context, walk, eventBindings) =>
     expression = expression.slice(1).trim();
   }
 
-  const rawValue = chainProps(context, expression);
+  const rawValue = getValueByPath(context, expression);
   let condition = Boolean(rawValue);
 
   if (invert) {
@@ -254,7 +236,7 @@ const processLoop: DirectiveProcessor = (element, context, walk, eventBindings) 
   }
 
   const loopExpression = element.dataset.loop;
-  const source = chainProps(context, loopExpression);
+  const source = getValueByPath(context, loopExpression);
   const processItem = (itemContext: any) => {
     const clone = element.cloneNode(true) as HTMLElement;
 
@@ -336,7 +318,7 @@ const processStyle: DirectiveProcessor = (element, context) => {
 
   element.dataset.style.split('|').forEach((pair) => {
     const [property, path] = pair.split(':');
-    const value = chainProps(context, path);
+    const value = getValueByPath(context, path);
 
     if (value != null) {
       element.style.setProperty(property, String(value));
@@ -361,7 +343,7 @@ const processAttr: DirectiveProcessor = (element, context) => {
 
   element.dataset.attr.split('|').forEach((binding) => {
     const [key, path] = binding.split(':');
-    const value = chainProps(context, path);
+    const value = getValueByPath(context, path);
 
     if (value != null) {
       if (key === 'class') {
@@ -396,7 +378,7 @@ const processText: DirectiveProcessor = (element, context) => {
   const path = element.dataset.text.trim();
   const value = path === ''
     ? (context && typeof context === 'object' && '_value' in context ? context._value : context)
-    : chainProps(context, path);
+    : getValueByPath(context, path);
 
   element.textContent = value != null ? String(value) : '';
 
@@ -444,7 +426,7 @@ const processVar: DirectiveProcessor = (element, context, walk, eventBindings) =
     const path = element.textContent?.trim() || '';
     const value = path === ''
       ? (context && typeof context === 'object' && '_value' in context ? context._value : context)
-      : chainProps(context, path);
+      : getValueByPath(context, path);
 
     element.replaceWith(document.createTextNode(value != null ? String(value) : ''));
 

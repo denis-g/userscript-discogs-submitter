@@ -6,20 +6,39 @@ import { networkRequest } from '@/core';
 import { normalizeArtists, normalizeDuration, normalizeMainArtists, normalizeReleaseDate, normalizeTitle } from '@/domain/normalizers';
 import { cleanString, getReleaseIdFromUrl, getTextFromTag, matchUrls } from '@/utils';
 
+interface JunoArtist {
+  name: string;
+}
+
+interface JunoLabel {
+  name: string;
+}
+
+interface JunoTrackItem {
+  releaseArtists: JunoArtist[];
+  releaseTitle: string;
+  label: JunoLabel;
+  artists: JunoArtist[];
+  title: string;
+  version: string;
+  length: string;
+  bpm?: number;
+}
+
 /**
  * Fetches playlist details array from JunoDownload API.
  *
  * @returns Array of parsed track items.
  */
-async function getData() {
+async function getData(): Promise<JunoTrackItem[]> {
   const releaseId = getReleaseIdFromUrl();
 
   if (!releaseId) {
     throw new Error(`[Discogs Submitter] Release ID not found`);
   }
 
-  const response = await networkRequest<{ items: any[] }>({
-    url: `https://www.junodownload.com/api/1.2/playlist/getplaylistdetails/?product_key=${releaseId}&output_type=json`,
+  const response = await networkRequest<{ items: JunoTrackItem[] }>({
+    url: `https://www.junodownload.com/api/1.2/playlist/getplaylistdetails/?product_key=${releaseId}&limit=100&output_type=json`,
     method: 'GET',
     responseType: 'json',
   });
@@ -50,9 +69,10 @@ export const junodownload: StoreAdapter = {
 
   parse: async () => {
     const data = await getData();
+    const smallCover = getTextFromTag('.product-image-for-modal', null, 'src');
     const albumCover = getTextFromTag('.product-image-for-modal', null, 'data-src-full');
     const albumExtraArtists: ArtistCredit[] = [];
-    const albumArtists = normalizeMainArtists(data[0].releaseArtists.map((item: any) => item.name), albumExtraArtists);
+    const albumArtists = normalizeMainArtists(data[0].releaseArtists.map(artist => artist.name), albumExtraArtists);
     const albumTitle = normalizeTitle(data[0].releaseTitle, albumExtraArtists);
     const albumLabel = data[0].label.name;
     const albumReleased = normalizeReleaseDate(getTextFromTag('#product-page-digi [itemprop="datePublished"]'));
@@ -72,10 +92,10 @@ export const junodownload: StoreAdapter = {
       return false;
     });
 
-    const albumTracks = data.map((track: any, index: number) => {
+    const albumTracks = data.map((track, index) => {
       const trackPosition = `${index + 1}`;
       const trackExtraArtists: ArtistCredit[] = [];
-      const trackArtists = normalizeArtists(track.artists.map((item: any) => item.name), trackExtraArtists);
+      const trackArtists = normalizeArtists(track.artists.map(artist => artist.name), trackExtraArtists);
       const trackTitle = normalizeTitle(track.version ? `${track.title} (${track.version})` : track.title, trackExtraArtists);
       const trackDuration = normalizeDuration(track.length);
       const trackBpm = track.bpm;
@@ -91,6 +111,7 @@ export const junodownload: StoreAdapter = {
     });
 
     return {
+      thumb: smallCover,
       cover: albumCover,
       extraartists: albumExtraArtists,
       artists: albumArtists,

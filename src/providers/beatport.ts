@@ -6,6 +6,40 @@ import { networkRequest } from '@/core';
 import { normalizeArtists, normalizeMainArtists, normalizeTitle } from '@/domain/normalizers';
 import { getReleaseIdFromUrl, matchUrls } from '@/utils';
 
+interface BeatportArtist {
+  name: string;
+}
+
+interface BeatportLabel {
+  name: string;
+}
+
+interface BeatportImage {
+  dynamic_uri: string;
+  uri: string;
+}
+
+interface BeatportTrack {
+  name: string;
+  mix_name: string;
+  artists: BeatportArtist[];
+  length: string;
+  bpm: number;
+}
+
+interface BeatportRelease {
+  image: BeatportImage;
+  artists: BeatportArtist[];
+  name: string;
+  label: BeatportLabel;
+  catalog_number: string;
+  publish_date: string;
+}
+
+interface BeatportReleaseData extends BeatportRelease {
+  tracks: BeatportTrack[];
+}
+
 /**
  * Fetches required tokens and loads store metadata arrays via API endpoints.
  *
@@ -13,7 +47,7 @@ import { getReleaseIdFromUrl, matchUrls } from '@/utils';
  * @throws {Error} When the release ID cannot be extracted from the URL.
  * @throws {Error} When the anonymous access token request fails.
  */
-async function getData() {
+async function getData(): Promise<BeatportReleaseData> {
   const releaseId = getReleaseIdFromUrl();
 
   if (!releaseId) {
@@ -32,14 +66,14 @@ async function getData() {
   }
 
   const [meta, tracksResponse] = await Promise.all([
-    networkRequest<any>({
+    networkRequest<BeatportRelease>({
       url: `https://api.beatport.com/v4/catalog/releases/${releaseId}`,
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
       responseType: 'json',
     }),
-    networkRequest<{ results: any[] }>({
+    networkRequest<{ results: BeatportTrack[] }>({
       url: `https://api.beatport.com/v4/catalog/releases/${releaseId}/tracks?per_page=100`,
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -75,17 +109,18 @@ export const beatport: StoreAdapter = {
 
   parse: async () => {
     const data = await getData();
+    const smallCover = data.image.dynamic_uri?.replace('{w}', '350')?.replace('{h}', '350');
     const albumCover = data.image.uri;
     const albumExtraArtists: ArtistCredit[] = [];
-    const albumArtists = normalizeMainArtists(data.artists.map((artist: any) => artist.name), albumExtraArtists);
+    const albumArtists = normalizeMainArtists(data.artists.map(artist => artist.name), albumExtraArtists);
     const albumTitle = normalizeTitle(data.name, albumExtraArtists);
-    const albumLabel = data.label.name || null;
-    const labelNumber = data.catalog_number || null;
+    const albumLabel = data.label.name;
+    const labelNumber = data.catalog_number;
     const albumReleased = data.publish_date;
-    const albumTracks = data.tracks.map((track: any, index: number) => {
+    const albumTracks = data.tracks.map((track, index) => {
       const trackPosition = `${index + 1}`;
       const trackExtraArtists: ArtistCredit[] = [];
-      const trackArtists = normalizeArtists(track.artists.map((artist: any) => artist.name), trackExtraArtists);
+      const trackArtists = normalizeArtists(track.artists.map(artist => artist.name), trackExtraArtists);
       const trackTitle = normalizeTitle(track.mix_name !== '' ? `${track.name} (${track.mix_name})` : track.name, trackExtraArtists);
       const trackDuration = track.length;
       const trackBpm = track.bpm;
@@ -101,6 +136,7 @@ export const beatport: StoreAdapter = {
     });
 
     return {
+      thumb: smallCover,
       cover: albumCover,
       extraartists: albumExtraArtists,
       artists: albumArtists,

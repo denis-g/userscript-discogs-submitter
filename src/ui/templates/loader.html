@@ -1,6 +1,9 @@
-<var data-if="cover">
-  <img data-attr="src:cover" class="discogs-submitter__loader__cover" alt="Loading..." />
+<var data-if="thumb">
+  <img class="discogs-submitter__loader__cover" data-attr="src:thumb" alt="" />
 </var>
-<var data-if="!cover">
+
+<var data-if="!thumb">
   <svg class="discogs-submitter__loader__icon" aria-hidden="true"><use href="#ds-logo"></use></svg>
 </var>
+
+<div class="discogs-submitter__loader__label"><var>label</var></div>

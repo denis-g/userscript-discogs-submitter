@@ -1,20 +1,19 @@
-
 .discogs-submitter__results {
   display: flex;
   flex-wrap: wrap;
   gap: 0 var(--ds-gap);
-  font-family: var(--ds-font-monospace);
   font-size: 10px;
   line-height: normal;
+  font-family: var(--ds-font-monospace);
 }
 
 .discogs-submitter__results__row {
-  width: 100%;
   display: grid;
-  gap: calc(var(--ds-gap) / 2);
   grid-template-columns: 60px 1fr;
+  gap: calc(var(--ds-gap) / 2);
+  border-bottom: 1px dotted rgba(var(--ds-palette-secondary-color), 0.25);
   padding: 2px 0;
-  border-bottom: 1px dotted rgba(0, 0, 0, 0.2);
+  width: 100%;
 
   &.is-half {
     width: calc(50% - var(--ds-gap) / 2);
@@ -47,6 +46,7 @@
 }
 
 .discogs-submitter__results__head {
+  padding-top: 3px;
   font-weight: bold;
   text-align: right;
 }
@@ -56,10 +56,6 @@
   flex-direction: column;
   align-items: start;
   gap: calc(var(--ds-gap) / 6);
-
-  a {
-    color: var(--ds-color-primary);
-  }
 
   small {
     font-size: 9px;

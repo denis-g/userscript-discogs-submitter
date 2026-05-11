@@ -36,6 +36,7 @@ export const bleep: StoreAdapter = {
     const albumMainArtistsSource = albumMainArtistsRaw.length > 0
       ? albumMainArtistsRaw
       : getTextFromTag('.product-page .product-details .artist a');
+    const smallCover = getTextFromTag('.product-page .main-product-image img', null, 'src')?.replace('/b/', '/s/') || null;
     const albumCover = getTextFromTag('.product-page .main-product-image img', null, 'src');
     const albumExtraArtists: ArtistCredit[] = [];
     const albumArtists = normalizeMainArtists(albumMainArtistsSource, albumExtraArtists);
@@ -55,7 +56,7 @@ export const bleep: StoreAdapter = {
       // Handle featured artists
       if (trackFeaturedArtists.length > 0) {
         normalizeArtists(trackFeaturedArtists).forEach((artist) => {
-          if (!trackExtraArtists.some(ea => ea.name === artist.name && ea.role === 'Featuring')) {
+          if (!trackExtraArtists.some(extraArtist => extraArtist.name === artist.name && extraArtist.role === 'Featuring')) {
             trackExtraArtists.push({ ...artist, role: 'Featuring' });
           }
         });
@@ -73,13 +74,14 @@ export const bleep: StoreAdapter = {
 
     if (featuredArtists?.length) {
       normalizeArtists(featuredArtists).forEach((artist) => {
-        if (!albumExtraArtists.some(ea => ea.name === artist.name && ea.role === 'Featuring')) {
+        if (!albumExtraArtists.some(extraArtist => extraArtist.name === artist.name && extraArtist.role === 'Featuring')) {
           albumExtraArtists.push({ ...artist, role: 'Featuring' });
         }
       });
     }
 
     return {
+      thumb: smallCover,
       cover: albumCover,
       extraartists: albumExtraArtists,
       artists: albumArtists,

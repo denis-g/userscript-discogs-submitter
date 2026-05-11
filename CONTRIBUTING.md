@@ -44,7 +44,7 @@ Adding a new digital store is the most common way to contribute. Please follow t
 2.  **Define selectors:** Use specific CSS selectors for the `target` (where the button is injected).
 3.  **Implement parsing:** Extract data into the `ReleaseData` structure.
 4.  **Register:** Add your provider to the list in `src/providers/index.ts`.
-5.  **Test:** Create `src/providers/[storename].test.ts` with mock DOM data.
+5.  **Test:** Create `src/providers/__tests__/[storename].test.ts` with mock DOM data.
 
 ## Coding Standards
 
@@ -82,7 +82,7 @@ The project uses [Antfu ESLint Config](https://github.com/antfu/eslint-config) t
 We follow a **Test-Driven Development (TDD)** approach using **Vitest**. Every bug fix or new feature must include a corresponding test.
 
 ### Testing Guidelines:
-*   **Location:** Provider tests go in `src/providers/[name].test.ts`, domain logic tests in `src/domain/normalizers/__tests__/[name].test.ts`, and utility tests in `src/utils/__tests__/[name].test.ts`.
+*   **Location:** Provider tests go in `src/providers/__tests__/[name].test.ts`, domain logic tests in `src/domain/normalizers/__tests__/[name].test.ts`, core tests in `src/core/__tests__/[name].test.ts`, and utility tests in `src/utils/__tests__/[name].test.ts`.
 *   **DOM Mocking:** Since we parse real websites, use `JSDOM` (provided by Vitest environment) to mock the necessary HTML structures.
 *   **Regex Testing:** For new parsing patterns, add exhaustive test cases to ensure no regressions in artist/title detection.
 
