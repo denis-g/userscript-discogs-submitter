@@ -10,7 +10,7 @@
  * console.log(isBandcamp('https://artist.bandcamp.com/album')); // true
  * ```
  */
-export function matchUrls(...patterns: string[]): (url: string) => boolean {
+export function matchUrls(...patterns: string[]): (_url: string) => boolean {
   const regexes = patterns.map(pattern =>
     new RegExp(`^${pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\\*/g, '.*')}$`, 'i'),
   );

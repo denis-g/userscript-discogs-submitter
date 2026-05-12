@@ -83,7 +83,7 @@ We follow a **Test-Driven Development (TDD)** approach using **Vitest**. Every b
 
 ### Testing Guidelines:
 *   **Location:** Provider tests go in `src/providers/__tests__/[name].test.ts`, domain logic tests in `src/domain/normalizers/__tests__/[name].test.ts`, core tests in `src/core/__tests__/[name].test.ts`, and utility tests in `src/utils/__tests__/[name].test.ts`.
-*   **DOM Mocking:** Since we parse real websites, use `JSDOM` (provided by Vitest environment) to mock the necessary HTML structures.
+*   **DOM Mocking:** Since we parse real websites, use `happy-dom` to mock the necessary HTML structures. The default Vitest environment is `node`; add `// @vitest-environment happy-dom` at the top of any test file that touches the DOM.
 *   **Regex Testing:** For new parsing patterns, add exhaustive test cases to ensure no regressions in artist/title detection.
 
 Before submitting a Pull Request, ensure all checks pass:

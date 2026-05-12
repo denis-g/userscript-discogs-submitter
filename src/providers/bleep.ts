@@ -3,7 +3,7 @@ import type {
   StoreAdapter,
 } from '@/types';
 import { normalizeArtists, normalizeDuration, normalizeMainArtists, normalizeReleaseDate, normalizeTitle } from '@/domain/normalizers';
-import { getManyTextFromTags, getTextFromTag, matchUrls } from '@/utils';
+import { cleanString, getManyTextFromTags, getTextFromTag, matchUrls } from '@/utils';
 
 /**
  * Adapter configuration for the Bleep digital store.
@@ -45,7 +45,17 @@ export const bleep: StoreAdapter = {
     const labelNumber = getTextFromTag('.product-page .product-details .catalogue-number');
     const albumReleased = normalizeReleaseDate(getTextFromTag('.product-page .product-details .product-release-date'));
     const albumTracks = Array.from(document.querySelectorAll('.track-list > li')).map((track: Element, index: number) => {
-      const trackMainArtists = getManyTextFromTags('.track-main-artists a, .track-artist a:not(.track-featured-artists a)', track);
+      const featuredArtistAnchors = new Set<Element>(track.querySelectorAll('.track-featured-artists a'));
+      const mainArtistAnchors = new Set<Element>([
+        ...track.querySelectorAll('.track-main-artists a'),
+        ...track.querySelectorAll('.track-artist a'),
+      ]);
+
+      featuredArtistAnchors.forEach(anchor => mainArtistAnchors.delete(anchor));
+
+      const trackMainArtists = Array.from(mainArtistAnchors)
+        .map(anchor => cleanString(anchor.textContent))
+        .filter((text): text is string => Boolean(text));
       const trackFeaturedArtists = getManyTextFromTags('.track-featured-artists a', track);
       const trackPosition = `${index + 1}`;
       const trackExtraArtists: ArtistCredit[] = [];

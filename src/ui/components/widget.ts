@@ -809,6 +809,9 @@ export class UiWidget {
     await this.renderPayload();
   }
 
+  /**
+   * Wires up DOM event listeners for the widget shell: close, preview changes, contenteditable, debug, and submit.
+   */
   private bindEvents(): void {
     this.ui.headerButtonClose?.addEventListener('click', () => this.ui.widget?.classList.remove('is-open'));
 
@@ -870,6 +873,11 @@ export class UiWidget {
     }
   }
 
+  /**
+   * Bootstraps the widget: builds its DOM, attaches the drag handler, and binds all UI events.
+   *
+   * @returns A promise that resolves when the widget is fully mounted and ready.
+   */
   public async init(): Promise<void> {
     await this.buildPopup();
     this.bindDraggableEvent();

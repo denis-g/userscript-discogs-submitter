@@ -102,7 +102,6 @@ export default defineConfig({
     cssMinify: true,
     rollupOptions: {
       output: {
-        format: 'iife',
         manualChunks: undefined,
       },
     },

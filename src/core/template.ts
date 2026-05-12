@@ -147,17 +147,17 @@ export function renderTemplate(template: HTMLTemplateElement | string, data: any
 /**
  * Directive processor type definition.
  *
- * @param element - The element being processed.
- * @param context - Current data context.
- * @param walk - The recursion function.
- * @param eventBindings - Collected event bindings list.
+ * @param _element - The element being processed.
+ * @param _context - Current data context.
+ * @param _walk - The recursion function.
+ * @param _eventBindings - Collected event bindings list.
  * @returns True if processing should stop for the current element.
  */
 type DirectiveProcessor = (
-  element: HTMLElement,
-  context: any,
-  walk: (node: Node, context: any, eventBindings: EventBinding[] | null) => void,
-  eventBindings: EventBinding[] | null,
+  _element: HTMLElement,
+  _context: any,
+  _walk: (_node: Node, _context: any, _eventBindings: EventBinding[] | null) => void,
+  _eventBindings: EventBinding[] | null,
 ) => boolean;
 
 /**

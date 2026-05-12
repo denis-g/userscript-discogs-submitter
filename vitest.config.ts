@@ -3,9 +3,11 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    environment: 'jsdom',
+    environment: 'node',
     globals: true,
     include: ['src/**/*.{test,spec}.{js,ts}'],
+    pool: 'threads',
+    isolate: false,
     alias: {
       '~': path.resolve(__dirname, './'),
       '@': path.resolve(__dirname, './src'),

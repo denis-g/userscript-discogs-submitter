@@ -5,17 +5,20 @@
 export class Draggable {
   private isDragging = false;
   private offset = { x: 0, y: 0 };
+  private readonly element: HTMLElement;
+  private readonly handle: HTMLElement;
+  private readonly onStateChange?: (_isDragging: boolean) => void;
 
   /**
    * @param element - The root element to move.
    * @param handle - The element that triggers the drag operation.
    * @param onStateChange - Optional callback to track dragging state.
    */
-  constructor(
-    private readonly element: HTMLElement,
-    private readonly handle: HTMLElement,
-    private readonly onStateChange?: (isDragging: boolean) => void,
-  ) {
+  constructor(element: HTMLElement, handle: HTMLElement, onStateChange?: (_isDragging: boolean) => void) {
+    this.element = element;
+    this.handle = handle;
+    this.onStateChange = onStateChange;
+
     this.handleMouseDown = this.handleMouseDown.bind(this);
     this.handleMouseMove = this.handleMouseMove.bind(this);
     this.handleMouseUp = this.handleMouseUp.bind(this);
