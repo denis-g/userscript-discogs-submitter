@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discogs Submitter
 // @namespace    discogs-submitter
-// @version      3.2.2
+// @version      3.2.3
 // @author       Denis G. <https://github.com/denis-g>
 // @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital, Amazon Music, Bleep, HDtracks and submit releases to Discogs.
 // @license      MIT
@@ -352,7 +352,7 @@
     var USERSCRIPT = {
         ID: info?.script?.namespace || "discogs-submitter",
         NAME: info?.script?.name || "discogs-submitter",
-        VERSION: info?.script?.version || "3.2.2",
+        VERSION: info?.script?.version || "3.2.3",
         HOMEPAGE: info?.script?.homepage || "https://github.com/denis-g/userscript-discogs-submitter",
         SUPPORT_URL: info?.script?.supportURL || bugs?.url,
         FUNDING_URL: "https://buymeacoffee.com/denis_g"
@@ -1347,6 +1347,7 @@
         injectButton: (button, target) => {
             target.insertAdjacentElement("afterend", button);
         },
+        styles: "",
         parse: async () => {
             const data = await getData$3();
             const smallCover = data[0].release.image?.replace("_800", "_350");
@@ -1383,6 +1384,7 @@
             target.style.whiteSpace = "normal";
             target.append(button);
         },
+        styles: ".discogs-submitter__inject__button{margin-top:24px;margin-right:100%}",
         parse: async () => {
             const albumCover = getTextFromTag("#main_content music-detail-header", null, "image-src");
             const albumExtraArtists = [];
@@ -1421,6 +1423,7 @@
             };
         }
     };
+    var bandcamp_default = ".discogs-submitter__inject__button{box-sizing:border-box;margin-bottom:1.5em}";
     function extractCatalogNumber(items) {
         const catPrefixes = [
             "Catalog Number",
@@ -1504,6 +1507,7 @@
         injectButton: (button, target) => {
             target.insertAdjacentElement("afterend", button);
         },
+        styles: bandcamp_default,
         parse: async () => {
             const smallCover = getTextFromTag("a.popupImage img", null, "src");
             const albumCover = getTextFromTag("a.popupImage", null, "href");
@@ -1560,6 +1564,7 @@
             };
         }
     };
+    var beatport_default = ".discogs-submitter__inject__button{margin-top:8px}";
     async function getData$2() {
         const releaseId = getReleaseIdFromUrl();
         if (!releaseId) throw new Error(`[Discogs Submitter] Release ID not found`);
@@ -1597,6 +1602,7 @@
         injectButton: (button, target) => {
             target.appendChild(button);
         },
+        styles: beatport_default,
         parse: async () => {
             const data = await getData$2();
             const smallCover = data.image.dynamic_uri?.replace("{w}", "350")?.replace("{h}", "350");
@@ -1642,6 +1648,7 @@
         injectButton: (button, target) => {
             target.before(button);
         },
+        styles: ".discogs-submitter__header__cover__image{opacity:1}.discogs-submitter__inject__button{margin:1.429rem 0 0}",
         parse: async () => {
             const albumMainArtistsRaw = getManyTextFromTags(".product-page .product-details .main-artists a");
             const albumMainArtistsSource = albumMainArtistsRaw.length > 0 ? albumMainArtistsRaw : getTextFromTag(".product-page .product-details .artist a");
@@ -1706,6 +1713,7 @@
         injectButton: (button, target) => {
             target.appendChild(button);
         },
+        styles: ".discogs-submitter__inject__button{margin:15px 0 0}",
         parse: async () => {
             const context = document.querySelector(".list-page.page-current:not(.page-swipeback-active)") || document.querySelector(".list-page.page-current");
             const albumCover = getTextFromTag(".list-info .list-cover", context, "style")?.match(/background-image:\s*url\("?(.*?)"?\)/)?.[1] ?? null;
@@ -1732,6 +1740,7 @@
             };
         }
     };
+    var junodownload_default = ".discogs-submitter__inject__button{margin-top:20px}";
     async function getData$1() {
         const releaseId = getReleaseIdFromUrl();
         if (!releaseId) throw new Error(`[Discogs Submitter] Release ID not found`);
@@ -1754,6 +1763,7 @@
         injectButton: (button, target) => {
             target.insertAdjacentElement("afterend", button);
         },
+        styles: junodownload_default,
         parse: async () => {
             const data = await getData$1();
             const smallCover = getTextFromTag(".product-image-for-modal", null, "src");
@@ -1797,6 +1807,7 @@
             };
         }
     };
+    var qobuz_default = ".discogs-submitter__inject__button{text-transform:none;text-transform:none;margin-top:20px}";
     async function getData() {
         const scripts = document.querySelectorAll("script[type=\"application/ld+json\"]");
         let data = null;
@@ -1836,6 +1847,7 @@
                         console.warn("[Discogs Submitter] Qobuz infiniteScroll trigger failed:", error);
                     }}
                 },
+                styles: qobuz_default,
                 parse: async () => {
                     const data = await getData();
                     const smallCover = getTextFromTag(".album-cover__image", null, "src");
@@ -1874,7 +1886,7 @@
         ],
         detectByLocation: () => DigitalStoreRegistry.list.find((provider) => provider.test(unsafeWindow.location.href))
     };
-    var inject_button_default$1 = ".discogs-submitter__inject__button{all:unset;vertical-align:middle;cursor:pointer;outline:1px solid rgba(var(--ds-color-white), 1);border:1px solid rgba(var(--ds-color-black), 1);border-radius:calc(var(--ds-radius) * 2);background:rgba(var(--ds-color-white), 1);padding:calc(var(--ds-gap) / 2);color:rgba(var(--ds-color-black), 1);font-size:14px;font-weight:700;line-height:1.2;font-family:var(--ds-font-sans);user-select:none;text-shadow:none;text-transform:none;white-space:nowrap;justify-content:center;align-items:center;gap:10px;transition:all .3s;display:inline-flex;&:hover{outline-color:rgba(var(--ds-color-black), 1);border-color:rgba(var(--ds-color-white), 1);background:rgba(var(--ds-color-black), 1);color:rgba(var(--ds-color-white), 1);& .discogs-submitter__inject__button__icon{animation:1s linear infinite ds-spinner}}&.is-disabled{opacity:.5;pointer-events:none}}.discogs-submitter__inject__button__icon{flex:none;width:1.25em;height:1.25em}.discogs-submitter__inject__button{&.is-bandcamp{box-sizing:border-box;margin-bottom:1.5em}&.is-qobuz{text-transform:none;margin-top:20px}&.is-qobuz{& .discogs-submitter__inject__button__icon{margin-top:-4px}}&.is-junodownload{margin-top:20px}&.is-beatport{margin-top:8px}&.is-amazonmusic{margin-top:24px;margin-right:100%}&.is-bleep{margin:1.429rem 0 0}&.is-hdtracks{margin:15px 0 0}}";
+    var inject_button_default$1 = ".discogs-submitter__inject__button{all:unset;vertical-align:middle;cursor:pointer;outline:1px solid rgba(var(--ds-color-white), 1);border:1px solid rgba(var(--ds-color-black), 1);border-radius:calc(var(--ds-radius) * 2);background:rgba(var(--ds-color-white), 1);padding:calc(var(--ds-gap) / 2);color:rgba(var(--ds-color-black), 1);font-size:14px;font-weight:700;line-height:1.2;font-family:var(--ds-font-sans);user-select:none;text-shadow:none;text-transform:none;white-space:nowrap;justify-content:center;align-items:center;gap:10px;transition:all .3s;display:inline-flex;&:hover{outline-color:rgba(var(--ds-color-black), 1);border-color:rgba(var(--ds-color-white), 1);background:rgba(var(--ds-color-black), 1);color:rgba(var(--ds-color-white), 1);& .discogs-submitter__inject__button__icon{animation:1s linear infinite ds-spinner}}&.is-disabled{opacity:.5;pointer-events:none}}.discogs-submitter__inject__button__icon{flex:none;width:1.25em;height:1.25em}";
     var inject_button_default = "<div class=\"discogs-submitter__inject__button\" role=\"button\">\n  <svg class=\"discogs-submitter__inject__button__icon\" aria-hidden=\"true\"><use href=\"#ds-logo\"></use></svg>\n\n  <span class=\"discogs-submitter__inject__button__label\"><var>scriptName</var></span>\n</div>\n";
     var InjectButton = class {
         element = null;
@@ -2618,7 +2630,7 @@
     var preview_default = ".discogs-submitter__results{gap:0 var(--ds-gap);font-size:10px;line-height:normal;font-family:var(--ds-font-monospace);flex-wrap:wrap;display:flex}.discogs-submitter__results__row{gap:calc(var(--ds-gap) / 2);border-bottom:1px dotted rgba(var(--ds-palette-secondary-color), .25);grid-template-columns:60px 1fr;width:100%;padding:2px 0;display:grid;&.is-half{width:calc(50% - var(--ds-gap) / 2)}&.is-tracklist{grid-template-columns:20px 1fr 1fr 50px;&.is-no-artist{grid-template-columns:20px 1fr 50px}&>.discogs-submitter__results__head{text-align:left}&>.discogs-submitter__results__body:last-child{text-align:right}}&.is-notes{gap:calc(var(--ds-gap) / 6);grid-template-columns:1fr;&>.discogs-submitter__results__head{text-align:left}}}.discogs-submitter__results__head{text-align:right;padding-top:3px;font-weight:700}.discogs-submitter__results__body{align-items:start;gap:calc(var(--ds-gap) / 6);flex-direction:column;display:flex;& small{font-size:9px}&.is-multiple{display:block;& .discogs-submitter__results__field{vertical-align:middle;width:auto;display:inline-flex}}&.is-inner{padding-left:calc(var(--ds-gap) / 2)}}.discogs-submitter__results__field{align-items:start;gap:calc(var(--ds-gap) / 6);flex-wrap:nowrap;width:100%;display:flex;& .discogs-submitter__textarea{width:100%;min-height:60px}& .discogs-submitter__button{padding:calc(var(--ds-gap) / 6);flex:none}}";
     var reset_default = ".discogs-submitter{text-shadow:none;text-transform:none;font-size:14px;font-weight:400;line-height:1.2;font-family:var(--ds-font-sans)!important;& *,& :after,& :before{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;box-sizing:border-box;text-rendering:optimizelegibility}& a{text-decoration:none}& em{font-style:oblique}& strong{font-weight:700}& [hidden]{display:none!important}}";
     var variables_default = ":root{--ds-font-sans:\"Helvetica Neue\", Helvetica, Arial, sans-serif;--ds-font-monospace:\"SFMono-Regular\", Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace;--ds-gap:20px;--ds-radius:12px;--ds-color-primary:20, 138, 102;--ds-color-success:40, 167, 69;--ds-color-error:220, 53, 69;--ds-color-warning:255, 193, 7;--ds-color-info:23, 162, 184;--ds-color-white:255, 255, 255;--ds-color-black:0, 0, 0;--ds-palette-secondary-color:var(--ds-color-black);--ds-palette-primary-color:var(--ds-color-white)}";
-    var widget_default = ".discogs-submitter{top:var(--ds-gap);right:var(--ds-gap);justify-content:start;gap:var(--ds-gap);transform-origin:0 0;visibility:hidden;opacity:0;z-index:999999;box-shadow:0 0 0 1px rgba(var(--ds-palette-secondary-color), .5), 0 0 15px 10px rgba(var(--ds-color-black), .5);border:1px solid rgba(var(--ds-palette-primary-color), 1);border-radius:var(--ds-radius);background:rgba(var(--ds-palette-primary-color), 1);padding:var(--ds-gap) var(--ds-gap) calc(var(--ds-gap) / 2);width:calc(100% - (var(--ds-gap) * 2));max-width:500px;color:rgba(var(--ds-palette-secondary-color), 1);flex-direction:column;transition:all .5s,left linear,top linear;display:flex;position:fixed;overflow:hidden;transform:scale(.9);&:after{z-index:-1;mask-image:linear-gradient(to bottom, rgba(var(--ds-color-black), 1) 0%, rgba(var(--ds-color-black), .025) 150px);filter:blur(4px);background:var(--ds-thumb-url) no-repeat 50%;content:\"\";background-size:cover;width:100%;height:100%;position:absolute;top:0;left:0;overflow:hidden;transform:scale(1.05)}&.is-open{visibility:visible;opacity:1;transform:scale(1)}&.is-webarchive{top:calc(var(--wm-toolbar-height) + var(--ds-gap))}}.discogs-submitter__header{font-size:20px;font-weight:600;display:flex;& .discogs-submitter__button{&,&:hover{background:0 0}&.is-move{cursor:grab;&:hover{color:rgba(var(--ds-color-info), 1)}&.is-draggable{cursor:grabbing}}&.is-close{&:hover{color:rgba(var(--ds-color-error), 1)}}}}.discogs-submitter__header__cover{width:2em;height:2em}.discogs-submitter__header__cover__logo,.discogs-submitter__header__cover__image{width:100%;height:100%}.discogs-submitter__header__cover__image{opacity:1;outline:1px solid rgba(var(--ds-palette-secondary-color), 1);border:1px solid rgba(var(--ds-palette-primary-color), 1);border-radius:calc(var(--ds-radius) / 2);object-fit:cover}.discogs-submitter__header__content{gap:calc(var(--ds-gap) / 2);margin-left:var(--ds-gap);flex:auto;display:flex}.discogs-submitter__header__title{filter:drop-shadow(0 0 10px rgba(var(--ds-color-white), 1));align-self:center;margin-right:auto;& small{font-size:8px}}.discogs-submitter__content{margin:0 calc(var(--ds-gap) * -1);padding:0 var(--ds-gap);scrollbar-color:rgba(var(--ds-palette-secondary-color), 1) transparent;scrollbar-width:thin;-webkit-overflow-scrolling:touch;max-height:40dvh;overflow:auto;&::-webkit-scrollbar{width:6px}}.discogs-submitter__status{--status-color:rgba(var(--ds-palette-secondary-color), 1);align-items:start;gap:var(--ds-gap);z-index:1;margin-bottom:var(--ds-gap);border-left:4px solid var(--status-color);border-radius:calc(var(--ds-radius) / 2);padding:calc(var(--ds-gap) / 2);transition:all .3s;display:flex;position:relative;overflow:hidden;&:after{opacity:.1;z-index:-1;background:var(--status-color);content:\"\";width:100%;height:100%;transition:all .3s;position:absolute;top:0;left:0}&.is-success{--status-color:rgba(var(--ds-color-success), 1)}&.is-error{--status-color:rgba(var(--ds-color-error), 1)}&.is-info{--status-color:rgba(var(--ds-color-info), 1)}&.is-warning{--status-color:rgba(var(--ds-color-warning), 1)}& .discogs-submitter__button{flex:none;margin-left:auto;&.is-debug{color:rgba(var(--ds-color-black), 1);background:0 0;&.is-success{color:rgba(var(--ds-color-success), 1)}&.is-error{color:rgba(var(--ds-color-error), 1)}}}}.discogs-submitter__actions{gap:var(--ds-gap);flex-wrap:nowrap;display:flex}.discogs-submitter__copyright{justify-content:center;gap:var(--ds-gap);margin:var(--ds-gap) 0 0;font-size:10px;display:flex}.discogs-submitter__copyright__link{color:currentColor;text-decoration:none;&:hover{text-decoration:underline}& span{vertical-align:middle;color:rgba(var(--ds-color-error), 1);font-family:var(--ds-font-monospace);animation:1s ease-in-out infinite ds-pulse;display:inline-block}}@keyframes ds-spinner{0%{transform:rotate(0)}to{transform:rotate(360deg)}}@keyframes ds-pulse{0%{transform:scale(1)}50%{transform:scale(1.2)}to{transform:scale(1)}}";
+    var widget_default = ".discogs-submitter{top:var(--ds-gap);right:var(--ds-gap);justify-content:start;gap:var(--ds-gap);transform-origin:0 0;visibility:hidden;opacity:0;z-index:999999;box-shadow:0 0 0 1px rgba(var(--ds-palette-secondary-color), .5), 0 0 15px 10px rgba(var(--ds-color-black), .5);border:1px solid rgba(var(--ds-palette-primary-color), 1);border-radius:var(--ds-radius);background:rgba(var(--ds-palette-primary-color), 1);padding:var(--ds-gap) var(--ds-gap) calc(var(--ds-gap) / 2);width:calc(100% - (var(--ds-gap) * 2));max-width:500px;color:rgba(var(--ds-palette-secondary-color), 1);flex-direction:column;transition:all .5s,left linear,top linear;display:flex;position:fixed;overflow:hidden;transform:scale(.9);&:after{z-index:-1;mask-image:linear-gradient(to bottom, rgba(var(--ds-color-black), 1) 0%, rgba(var(--ds-color-black), .025) 150px);filter:blur(4px);background:var(--ds-thumb-url) no-repeat 50%;content:\"\";background-size:cover;width:100%;height:100%;position:absolute;top:0;left:0;overflow:hidden;transform:scale(1.05)}&.is-open{visibility:visible;opacity:1;transform:scale(1)}&.is-webarchive{top:calc(var(--wm-toolbar-height) + var(--ds-gap))}}.discogs-submitter__header{font-size:20px;font-weight:600;display:flex;& .discogs-submitter__button{&,&:hover{background:0 0}&.is-move{cursor:grab;&:hover{color:rgba(var(--ds-color-info), 1)}&.is-draggable{cursor:grabbing}}&.is-close{&:hover{color:rgba(var(--ds-color-error), 1)}}}}.discogs-submitter__header__cover{width:2em;height:2em}.discogs-submitter__header__cover__logo,.discogs-submitter__header__cover__image{width:100%;height:100%}.discogs-submitter__header__cover__image{outline:1px solid rgba(var(--ds-palette-secondary-color), 1);border:1px solid rgba(var(--ds-palette-primary-color), 1);border-radius:calc(var(--ds-radius) / 2);object-fit:cover}.discogs-submitter__header__content{gap:calc(var(--ds-gap) / 2);margin-left:var(--ds-gap);flex:auto;display:flex}.discogs-submitter__header__title{filter:drop-shadow(0 0 10px rgba(var(--ds-color-white), 1));align-self:center;margin-right:auto;& small{font-size:8px}}.discogs-submitter__content{margin:0 calc(var(--ds-gap) * -1);padding:0 var(--ds-gap);scrollbar-color:rgba(var(--ds-palette-secondary-color), 1) transparent;scrollbar-width:thin;-webkit-overflow-scrolling:touch;max-height:40dvh;overflow:auto;&::-webkit-scrollbar{width:6px}}.discogs-submitter__status{--status-color:rgba(var(--ds-palette-secondary-color), 1);align-items:start;gap:var(--ds-gap);z-index:1;margin-bottom:var(--ds-gap);border-left:4px solid var(--status-color);border-radius:calc(var(--ds-radius) / 2);padding:calc(var(--ds-gap) / 2);transition:all .3s;display:flex;position:relative;overflow:hidden;&:after{opacity:.1;z-index:-1;background:var(--status-color);content:\"\";width:100%;height:100%;transition:all .3s;position:absolute;top:0;left:0}&.is-success{--status-color:rgba(var(--ds-color-success), 1)}&.is-error{--status-color:rgba(var(--ds-color-error), 1)}&.is-info{--status-color:rgba(var(--ds-color-info), 1)}&.is-warning{--status-color:rgba(var(--ds-color-warning), 1)}& .discogs-submitter__button{flex:none;margin-left:auto;&.is-debug{color:rgba(var(--ds-color-black), 1);background:0 0;&.is-success{color:rgba(var(--ds-color-success), 1)}&.is-error{color:rgba(var(--ds-color-error), 1)}}}}.discogs-submitter__actions{gap:var(--ds-gap);flex-wrap:nowrap;display:flex}.discogs-submitter__copyright{justify-content:center;gap:var(--ds-gap);margin:var(--ds-gap) 0 0;font-size:10px;display:flex}.discogs-submitter__copyright__link{color:currentColor;text-decoration:none;&:hover{text-decoration:underline}& span{vertical-align:middle;color:rgba(var(--ds-color-error), 1);font-family:var(--ds-font-monospace);animation:1s ease-in-out infinite ds-pulse;display:inline-block}}@keyframes ds-spinner{0%{transform:rotate(0)}to{transform:rotate(360deg)}}@keyframes ds-pulse{0%{transform:scale(1)}50%{transform:scale(1.2)}to{transform:scale(1)}}";
     var bug_default = "<svg viewBox=\"0 0 640 640\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m224 160c0-53 43-96 96-96s96 43 96 96v3.6c0 15.7-12.7 28.4-28.4 28.4h-135.1c-15.7 0-28.4-12.7-28.4-28.4v-3.6zm345.6 12.8c10.6 14.1 7.7 34.2-6.4 44.8l-97.8 73.3c5.3 8.9 9.3 18.7 11.8 29.1h98.8c17.7 0 32 14.3 32 32s-14.3 32-32 32h-96v32c0 2.6-.1 5.3-.2 7.9l83.4 62.5c14.1 10.6 17 30.7 6.4 44.8s-30.7 17-44.8 6.4l-63.1-47.3c-23.2 44.2-66.5 76.2-117.7 83.9v-230.2c0-13.3-10.7-24-24-24s-24 10.7-24 24v230.2c-51.2-7.7-94.5-39.7-117.7-83.9l-63.1 47.3c-14.1 10.6-34.2 7.7-44.8-6.4s-7.7-34.2 6.4-44.8l83.4-62.5c-.1-2.6-.2-5.2-.2-7.9v-32h-96c-17.7 0-32-14.3-32-32s14.3-32 32-32h98.8c2.5-10.4 6.5-20.2 11.8-29.1l-97.8-73.3c-14.1-10.6-17-30.7-6.4-44.8s30.7-17 44.8-6.4l108.8 81.6c12.3-5.1 25.8-8 40-8h112c14.2 0 27.7 2.8 40 8l108.8-81.6c14.1-10.6 34.2-7.7 44.8 6.4z\"/></svg>";
     var chevron_down_default = "<svg viewBox=\"0 0 640 640\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m297.4 470.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-169.4 169.4-169.4-169.3c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z\"/></svg>";
     var close_default = "<svg viewBox=\"0 0 640 640\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m183.1 137.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l137.4 137.3-137.3 137.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0l137.3-137.4 137.4 137.3c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-137.4-137.3 137.3-137.4c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-137.3 137.4z\"/></svg>";
@@ -2699,6 +2711,7 @@
             const store = DigitalStoreRegistry.detectByLocation();
             if (!store) {
                 if (this.injectButton.element?.parentElement) this.injectButton.element.remove();
+                this.cleanupProviderStyles();
                 return;
             }
             const targets = document.querySelectorAll(store.target);
@@ -2707,6 +2720,21 @@
                 this.injectButton.setStore(store.id);
                 store.injectButton(this.injectButton.element, target);
             }
+            this.injectProviderStyles(store);
+        }
+        injectProviderStyles(store) {
+            const styleId = `${USERSCRIPT.ID}-styles-${store.id}`;
+            if (document.getElementById(styleId)) return;
+            this.cleanupProviderStyles();
+            if (!store.styles) return;
+            const style = document.createElement("style");
+            style.id = styleId;
+            style.textContent = store.styles;
+            document.head.appendChild(style);
+        }
+        cleanupProviderStyles() {
+            const selector = `style[id^="${USERSCRIPT.ID}-styles-"]`;
+            document.querySelectorAll(selector).forEach((element) => element.remove());
         }
         handleUrlChange() {
             const newUrl = unsafeWindow.location.href;
