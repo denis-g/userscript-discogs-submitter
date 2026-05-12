@@ -77,6 +77,12 @@ The project uses [Antfu ESLint Config](https://github.com/antfu/eslint-config) t
 *   **Pre-commit:** We use `husky` and `lint-staged` to automatically check and format your code before every commit.
 *   **Manual Fixes:** Always run `npm run lint:fix` before committing if you have local formatting issues.
 
+### Automated Release Commits
+A `post-commit` Husky hook keeps the userscript artifact in sync with the version field:
+*   If your commit touches any file under `src/`, the hook automatically runs `npm version patch`, rebuilds `discogs-submitter.user.js`, and appends a follow-up commit titled `chore(release): vX.Y.Z` containing only `package.json`, `package-lock.json`, and the rebuilt userscript.
+*   Commits that don't touch `src/` (docs, configs, tests in isolation) are left alone — no version bump, no rebuild.
+*   The auto-commit is created with `--no-verify` so it doesn't re-trigger the test suite. Recursion is prevented by skipping any commit whose subject starts with `chore(release):`.
+
 ## Testing & Quality
 
 We follow a **Test-Driven Development (TDD)** approach using **Vitest**. Every bug fix or new feature must include a corresponding test.
