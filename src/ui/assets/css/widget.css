@@ -97,7 +97,6 @@
 }
 
 .discogs-submitter__header__cover__image {
-  opacity: 1; /* Bleep */
   outline: 1px solid rgba(var(--ds-palette-secondary-color), 1);
   border: 1px solid rgba(var(--ds-palette-primary-color), 1);
   border-radius: calc(var(--ds-radius) / 2);

@@ -5,6 +5,7 @@ import type {
 } from '@/types';
 import { normalizeDuration, normalizeMainArtists, normalizeReleaseDate, normalizeTitle, splitArtistTitle } from '@/domain/normalizers';
 import { cleanString, getManyTextFromTags, getTextFromTag, matchUrls } from '@/utils';
+import styles from './bandcamp.css?inline';
 
 /**
  * Extracts catalog number from credits and about items.
@@ -133,6 +134,8 @@ export const bandcamp: StoreAdapter = {
   injectButton: (button, target) => {
     target.insertAdjacentElement('afterend', button);
   },
+
+  styles,
 
   parse: async () => {
     const smallCover = getTextFromTag('a.popupImage img', null, 'src');

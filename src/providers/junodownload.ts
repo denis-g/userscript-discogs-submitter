@@ -5,6 +5,7 @@ import type {
 import { networkRequest } from '@/core';
 import { normalizeArtists, normalizeDuration, normalizeMainArtists, normalizeReleaseDate, normalizeTitle } from '@/domain/normalizers';
 import { cleanString, getReleaseIdFromUrl, getTextFromTag, matchUrls } from '@/utils';
+import styles from './junodownload.css?inline';
 
 interface JunoArtist {
   name: string;
@@ -66,6 +67,8 @@ export const junodownload: StoreAdapter = {
   injectButton: (button, target) => {
     target.insertAdjacentElement('afterend', button);
   },
+
+  styles,
 
   parse: async () => {
     const data = await getData();

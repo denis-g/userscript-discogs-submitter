@@ -4,6 +4,7 @@ import type {
 } from '@/types';
 import { normalizeArtists, normalizeDuration, normalizeMainArtists, normalizeTitle } from '@/domain/normalizers';
 import { getTextFromTag, matchUrls } from '@/utils';
+import styles from './qobuz.css?inline';
 
 /**
  * Scrapes metadata directly from JSON-LD schema injected in the DOM.
@@ -66,6 +67,8 @@ export const qobuz: StoreAdapter = {
       }
     }
   },
+
+  styles,
 
   parse: async () => {
     const data = await getData();

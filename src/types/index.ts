@@ -43,6 +43,12 @@ export interface StoreAdapter {
   /** The audio formats supported by this store. */
   supports: StoreFormatOptions;
   /**
+   * Optional store-specific CSS. Injected as a `<style>` tag when this store is the active page,
+   * and removed when navigating away. Recommended for branded overrides (button color, layout
+   * tweaks) that should not pollute other stores. Import as `import css from './store.css?inline'`.
+   */
+  styles?: string;
+  /**
    * Extracts the full release data from the store's current page.
    *
    * @returns A promise that resolves to the standardized release data.

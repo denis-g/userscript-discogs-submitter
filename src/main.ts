@@ -1,3 +1,4 @@
+import type { StoreAdapter } from '@/types';
 import { USERSCRIPT } from '@/config';
 import { DigitalStoreRegistry } from '@/providers';
 import { InjectButton, UiWidget } from '@/ui';
@@ -146,6 +147,8 @@ class Widget {
         this.injectButton.element.remove();
       }
 
+      this.cleanupProviderStyles();
+
       return;
     }
 
@@ -157,6 +160,47 @@ class Widget {
 
       store.injectButton(this.injectButton.element, target);
     }
+
+    this.injectProviderStyles(store);
+  }
+
+  /**
+   * Injects the active store's provider-specific CSS into the document head.
+   * Idempotent — if the matching `<style>` tag already exists, the method is a no-op.
+   * Any previously-injected provider styles for a different store are removed first.
+   *
+   * @param store - The currently-detected store adapter.
+   */
+  private injectProviderStyles(store: StoreAdapter): void {
+    const styleId = `${USERSCRIPT.ID}-styles-${store.id}`;
+
+    if (document.getElementById(styleId)) {
+      return;
+    }
+
+    this.cleanupProviderStyles();
+
+    if (!store.styles) {
+      return;
+    }
+
+    const style = document.createElement('style');
+
+    style.id = styleId;
+    style.textContent = store.styles;
+
+    document.head.appendChild(style);
+  }
+
+  /**
+   * Removes every previously-injected provider-specific `<style>` tag.
+   * Matches by id prefix `${USERSCRIPT.ID}-styles-` (with trailing hyphen) so the global
+   * `${USERSCRIPT.ID}-styles` tag is untouched.
+   */
+  private cleanupProviderStyles(): void {
+    const selector = `style[id^="${USERSCRIPT.ID}-styles-"]`;
+
+    document.querySelectorAll(selector).forEach(element => element.remove());
   }
 
   /**

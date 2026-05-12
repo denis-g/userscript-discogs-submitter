@@ -5,6 +5,7 @@ import type {
 } from '@/types';
 import { normalizeArtists, normalizeDuration, normalizeMainArtists, normalizeReleaseDate, normalizeTitle } from '@/domain/normalizers';
 import { getTextFromTag, matchUrls } from '@/utils';
+import styles from './amazonmusic.css?inline';
 
 /**
  * Adapter configuration for the Amazon Music digital store.
@@ -28,6 +29,8 @@ export const amazonmusic: StoreAdapter = {
 
     target.append(button);
   },
+
+  styles,
 
   parse: async () => {
     const albumCover = getTextFromTag('#main_content music-detail-header', null, 'image-src');

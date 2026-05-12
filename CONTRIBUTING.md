@@ -45,6 +45,17 @@ Adding a new digital store is the most common way to contribute. Please follow t
 3.  **Implement parsing:** Extract data into the `ReleaseData` structure.
 4.  **Register:** Add your provider to the list in `src/providers/index.ts`.
 5.  **Test:** Create `src/providers/__tests__/[storename].test.ts` with mock DOM data.
+6.  **(Optional) Store-specific styles:** If the store needs custom CSS (button color, layout fix), create `src/providers/[storename].css` next to the adapter, import it inline, and assign it to the `styles` field of the adapter:
+    ```ts
+    import styles from './[storename].css?inline';
+
+    export const [storename]: StoreAdapter = {
+      id: '[storename]',
+      styles,
+      // ...
+    };
+    ```
+    The styles are injected as a scoped `<style>` tag only when the user lands on a matching page and removed automatically on navigation away.
 
 ## Coding Standards
 
@@ -69,7 +80,7 @@ Our UI styles are located in `src/ui/assets/css/*.css`. We follow these principl
 *   **BEM Methodology:** Use BEM-like naming for classes (e.g., `discogs-submitter__header__title`).
 *   **Scoped Styling:** All classes must be prefixed with `discogs-submitter` to avoid collisions with the host website.
 *   **CSS Variables:** Use the predefined variables in `widget.css` for colors, gaps, and border-radius.
-*   **Vite Raw Imports:** CSS files are imported in TS via `import css from './style.css?raw'` and injected dynamically.
+*   **Vite Inline Imports:** CSS files are imported in TS via `import css from './style.css?inline'` and injected dynamically.
 
 ### Linting & Formatting
 The project uses [Antfu ESLint Config](https://github.com/antfu/eslint-config) to enforce code style and catch common errors.

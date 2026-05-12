@@ -5,6 +5,7 @@ import type {
 import { networkRequest } from '@/core';
 import { normalizeArtists, normalizeDuration, normalizeMainArtists, normalizeReleaseDate, normalizeTitle } from '@/domain/normalizers';
 import { getTextFromTag, matchUrls } from '@/utils';
+import styles from './7digital.css?inline';
 
 interface SevenDigitalArtist {
   name: string;
@@ -72,6 +73,8 @@ export const sevendigital: StoreAdapter = {
   injectButton: (button, target) => {
     target.insertAdjacentElement('afterend', button);
   },
+
+  styles,
 
   parse: async () => {
     const data = await getData();

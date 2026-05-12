@@ -5,6 +5,7 @@ import type {
 import { networkRequest } from '@/core';
 import { normalizeArtists, normalizeMainArtists, normalizeTitle } from '@/domain/normalizers';
 import { getReleaseIdFromUrl, matchUrls } from '@/utils';
+import styles from './beatport.css?inline';
 
 interface BeatportArtist {
   name: string;
@@ -106,6 +107,8 @@ export const beatport: StoreAdapter = {
   injectButton: (button, target) => {
     target.appendChild(button);
   },
+
+  styles,
 
   parse: async () => {
     const data = await getData();

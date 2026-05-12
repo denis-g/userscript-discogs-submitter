@@ -4,6 +4,7 @@ import type {
 } from '@/types';
 import { normalizeArtists, normalizeDuration, normalizeMainArtists, normalizeReleaseDate, normalizeTitle } from '@/domain/normalizers';
 import { getTextFromTag, matchUrls } from '@/utils';
+import styles from './hdtracks.css?inline';
 
 /**
  * Adapter configuration for the HDtracks digital store.
@@ -27,9 +28,8 @@ export const hdtracks: StoreAdapter = {
     target.appendChild(button);
   },
 
-  /**
-   * Main parsing logic for HDtracks releases.
-   */
+  styles,
+
   parse: async () => {
     // get current page context
     const context = document.querySelector('.list-page.page-current:not(.page-swipeback-active)') || document.querySelector('.list-page.page-current');

@@ -4,6 +4,7 @@ import type {
 } from '@/types';
 import { normalizeArtists, normalizeDuration, normalizeMainArtists, normalizeReleaseDate, normalizeTitle } from '@/domain/normalizers';
 import { cleanString, getManyTextFromTags, getTextFromTag, matchUrls } from '@/utils';
+import styles from './bleep.css?inline';
 
 /**
  * Adapter configuration for the Bleep digital store.
@@ -26,11 +27,8 @@ export const bleep: StoreAdapter = {
     target.before(button);
   },
 
-  /**
-   * Main parsing logic for Bleep releases.
-   *
-   * @returns Standardized ReleaseData object.
-   */
+  styles,
+
   parse: async () => {
     const albumMainArtistsRaw = getManyTextFromTags('.product-page .product-details .main-artists a');
     const albumMainArtistsSource = albumMainArtistsRaw.length > 0
