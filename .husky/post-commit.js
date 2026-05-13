@@ -13,6 +13,15 @@ function getLastCommitSubject() {
 }
 
 /**
+ * Returns the last commit's full raw message (subject + body).
+ *
+ * @returns Output of `git log -1 --pretty=%B`, with trailing whitespace stripped.
+ */
+function getLastCommitMessage() {
+  return execSync('git log -1 --pretty=%B', { encoding: 'utf8' }).trimEnd();
+}
+
+/**
  * Returns the list of files changed in the last commit.
  *
  * @returns Array of file paths.
@@ -26,9 +35,13 @@ function getLastCommitFiles() {
 
 /**
  * Bumps the patch version in package.json, rebuilds the userscript, and creates a release commit
- * containing only the version-related artifacts.
+ * containing only the version-related artifacts. The triggering developer commit's full message
+ * is embedded in the release body so `git log` shows what's actually in the release.
  */
 function bumpAndCommit() {
+  // Capture the developer commit message before any new commit happens
+  const sourceMessage = getLastCommitMessage();
+
   console.warn('\x1B[33m[Husky] src/ changed. Bumping version...\x1B[0m');
   execSync('npm version patch --no-git-tag-version', { stdio: 'inherit' });
 
@@ -39,7 +52,10 @@ function bumpAndCommit() {
 
   console.warn('\x1B[33m[Husky] Creating release commit...\x1B[0m');
   execSync('git add package.json package-lock.json discogs-submitter.user.js');
-  execSync(`git commit --no-verify -m "${RELEASE_PREFIX} v${version}"`, { stdio: 'inherit' });
+
+  const releaseMessage = `${RELEASE_PREFIX} v${version}\n\n${sourceMessage}`;
+
+  execSync('git commit --no-verify -F -', { input: releaseMessage, stdio: ['pipe', 'inherit', 'inherit'] });
 
   console.warn(`\x1B[32m[Husky] Released v${version}\x1B[0m`);
 }
