@@ -1,0 +1,186 @@
+<div class="discogs-submitter__results">
+  <div class="discogs-submitter__results__row">
+    <div class="discogs-submitter__results__head">Artists</div>
+    <div class="discogs-submitter__results__body is-multiple">
+      <var data-loop="releaseArtists">
+        <div class="discogs-submitter__results__field">
+          <span class="discogs-submitter__input is-edit" contenteditable="plaintext-only" spellcheck="false" data-field="artists.name" data-text="name" data-attr="data-index:_index" placeholder="Artist..."></span>
+          <svg class="discogs-submitter__button is-icon" role="button" data-field="artists.name" data-attr="data-index:_index" title="Restore original artist"><use href="#ds-rotate-left"></use></svg>
+        </div>
+        <var data-if="!_last">
+          <var data-if="join"><var>join</var></var>
+        </var>
+      </var>
+    </div>
+  </div>
+
+  <div class="discogs-submitter__results__row">
+    <div class="discogs-submitter__results__head">Title</div>
+    <div class="discogs-submitter__results__body">
+      <div class="discogs-submitter__results__field">
+        <span class="discogs-submitter__input is-edit" contenteditable="plaintext-only" spellcheck="false" data-field="title" data-text="rawTitle" placeholder="Title..."></span>
+        <svg class="discogs-submitter__button is-icon" role="button" data-field="title" title="Restore original title"><use href="#ds-rotate-left"></use></svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="discogs-submitter__results__row is-half">
+    <div class="discogs-submitter__results__head">Label</div>
+    <div class="discogs-submitter__results__body">
+      <div class="discogs-submitter__results__field">
+        <span class="discogs-submitter__input is-edit" contenteditable="plaintext-only" spellcheck="false" data-field="label" data-text="rawLabel" placeholder="Label..."></span>
+        <svg class="discogs-submitter__button is-icon" role="button" data-field="label" title="Restore original label"><use href="#ds-rotate-left"></use></svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="discogs-submitter__results__row is-half">
+    <div class="discogs-submitter__results__head">Catalog</div>
+    <div class="discogs-submitter__results__body">
+      <div class="discogs-submitter__results__field">
+        <span class="discogs-submitter__input is-edit" contenteditable="plaintext-only" spellcheck="false" data-field="number" data-text="rawNumber" placeholder="Catalog..."></span>
+        <svg class="discogs-submitter__button is-icon" role="button" data-field="number" title="Restore original catalog"><use href="#ds-rotate-left"></use></svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="discogs-submitter__results__row is-half">
+    <div class="discogs-submitter__results__head">Released</div>
+    <div class="discogs-submitter__results__body">
+      <div class="discogs-submitter__results__field">
+        <span class="discogs-submitter__input is-edit" contenteditable="plaintext-only" spellcheck="false" data-field="released" data-text="rawReleased" placeholder="Date..."></span>
+        <svg class="discogs-submitter__button is-icon" role="button" data-field="released" title="Restore original release date"><use href="#ds-rotate-left"></use></svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="discogs-submitter__results__row is-half">
+    <div class="discogs-submitter__results__head">Country</div>
+    <div class="discogs-submitter__results__body">
+      <div class="discogs-submitter__results__field">
+        <select class="is-edit is-country" autocomplete="off" data-field="country" data-placeholder="Country...">
+          <option value="">–</option>
+          <optgroup data-unwrap data-loop="availableCountries">
+            <option data-attr="value:_value" data-if="isSelected" data-text="_value" selected></option>
+            <option data-attr="value:_value" data-if="!isSelected" data-text="_value"></option>
+          </optgroup>
+        </select>
+        <svg class="discogs-submitter__button is-icon" role="button" data-field="country" title="Restore original country"><use href="#ds-rotate-left"></use></svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="discogs-submitter__results__row">
+    <div class="discogs-submitter__results__head">Format</div>
+    <div class="discogs-submitter__results__body is-multiple">
+      <var data-loop="format"> <var>qty</var> x <var>name</var>, </var>
+      <div class="discogs-submitter__results__field">
+        <select class="is-format" autocomplete="off" tabindex="-1" data-placeholder="Format...">
+          <optgroup data-unwrap data-loop="availableFormats">
+            <option data-attr="value:_value" data-if="isSelected" data-text="_value" selected></option>
+            <option data-attr="value:_value" data-if="!isSelected" data-text="_value"></option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="discogs-submitter__results__field">
+        <select class="is-description" multiple autocomplete="off" tabindex="-1" data-placeholder="Description...">
+          <optgroup data-unwrap data-loop="availableDescriptions">
+            <option data-attr="value:_value" data-if="isSelected" data-text="_value" selected></option>
+            <option data-attr="value:_value" data-if="!isSelected" data-text="_value"></option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="discogs-submitter__results__field">
+        <span class="discogs-submitter__input is-edit is-format-text" contenteditable="plaintext-only" spellcheck="false" data-field="formatText" data-text="formatText" placeholder="Free Text..."></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="discogs-submitter__results__row is-tracklist" data-attr="class:rowClass">
+    <div class="discogs-submitter__results__head">#</div>
+    <var data-if="hasTrackArtists">
+      <div class="discogs-submitter__results__head">Artist</div>
+    </var>
+    <div class="discogs-submitter__results__head">Title / Credits</div>
+    <div class="discogs-submitter__results__head">Duration</div>
+  </div>
+
+  <var data-if="!tracks.length">
+    <div class="discogs-submitter__results__row">
+      <div class="discogs-submitter__results__body">⚠️ No tracks found.</div>
+    </div>
+  </var>
+
+  <var data-loop="tracks">
+    <div class="discogs-submitter__results__row is-tracklist" data-attr="class:rowClass" data-attr="data-index:_index">
+      <div class="discogs-submitter__results__body"><var>pos</var></div>
+      <var data-if="hasTrackArtists">
+        <div class="discogs-submitter__results__body is-multiple">
+          <var data-loop="trackArtists">
+            <div class="discogs-submitter__results__field">
+              <span class="discogs-submitter__input is-edit is-track-artists" contenteditable="plaintext-only" spellcheck="false" data-field="tracks.artists.name" data-text="name" data-attr="data-index:_trackIndex|data-subindex:_index" placeholder="Artist..."></span>
+              <svg class="discogs-submitter__button is-icon" role="button" data-field="tracks.artists.name" data-attr="data-index:_trackIndex|data-subindex:_index" title="Restore original artist"><use href="#ds-rotate-left"></use></svg>
+            </div>
+            <var data-if="!_last">
+              <var data-if="join"><var>join</var></var>
+            </var>
+          </var>
+        </div>
+      </var>
+      <div class="discogs-submitter__results__body">
+        <div class="discogs-submitter__results__field">
+          <span class="discogs-submitter__input is-edit is-track-title" contenteditable="plaintext-only" spellcheck="false" data-field="tracks.title" data-text="title" data-attr="data-index:_index" placeholder="Title..."></span>
+          <svg class="discogs-submitter__button is-icon" role="button" data-field="tracks.title" data-attr="data-index:_index" title="Restore original title"><use href="#ds-rotate-left"></use></svg>
+        </div>
+        <var data-if="trackExtraartists.length">
+          <var data-loop="trackExtraartists">
+            <div class="discogs-submitter__results__body is-multiple is-inner">
+              <small><var>role</var> – </small>
+              <div class="discogs-submitter__results__field">
+                <span class="discogs-submitter__input is-edit is-track-extraartists" contenteditable="plaintext-only" spellcheck="false" data-field="tracks.extraartists.name" data-text="name" data-attr="data-index:_trackIndex|data-subindex:_index" placeholder="Artist..."></span>
+                <svg class="discogs-submitter__button is-icon" role="button" data-field="tracks.extraartists.name" data-attr="data-index:_trackIndex|data-subindex:_index" title="Restore original credit"><use href="#ds-rotate-left"></use></svg>
+              </div>
+            </div>
+          </var>
+        </var>
+      </div>
+      <div class="discogs-submitter__results__body"><var>duration</var></div>
+    </div>
+  </var>
+
+  <var data-if="showExtraArtists">
+    <div class="discogs-submitter__results__row is-notes">
+      <div class="discogs-submitter__results__head">Credits</div>
+      <div class="discogs-submitter__results__body is-multiple">
+        <var data-loop="rawExtraartists">
+          <var>role</var> –
+          <div class="discogs-submitter__results__field">
+            <span class="discogs-submitter__input is-edit" contenteditable="plaintext-only" data-field="extraartists.name" data-text="name" data-attr="data-index:_index" placeholder="Artist..."></span>
+            <svg class="discogs-submitter__button is-icon" role="button" data-field="extraartists.name" data-attr="data-index:_index" title="Restore original credit"><use href="#ds-rotate-left"></use></svg>
+          </div>
+          <br />
+        </var>
+      </div>
+    </div>
+  </var>
+
+  <div class="discogs-submitter__results__row is-notes">
+    <div class="discogs-submitter__results__head">Notes</div>
+    <div class="discogs-submitter__results__body">
+      <div class="discogs-submitter__results__field">
+        <span class="discogs-submitter__textarea is-edit" contenteditable="plaintext-only" spellcheck="false" data-field="notes" data-text="rawNotes" placeholder="Notes..."></span>
+        <svg class="discogs-submitter__button is-icon" role="button" data-field="notes" title="Restore original notes"><use href="#ds-rotate-left"></use></svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="discogs-submitter__results__row is-notes">
+    <div class="discogs-submitter__results__head">Submission Notes</div>
+    <div class="discogs-submitter__results__body">
+      <div class="discogs-submitter__results__field">
+        <span class="discogs-submitter__textarea is-edit" contenteditable="plaintext-only" spellcheck="false" data-field="submissionNotes" data-text="rawSubmissionNotes" placeholder="Submission Notes..."></span>
+        <svg class="discogs-submitter__button is-icon" role="button" data-field="submissionNotes" title="Restore original submission notes"><use href="#ds-rotate-left"></use></svg>
+      </div>
+    </div>
+  </div>
+</div>

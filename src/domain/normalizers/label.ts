@@ -1,4 +1,4 @@
-import { cleanString } from '@/utils';
+import { cleanString } from '@/utils/string';
 
 /**
  * Normalizes the release label by applying heuristics for self-releases.

@@ -36,26 +36,37 @@ Before proposing or applying any changes to a file, always read its current cont
 ### Surgical Changes
 Touch only what you must. Avoid broad refactorings or "cleanup" of unrelated code. Every change should trace directly to the task at hand.
 
+## Project Structure
+
+The project follows a **Modular Monolith with Component Co-location** pattern. The full architecture is documented in `CONTEXT.md`. In short:
+
+- **Layer folder** (`src/app/`, `src/libs/`, `src/domain/`, `src/providers/`, `src/ui/`) — contains only module folders, each shaped as `<name>/index.ts` + optional companions (`template.html`, `styles.css`, `types.ts`, `__tests__/`).
+- **Collection folder** (`src/config/`, `src/utils/`, `src/domain/normalizers/`) — contains flat `<topic>.ts` files plus a shared `__tests__/`.
+
+Where to put what:
+- Class / controller / engine → `<layer>/<name>/index.ts`
+- Utility function or constant → `<collection>/<topic>.ts`
+- Internal helper inside a module → flat `.ts` file beside its `index.ts`
+- Tests → `__tests__/` next to the module or inside the collection
+
 ## Adding a New Provider
 
 Adding a new digital store is the most common way to contribute. Please follow these steps:
 
-1.  **Create the adapter:** Create `src/providers/[storename].ts`. Implement the `StoreAdapter` interface.
+1.  **Create the adapter folder:** `src/providers/[storename]/index.ts`. Implement the `StoreAdapter` interface.
 2.  **Define selectors:** Use specific CSS selectors for the `target` (where the button is injected).
 3.  **Implement parsing:** Extract data into the `ReleaseData` structure.
-4.  **Register:** Add your provider to the list in `src/providers/index.ts`.
-5.  **Test:** Create `src/providers/__tests__/[storename].test.ts` with mock DOM data.
-6.  **(Optional) Store-specific styles:** If the store needs custom CSS (button color, layout fix), create `src/providers/[storename].css` next to the adapter, import it inline, and assign it to the `styles` field of the adapter:
-    ```ts
-    import styles from './[storename].css?inline';
-
-    export const [storename]: StoreAdapter = {
-      id: '[storename]',
-      styles,
-      // ...
-    };
+4.  **Register:** Add your provider to the `list` in `src/providers/index.ts`.
+5.  **Test:** Create `src/providers/[storename]/__tests__/parse.test.ts` with mock DOM data. Add `// @vitest-environment happy-dom` at the top if you touch the DOM.
+6.  **(Optional) Store-specific styles:** Drop a `styles.css` inside the provider folder:
+    ```
+    src/providers/[storename]/
+    ├── index.ts
+    ├── styles.css         ← auto-discovered via `import.meta.glob`, no wiring needed
+    └── __tests__/parse.test.ts
     ```
     The styles are injected as a scoped `<style>` tag only when the user lands on a matching page and removed automatically on navigation away.
+7.  **(Optional) Provider-private API types:** If the store API returns complex types, put them in `src/providers/[storename]/types.ts` so they don't leak into shared `types.ts`.
 
 ## Coding Standards
 
@@ -73,14 +84,19 @@ All exported functions, interfaces, and public methods MUST have JSDoc comments.
 *   Provide an `@example` for complex logic or utilities.
 
 ### Strict Typing
-Avoid `any`. Use TypeScript's strict mode to its full potential. If you need a new data structure, define it in `src/types/index.ts`.
+Avoid `any`. Use TypeScript's strict mode to its full potential. Cross-layer contracts go in `src/types.ts`. Provider-private API types go in `src/providers/<store>/types.ts`. Module-internal types stay in `src/<module>/types.ts`.
 
 ### CSS Standards
-Our UI styles are located in `src/ui/assets/css/*.css`. We follow these principles:
+CSS is **co-located** with the component it styles, following the project's auto-discovery convention:
+*   **Global stylesheets** in `src/assets/styles/` — collected by `import.meta.glob` and injected once at startup by `StylesInjector`. Files are prefixed with a numeric band (`10-reset`, `20-variables`, `30-inputs`, `40-buttons`) so the cascade order is encoded in the alphabetical filename order; pick an unused number in the right band when adding a new file.
+*   **Component styles** as `styles.css` next to the component's `index.ts` (e.g., `src/ui/widget/styles.css`, `src/ui/widget/preview/styles.css`, `src/ui/inject-button/styles.css`). The widget glob-discovers every `styles.css` inside `src/ui/widget/`; the inject button imports its own.
+*   **Provider styles** as `src/providers/<store>/styles.css` — auto-discovered and injected lazily when the user lands on a matching page.
+
+We follow these principles:
 *   **BEM Methodology:** Use BEM-like naming for classes (e.g., `discogs-submitter__header__title`).
 *   **Scoped Styling:** All classes must be prefixed with `discogs-submitter` to avoid collisions with the host website.
-*   **CSS Variables:** Use the predefined variables in `widget.css` for colors, gaps, and border-radius.
-*   **Vite Inline Imports:** CSS files are imported in TS via `import css from './style.css?inline'` and injected dynamically.
+*   **CSS Variables:** Use the predefined variables in `src/assets/styles/20-variables.css` for colors, gaps, and border-radius.
+*   **Vite Inline Imports:** CSS files are imported in TS via `import css from './style.css?inline'` or auto-discovered via `import.meta.glob` and injected dynamically.
 
 ### Linting & Formatting
 The project uses [Antfu ESLint Config](https://github.com/antfu/eslint-config) to enforce code style and catch common errors.
@@ -99,7 +115,9 @@ A `post-commit` Husky hook keeps the userscript artifact in sync with the versio
 We follow a **Test-Driven Development (TDD)** approach using **Vitest**. Every bug fix or new feature must include a corresponding test.
 
 ### Testing Guidelines:
-*   **Location:** Provider tests go in `src/providers/__tests__/[name].test.ts`, domain logic tests in `src/domain/normalizers/__tests__/[name].test.ts`, core tests in `src/core/__tests__/[name].test.ts`, and utility tests in `src/utils/__tests__/[name].test.ts`.
+*   **Location:** Tests live next to the code they cover:
+    *   Module tests inside the module folder: `src/providers/<store>/__tests__/parse.test.ts`, `src/libs/template/__tests__/render.test.ts`.
+    *   Collection tests at the collection root: `src/domain/normalizers/__tests__/<topic>.test.ts`, `src/utils/__tests__/<topic>.test.ts`.
 *   **DOM Mocking:** Since we parse real websites, use `happy-dom` to mock the necessary HTML structures. The default Vitest environment is `node`; add `// @vitest-environment happy-dom` at the top of any test file that touches the DOM.
 *   **Regex Testing:** For new parsing patterns, add exhaustive test cases to ensure no regressions in artist/title detection.
 
@@ -118,11 +136,17 @@ npm run test:run
 
 ## Commit Messages
 
-We use [Conventional Commits](https://www.conventionalcommits.org/). This is enforced by `commitlint`.
+We use [Conventional Commits](https://www.conventionalcommits.org/). This is enforced by `commitlint` via the `commit-msg` Husky hook.
 *   `chore: update dependencies`
 *   `docs: update contributing guidelines`
 *   `feat: add Beatport provider`
 *   `fix: resolve incorrect duration parsing on Bandcamp`
+
+Rules inherited from `@commitlint/config-conventional` that you'll hit most often:
+*   **Header (subject) ≤ 100 characters.** If you exceed this, commitlint blocks the commit with `header-max-length`. Move detail to the body instead of cramming it into the subject.
+*   **Body lines ≤ 100 characters.** Wrap long bullet/explanation lines (`body-max-line-length`).
+*   **Blank line between subject and body** is required when a body is present.
+*   The `subject-case` rule is intentionally disabled so non-English subjects are allowed.
 
 ## Pull Request Checklist
 

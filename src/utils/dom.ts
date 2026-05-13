@@ -1,4 +1,4 @@
-import { cleanString } from '@/utils';
+import { cleanString } from './string';
 
 /**
  * Extracts text from multiple DOM elements matching a specific CSS selector.
@@ -13,11 +13,7 @@ import { cleanString } from '@/utils';
  * const texts = getManyTextFromTags('.artist-name');
  * ```
  */
-export function getManyTextFromTags(
-  target: string,
-  parent: HTMLElement | Document | Element | null = null,
-  keepNewlines = false,
-): string[] {
+export function getManyTextFromTags(target: string, parent: HTMLElement | Document | Element | null = null, keepNewlines = false): string[] {
   const context = parent || document;
   const results = Array.from(context.querySelectorAll(target));
 
@@ -53,13 +49,7 @@ export function getManyTextFromTags(
  * const url = getTextFromTag('meta[property="og:image"]', document, 'content');
  * ```
  */
-export function getTextFromTag(
-  target: string,
-  parent: HTMLElement | Document | Element | ShadowRoot | null = null,
-  attribute = '',
-  keepNewlines = false,
-  visible = false,
-): string | null {
+export function getTextFromTag(target: string, parent: HTMLElement | Document | Element | ShadowRoot | null = null, attribute = '', keepNewlines = false, visible = false): string | null {
   const context = parent || document;
   const result = context.querySelector(target);
   let output = null;

@@ -9,7 +9,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   plugins: [
     monkey({
-      entry: 'src/main.ts',
+      entry: 'src/index.ts',
       build: {
         fileName: 'discogs-submitter.user.js',
         autoGrant: false,

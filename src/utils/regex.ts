@@ -1,7 +1,3 @@
-/**
- * Utility functions for dynamically building and processing Regular Expressions.
- */
-
 const SPACE_REGEX = /\s+/g;
 const WORD_BOUNDARY_END_REGEX = /\w$/;
 const PLACEHOLDER_REGEX = /\{\{p\}\}/g;
