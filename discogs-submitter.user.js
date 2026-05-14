@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discogs Submitter
 // @namespace    discogs-submitter
-// @version      3.2.4
+// @version      3.2.5
 // @author       Denis G. <https://github.com/denis-g>
 // @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital, Amazon Music, Bleep, HDtracks and submit releases to Discogs.
 // @license      MIT
@@ -359,7 +359,7 @@
     var USERSCRIPT = {
         ID: info?.script?.namespace || "discogs-submitter",
         NAME: info?.script?.name || "discogs-submitter",
-        VERSION: info?.script?.version || "3.2.4",
+        VERSION: info?.script?.version || "3.2.5",
         HOMEPAGE: info?.script?.homepage || "https://github.com/denis-g/userscript-discogs-submitter",
         SUPPORT_URL: info?.script?.supportURL || bugs?.url,
         FUNDING_URL: "https://buymeacoffee.com/denis_g"
@@ -1319,6 +1319,19 @@
         detectByLocation: () => DigitalStoreRegistry.list.find((provider) => provider.test(unsafeWindow.location.href)),
         getStyles: (storeId) => PROVIDER_STYLES[storeId]
     };
+    var FORBIDDEN_KEYS = new Set([
+        "__proto__",
+        "prototype",
+        "constructor"
+    ]);
+    function defineOwnProperty(target, key, value) {
+        Object.defineProperty(target, key, {
+            value,
+            writable: true,
+            enumerable: true,
+            configurable: true
+        });
+    }
     function getValueByPath(object, path) {
         if (!path) return object;
         return path.split(".").reduce((accumulator, key) => accumulator?.[key], object);
@@ -1326,21 +1339,15 @@
     function setValueByPath(object, path, value) {
         if (!path) return;
         const parts = path.split(".");
-        const forbiddenKeys = new Set([
-            "__proto__",
-            "prototype",
-            "constructor"
-        ]);
-        if (parts.some((part) => forbiddenKeys.has(part))) return;
+        if (parts.some((part) => FORBIDDEN_KEYS.has(part))) return;
         let current = object;
         for (let index = 0; index < parts.length - 1; index++) {
             const key = parts[index];
             const nextKey = parts[index + 1];
-            if (!(key in current)) current[key] = /^\d+$/.test(nextKey) ? [] : {};
+            if (!(key in current)) defineOwnProperty(current, key, /^\d+$/.test(nextKey) ? [] : {});
             current = current[key];
         }
-        const lastKey = parts[parts.length - 1];
-        current[lastKey] = value;
+        defineOwnProperty(current, parts[parts.length - 1], value);
     }
     var EVENT_NAME_RE = /^[A-Z][\w-]*$/i;
     var HANDLER_NAME_RE = /^[A-Z_$][\w$]*$/i;
