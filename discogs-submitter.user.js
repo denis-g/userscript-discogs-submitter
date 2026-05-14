@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discogs Submitter
 // @namespace    discogs-submitter
-// @version      3.2.5
+// @version      3.2.6
 // @author       Denis G. <https://github.com/denis-g>
 // @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital, Amazon Music, Bleep, HDtracks and submit releases to Discogs.
 // @license      MIT
@@ -359,7 +359,7 @@
     var USERSCRIPT = {
         ID: info?.script?.namespace || "discogs-submitter",
         NAME: info?.script?.name || "discogs-submitter",
-        VERSION: info?.script?.version || "3.2.5",
+        VERSION: info?.script?.version || "3.2.6",
         HOMEPAGE: info?.script?.homepage || "https://github.com/denis-g/userscript-discogs-submitter",
         SUPPORT_URL: info?.script?.supportURL || bugs?.url,
         FUNDING_URL: "https://buymeacoffee.com/denis_g"
@@ -1344,8 +1344,13 @@
         for (let index = 0; index < parts.length - 1; index++) {
             const key = parts[index];
             const nextKey = parts[index + 1];
-            if (!(key in current)) defineOwnProperty(current, key, /^\d+$/.test(nextKey) ? [] : {});
-            current = current[key];
+            const existing = Reflect.get(current, key);
+            const isContainer = existing !== null && (typeof existing === "object" || typeof existing === "function");
+            if (!Object.hasOwn(current, key) || !isContainer) {
+                const nextContainer = /^\d+$/.test(nextKey) ? [] : {};
+                defineOwnProperty(current, key, nextContainer);
+                current = nextContainer;
+            } else current = existing;
         }
         defineOwnProperty(current, parts[parts.length - 1], value);
     }
