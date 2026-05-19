@@ -5,9 +5,9 @@
   position: relative;
   z-index: 1;
   transition: all 0.3s ease;
-  border: 1px solid rgba(var(--ds-palette-secondary-color), 0.5);
+  border: 1px solid rgba(var(--ds-palette-secondary-color), 0.25);
   border-radius: calc(var(--ds-radius) / 4);
-  background: rgba(var(--ds-palette-secondary-color), 0.1);
+  background: rgba(var(--ds-palette-secondary-color), 0.075);
   padding: calc(var(--ds-gap) / 8) calc(var(--ds-gap) / 4);
   min-width: 20px;
   min-height: 1.2em;

@@ -42,10 +42,6 @@ export const junodownload: StoreAdapter = {
   supports: {
     formats: ['WAV', 'FLAC', 'AIFF', 'MP3'],
   },
-  target: '#product-action-btns',
-  injectButton: (button, target) => {
-    target.insertAdjacentElement('afterend', button);
-  },
   parse: async () => {
     const data = await getData();
     const smallCover = getTextFromTag('.product-image-for-modal', null, 'src');

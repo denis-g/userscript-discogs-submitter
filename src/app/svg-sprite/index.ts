@@ -1,21 +1,17 @@
 import iconBug from '@/assets/icons/bug.svg?raw';
 import iconChevronDown from '@/assets/icons/chevron-down.svg?raw';
 import iconClose from '@/assets/icons/close.svg?raw';
-import iconGripLines from '@/assets/icons/grip-lines.svg?raw';
 import imageLogo from '@/assets/icons/logo.svg?raw';
 import iconRotateLeft from '@/assets/icons/rotate-left.svg?raw';
 import iconSquareCheck from '@/assets/icons/square-check.svg?raw';
 import { USERSCRIPT } from '@/config';
 
-const SVG_SPRITE_ID = `${USERSCRIPT.ID}-svg-sprite`;
-const DEFAULT_VIEWBOX = '0 0 1024 1024';
 /**
  * Icon id → raw SVG source. Keys become `<symbol id="...">` ids consumed by
  * widget templates via `<use href="#ds-...">`.
  */
 const ICON_REGISTRY: Record<string, string> = {
   'ds-logo': imageLogo,
-  'ds-icon-grip-lines': iconGripLines,
   'ds-icon-close': iconClose,
   'ds-icon-bug': iconBug,
   'ds-icon-chevron-down': iconChevronDown,
@@ -33,13 +29,13 @@ export class SvgSprite {
    * Mounts the sprite if not already present in the document.
    */
   public mount(): void {
-    if (document.getElementById(SVG_SPRITE_ID)) {
+    if (document.getElementById(`${USERSCRIPT.ID}-svg-sprite`)) {
       return;
     }
 
     const sprite = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
 
-    sprite.id = SVG_SPRITE_ID;
+    sprite.id = `${USERSCRIPT.ID}-svg-sprite`;
     sprite.style.display = 'none';
     sprite.innerHTML = this.buildSymbols();
 
@@ -67,7 +63,7 @@ export class SvgSprite {
           return '';
         }
 
-        const viewBox = svgElement.getAttribute('viewBox') || DEFAULT_VIEWBOX;
+        const viewBox = svgElement.getAttribute('viewBox') || '0 0 1024 1024';
         const innerContent = svgElement.innerHTML.trim();
 
         return `<symbol id="${iconId}" viewBox="${viewBox}">${innerContent}</symbol>`;

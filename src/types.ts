@@ -31,17 +31,17 @@ export interface StoreAdapter {
    * @returns True if the URL belongs to this store.
    */
   test: (_url: string) => boolean;
-  /** The CSS selector indicating where the widget button should be injected. */
-  target: string;
-  /**
-   * Defines how to inject the parsing button into the store's DOM.
-   *
-   * @param _button - The button element to inject.
-   * @param _target - The target element found via the target selector.
-   */
-  injectButton: (_button: HTMLElement, _target: HTMLElement) => void;
   /** The audio formats supported by this store. */
   supports: StoreFormatOptions;
+  /**
+   * Optional lifecycle hook invoked right before `parse()`. Use it for any host-page side-effect
+   * that needs to settle before scraping — e.g. nudging an SPA to render hidden DOM, triggering a
+   * lazy data load, scrolling into view. Failures must be swallowed by the hook itself; the parse
+   * flow continues regardless.
+   *
+   * @returns A promise or void.
+   */
+  beforeParse?: () => Promise<void> | void;
   /**
    * Extracts the full release data from the store's current page.
    *

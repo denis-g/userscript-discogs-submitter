@@ -8,10 +8,10 @@ import { resolvePath } from './resolver';
 
 /**
  * Side-effects performed after the preview renders. Allows the widget shell to update
- * sibling controllers (cover, status, submit button) without coupling them to preview internals.
+ * sibling controllers (header, status, submit button) without coupling them to preview internals.
  */
 export interface PreviewControllerHooks {
-  /** Called after every successful preview render so the shell can update the cover, status, and submit button. */
+  /** Called after every successful preview render so the shell can update the header, status, and submit button. */
   onRendered: (_rawJson: string) => void;
 }
 
@@ -106,8 +106,23 @@ export class PreviewController {
     });
 
     this.contentElement.addEventListener('keydown', (event) => {
-      if ((event.target as HTMLElement).classList.contains('is-edit')) {
+      const target = event.target as HTMLElement;
+
+      if (target.classList.contains('is-edit')) {
         EditableHelper.handleKeydown(event);
+
+        return;
+      }
+
+      // Keyboard activation for restore buttons (mirrors the delegated click handler above)
+      if (event.key === 'Enter' || event.key === ' ') {
+        const fieldButton = target.closest('.discogs-submitter__results__field .discogs-submitter__button');
+
+        if (fieldButton) {
+          event.preventDefault();
+
+          this.handleRestore(fieldButton as HTMLElement);
+        }
       }
     });
 
@@ -126,7 +141,7 @@ export class PreviewController {
     // Trigger handleChange on blur for contenteditable fields
     this.contentElement.addEventListener('blur', (event) => {
       if ((event.target as HTMLElement).classList.contains('is-edit')) {
-        void this.handleChange(event);
+        this.handleChange(event);
       }
     }, true);
   }

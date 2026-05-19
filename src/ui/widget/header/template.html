@@ -1,0 +1,21 @@
+<div class="discogs-submitter__header__cover">
+  <var data-if="thumb">
+    <img class="discogs-submitter__header__cover__image" data-attr="src:thumb" alt="" />
+  </var>
+
+  <var data-if="!thumb">
+    <svg class="discogs-submitter__header__cover__logo" aria-hidden="true"><use href="#ds-logo"></use></svg>
+  </var>
+</div>
+
+<div class="discogs-submitter__header__content">
+  <div class="discogs-submitter__header__title">
+    <var>scriptName</var>
+  </div>
+
+  <div class="discogs-submitter__header__actions">
+    <div class="discogs-submitter__button is-to-left" role="button" tabindex="0" aria-label="Dock widget to left side">Move to left</div>
+    <div class="discogs-submitter__button is-to-right" role="button" tabindex="0" aria-label="Dock widget to right side">Move to right</div>
+    <svg class="discogs-submitter__button is-icon is-large is-close" role="button" tabindex="0" title="Close widget" aria-label="Close widget"><use href="#ds-icon-close"></use></svg>
+  </div>
+</div>

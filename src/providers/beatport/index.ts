@@ -63,10 +63,6 @@ export const beatport: StoreAdapter = {
   supports: {
     formats: ['WAV', 'FLAC', 'AIFF', 'MP3'],
   },
-  target: '[class^="ReleaseDetailCard-style__Controls"]',
-  injectButton: (button, target) => {
-    target.appendChild(button);
-  },
   parse: async () => {
     const data = await getData();
     const smallCover = data.image.dynamic_uri?.replace('{w}', '350')?.replace('{h}', '350');

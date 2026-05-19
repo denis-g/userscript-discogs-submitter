@@ -19,10 +19,6 @@ export const hdtracks: StoreAdapter = {
   supports: {
     formats: ['WAV', 'DSF'],
   },
-  target: '.list-page.page-current .list-info .list-title',
-  injectButton: (button, target): void => {
-    target.appendChild(button);
-  },
   parse: async () => {
     // get current page context
     const context = document.querySelector('.list-page.page-current:not(.page-swipeback-active)') || document.querySelector('.list-page.page-current');

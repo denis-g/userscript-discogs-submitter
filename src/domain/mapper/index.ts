@@ -21,8 +21,10 @@ export const DiscogsMapper = {
    * format configurations, and standardizing notes.
    *
    * NOTE: This method prioritizes manually edited data provided in the `data` object.
-   * Heuristics (like "Not On Label" transformation) should be applied before calling
-   * this method to ensure they are visible and editable in the UI.
+   * Heuristics that must be visible and editable in the UI (e.g. the "Not On Label"
+   * label normalization or the `resolveCountry` fallback) are applied by the widget
+   * before the data lands here; the same defaults are re-applied inside this method as
+   * a safety net for the case where the user clears an editable field to an empty value.
    *
    * @param data - The raw or edited Data extracted from a store.
    * @param sourceUrl - The originating URL where the data was scraped.

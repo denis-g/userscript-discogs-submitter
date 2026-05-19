@@ -19,10 +19,6 @@ export const bleep: StoreAdapter = {
   supports: {
     formats: ['WAV', 'FLAC', 'MP3'],
   },
-  target: '.product-page .product-actions',
-  injectButton: (button, target): void => {
-    target.before(button);
-  },
   parse: async () => {
     const albumMainArtistsRaw = getManyTextFromTags('.product-page .product-details .main-artists a');
     const albumMainArtistsSource = albumMainArtistsRaw.length > 0

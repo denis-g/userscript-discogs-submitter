@@ -67,3 +67,31 @@ export function normalizeCountry(country: string | null | undefined): string {
 
   return canonical || '';
 }
+
+/**
+ * Resolves an arbitrary country string from a store parser into a valid Discogs country.
+ * Combines the allowed-list check with the alias normalizer and falls back to `'Worldwide'`
+ * when the value is empty or unrecognized (e.g. provider returned a city/state like `'Texas'`).
+ *
+ * @param raw - The raw country string from a store adapter.
+ * @returns A guaranteed-valid Discogs country name.
+ *
+ * @example
+ * ```typescript
+ * resolveCountry('UK');       // 'UK'        (already canonical)
+ * resolveCountry('usa');      // 'US'        (alias)
+ * resolveCountry('Texas');    // 'Worldwide' (unknown → fallback)
+ * resolveCountry(null);       // 'Worldwide' (empty → fallback)
+ * ```
+ */
+export function resolveCountry(raw: string | null | undefined): string {
+  if (!raw) {
+    return 'Worldwide';
+  }
+
+  if (ALLOWED_COUNTRIES.includes(raw)) {
+    return raw;
+  }
+
+  return normalizeCountry(raw) || 'Worldwide';
+}

@@ -28,7 +28,7 @@ export default defineConfig({
         'homepage': `${pkg.homepage}`,
         'match': [
           'https://*.bandcamp.com/album/*',
-          'https://web.archive.org/web/*/*://*.bandcamp.com/album/*',
+          'https://web.archive.org/web/*/*://*.bandcamp.com*/album/*',
           'https://*.qobuz.com/*',
           'https://*.junodownload.com/*',
           'https://*.beatport.com/*',

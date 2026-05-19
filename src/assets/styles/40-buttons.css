@@ -9,14 +9,14 @@
   padding: calc(var(--ds-gap) / 4);
   color: currentColor;
   font-weight: bold;
+  font-size: 8px;
   user-select: none;
   text-align: center;
 
   &.is-icon {
     fill: currentColor;
-    border: none;
-    width: 1.75em;
-    height: 1.75em;
+    width: 2em;
+    height: 2em;
 
     &,
     &.is-large {
@@ -36,9 +36,9 @@
   }
 
   &.is-large {
-    border-radius: var(--ds-radius);
+    border-radius: calc(var(--ds-radius) / 2);
     padding: calc(var(--ds-gap) / 2);
-    font-size: 18px;
+    font-size: 16px;
   }
 
   &.is-primary {
@@ -46,13 +46,10 @@
     color: rgba(var(--ds-color-white), 1);
 
     &:hover {
+      outline: 2px solid rgba(var(--ds-palette-secondary-color), 1);
+      outline-offset: 2px;
       background: rgba(var(--ds-palette-secondary-color), 1);
       color: rgba(var(--ds-palette-primary-color), 1);
     }
-  }
-
-  &.is-disabled {
-    opacity: 0.5;
-    pointer-events: none;
   }
 }

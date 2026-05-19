@@ -18,12 +18,6 @@ export const amazonmusic: StoreAdapter = {
   supports: {
     formats: ['MP3'],
   },
-  target: 'music-detail-header[primary-text-href] div[slot="icons"]',
-  injectButton: (button, target) => {
-    target.style.whiteSpace = 'normal';
-
-    target.append(button);
-  },
   parse: async () => {
     const albumCover = getTextFromTag('#main_content music-detail-header', null, 'image-src');
     const albumExtraArtists: ArtistCredit[] = [];

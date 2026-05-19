@@ -53,9 +53,9 @@ Where to put what:
 
 Adding a new digital store is the most common way to contribute. Please follow these steps:
 
-1.  **Create the adapter folder:** `src/providers/[storename]/index.ts`. Implement the `StoreAdapter` interface.
-2.  **Define selectors:** Use specific CSS selectors for the `target` (where the button is injected).
-3.  **Implement parsing:** Extract data into the `ReleaseData` structure.
+1.  **Create the adapter folder:** `src/providers/[storename]/index.ts`. Implement the `StoreAdapter` interface (`id`, `test`, `supports`, `parse`).
+2.  **URL matching:** Use `matchUrls(...)` from `@/utils/url` in the `test` predicate to declare which page URLs the provider handles.
+3.  **Implement parsing:** Extract data into the `ReleaseData` structure inside `parse()`. Reuse normalizers from `@/domain/normalizers/`.
 4.  **Register:** Add your provider to the `list` in `src/providers/index.ts`.
 5.  **Test:** Create `src/providers/[storename]/__tests__/parse.test.ts` with mock DOM data. Add `// @vitest-environment happy-dom` at the top if you touch the DOM.
 6.  **(Optional) Store-specific styles:** Drop a `styles.css` inside the provider folder:
@@ -65,8 +65,9 @@ Adding a new digital store is the most common way to contribute. Please follow t
     ├── styles.css         ← auto-discovered via `import.meta.glob`, no wiring needed
     └── __tests__/parse.test.ts
     ```
-    The styles are injected as a scoped `<style>` tag only when the user lands on a matching page and removed automatically on navigation away.
+    The styles are injected as a scoped `<style>` tag only when the user lands on a matching page and removed automatically on navigation away. Rarely needed — the widget and inject button are `position: fixed` and don't depend on the host DOM. Use this only to fix visual quirks caused by the store's own CSS leaking into our widget elements (e.g. `img { opacity: 0.5 }` overriding our cover image — see `src/providers/bleep/styles.css` for a real example).
 7.  **(Optional) Provider-private API types:** If the store API returns complex types, put them in `src/providers/[storename]/types.ts` so they don't leak into shared `types.ts`.
+8.  **(Optional) Pre-parse hook:** If the store needs DOM settlement before scraping (SPA rendering, lazy-loaded tracks), implement `beforeParse?: () => Promise<void> | void` on the adapter. It runs once before `parse()` and must swallow its own failures. See `src/providers/qobuz/index.ts` for a real example (it triggers Qobuz's `infiniteScroll` loader so every track is in the DOM).
 
 ## Coding Standards
 
@@ -97,6 +98,30 @@ We follow these principles:
 *   **Scoped Styling:** All classes must be prefixed with `discogs-submitter` to avoid collisions with the host website.
 *   **CSS Variables:** Use the predefined variables in `src/assets/styles/20-variables.css` for colors, gaps, and border-radius.
 *   **Vite Inline Imports:** CSS files are imported in TS via `import css from './style.css?inline'` or auto-discovered via `import.meta.glob` and injected dynamically.
+
+### HTML Templates & Accessibility
+The widget is rendered into the host page via `<div>` / `<svg>` elements (so host-page CSS resets don't bleed into our UI), which means accessibility semantics have to be added explicitly. Every interactive element must be reachable by keyboard *and* announceable by screen readers.
+
+**Mandatory attributes on non-native button elements** (`<div>` / `<svg>` acting as a button):
+*   `role="button"` — tells assistive tech this is a button.
+*   `tabindex="0"` — makes the element focusable in document tab order.
+*   `aria-label="<concise action description>"` — read by screen readers; `title` alone is unreliable.
+
+**Mandatory event wiring** for those same elements — always use `bindActivation(element, handler)` from `@/utils/dom` instead of `element.addEventListener('click', handler)`. The helper wires click *and* `Enter` / `Space` keyboard activation in one call, so keyboard users get the same affordance as mouse users.
+
+**Common shapes:**
+*   **Icon button** (SVG with `<use>`): `<svg class="discogs-submitter__button is-icon ..." role="button" tabindex="0" title="..." aria-label="..."><use href="#ds-icon-..."></use></svg>`. The inner `<use>` is decorative — the `<svg>` itself carries the role + label.
+*   **Text button** (DIV with visible label): `<div class="discogs-submitter__button ..." role="button" tabindex="0" aria-label="...">Label</div>`. Visible text serves as the accessible name, but always include `aria-label` for clarity and consistency with the icon-button pattern.
+
+**Common ARIA patterns used in this project:**
+*   **Dialog/sidebar shell** (`Widget.buildPopup`) — `role="dialog"` + `aria-modal="false"` + `aria-label`.
+*   **Live status banners** — `role="status"` + `aria-live="polite"` on the container; the inner text node is updated dynamically and the change is announced.
+*   **Busy/loading state** — `role="status"` + `aria-busy="true"` + `aria-label="Loading"`; visibility is toggled via CSS, which also hides the element from assistive tech when not active.
+*   **Custom `<select>` (`Select`)** — trigger uses `role="combobox"` + `aria-haspopup="listbox"` + `aria-expanded` (kept in sync with open state in `toggleDropdown` / `closeDropdown`); list uses `role="listbox"` + `aria-multiselectable`; items use `role="option"` + `aria-selected`.
+*   **Editable contenteditable spans** — `role="textbox"` + `aria-label`. Multi-line textareas additionally set `aria-multiline="true"`.
+*   **Decorative SVG icons** (icons inside a labelled button, list markers) — `aria-hidden="true"` so the icon isn't announced separately from its parent's label.
+
+**Bottom line:** if you add a new clickable element that isn't a native `<button>` / `<a>` / `<input>`, give it `role="button"` + `tabindex="0"` + `aria-label`, and wire it through `bindActivation`. No exceptions.
 
 ### Linting & Formatting
 The project uses [Antfu ESLint Config](https://github.com/antfu/eslint-config) to enforce code style and catch common errors.

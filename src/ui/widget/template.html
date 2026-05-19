@@ -1,29 +1,9 @@
-<div class="discogs-submitter__header">
-  <div class="discogs-submitter__header__cover"></div>
-  <div class="discogs-submitter__header__content">
-    <span class="discogs-submitter__header__title"><var>scriptName</var> <small>v<var>scriptVersion</var></small></span>
-    <svg class="discogs-submitter__button is-icon is-large is-move" title="Grab to move" role="button"><use href="#ds-icon-grip-lines"></use></svg>
-    <svg class="discogs-submitter__button is-icon is-large is-close" title="Close widget" role="button"><use href="#ds-icon-close"></use></svg>
-  </div>
-</div>
+<aside data-attr="id:scriptId|class:rootClasses|aria-label:scriptName" role="dialog" aria-modal="false">
+  <div class="discogs-submitter__header"></div>
 
-<div class="discogs-submitter__content"></div>
+  <div class="discogs-submitter__content"></div>
 
-<div class="discogs-submitter__footer">
-  <div class="discogs-submitter__status">
-    <div class="discogs-submitter__status__text">Waiting...</div>
-    <svg class="discogs-submitter__button is-icon is-debug" hidden title="Copy debug" role="button"><use href="#ds-icon-bug"></use></svg>
-  </div>
+  <div class="discogs-submitter__footer"></div>
 
-  <div class="discogs-submitter__actions">
-    <div class="discogs-submitter__button is-full is-large is-primary" role="button" hidden>Submit to Discogs</div>
-  </div>
-
-  <div class="discogs-submitter__copyright">
-    <a class="discogs-submitter__copyright__link" data-attr="href:homepage" target="_blank">Homepage</a>
-    <a class="discogs-submitter__copyright__link" data-attr="href:supportURL" target="_blank">Report Bug</a>
-    <a class="discogs-submitter__copyright__link" data-attr="href:funding" target="_blank">Made with <span>♥</span> for music</a>
-  </div>
-</div>
-
-<div class="discogs-submitter__loader"></div>
+  <div class="discogs-submitter__loader" role="status" aria-busy="true" aria-label="Loading"></div>
+</aside>

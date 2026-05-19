@@ -1,6 +1,7 @@
 import { DigitalStoreRegistry } from '@/providers';
 import { InjectButton } from '@/ui/inject-button';
 import { Widget } from '@/ui/widget';
+import { bindActivation } from '@/utils/dom';
 import { SpaObserver } from './spa-observer';
 import { StylesInjector } from './styles-injector';
 import { SvgSprite } from './svg-sprite';
@@ -18,8 +19,18 @@ import { SvgSprite } from './svg-sprite';
  * ```
  */
 export class App {
-  private readonly widget = new Widget();
+  private position: 'left' | 'right' = 'right';
   private readonly injectButton = new InjectButton();
+  private readonly widget = new Widget({
+    onOpen: () => this.injectButton.setHidden(true),
+    onClose: () => this.injectButton.setHidden(false),
+    onPositionChange: (side) => {
+      this.position = side;
+
+      this.injectButton.setPosition(side);
+    },
+  });
+
   private readonly styles = new StylesInjector();
   private readonly sprite = new SvgSprite();
   private readonly observer = new SpaObserver();
@@ -37,6 +48,8 @@ export class App {
 
     await this.widget.init();
 
+    this.injectButton.setPosition(this.position);
+
     this.bindEvents();
 
     this.observer.start({
@@ -51,15 +64,7 @@ export class App {
    * Wires the inject button click — opens the widget for the currently-detected store.
    */
   private bindEvents(): void {
-    if (!this.injectButton.element) {
-      return;
-    }
-
-    this.injectButton.element.addEventListener('click', () => {
-      if (this.injectButton.element?.classList.contains('is-disabled')) {
-        return;
-      }
-
+    bindActivation(this.injectButton.element, () => {
       const store = DigitalStoreRegistry.detectByLocation();
 
       if (store) {
@@ -69,9 +74,10 @@ export class App {
   }
 
   /**
-   * Verifies whether the current location matches a supported store. When it does, injects
-   * the action button (if not already there) and the provider-specific CSS. When it doesn't,
-   * removes the button and cleans up any leftover provider styles.
+   * Verifies whether the current location matches a supported store. The inject button itself is
+   * already built in the constructor; this method just attaches it to `<body>` (if it isn't already)
+   * and injects the matching provider's CSS. On unsupported pages it detaches the button and removes
+   * any lingering provider stylesheet. Position is `fixed`, so no store-specific anchor is needed.
    */
   private refreshInjection(): void {
     const store = DigitalStoreRegistry.detectByLocation();
@@ -86,13 +92,8 @@ export class App {
       return;
     }
 
-    const targets = document.querySelectorAll(store.target) as NodeListOf<HTMLElement>;
-    const target = Array.from(targets).find(candidate => candidate.offsetWidth > 0) || targets[0];
-
-    if (target && this.injectButton.element && !this.injectButton.element.isConnected) {
-      this.injectButton.setStore(store.id);
-
-      store.injectButton(this.injectButton.element, target);
+    if (this.injectButton.element && !this.injectButton.element.isConnected) {
+      document.body.appendChild(this.injectButton.element);
     }
 
     this.styles.injectProvider(store.id, DigitalStoreRegistry.getStyles(store.id));

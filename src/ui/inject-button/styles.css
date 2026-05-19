@@ -1,48 +1,75 @@
-/* --- INJECTED BUTTONS --- */
+.discogs-submitter__inject {
+  display: flex;
+  position: fixed;
+  top: 50%;
+  flex-direction: column;
+  transform: translate(0, -50%);
+  z-index: 999998;
+  filter: drop-shadow(0 0 1px rgba(var(--ds-palette-secondary-color), 1))
+    drop-shadow(0 0 2px rgba(var(--ds-palette-secondary-color), 1));
+  transition: all 0.5s ease;
 
-.discogs-submitter__inject__button {
-  all: unset;
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  vertical-align: middle;
-  gap: 10px;
-  transition: all 0.3s ease;
-  cursor: pointer;
-  outline: 1px solid rgba(var(--ds-color-white), 1);
-  border: 1px solid rgba(var(--ds-color-black), 1);
-  border-radius: calc(var(--ds-radius) * 2);
-  background: rgba(var(--ds-color-white), 1);
-  padding: calc(var(--ds-gap) / 2);
-  color: rgba(var(--ds-color-black), 1);
-  font-weight: bold;
-  font-size: 14px;
-  line-height: 1.2;
-  font-family: var(--ds-font-sans);
-  user-select: none;
-  text-shadow: none;
-  text-transform: none;
-  white-space: nowrap;
+  &.is-position-left {
+    left: 0;
 
-  &:hover {
-    outline-color: rgba(var(--ds-color-black), 1);
-    border-color: rgba(var(--ds-color-white), 1);
-    background: rgba(var(--ds-color-black), 1);
-    color: rgba(var(--ds-color-white), 1);
+    .discogs-submitter__button.is-inject {
+      mask:
+        radial-gradient(
+            var(--ds-radius) at 100% var(--ds-radius),
+            rgba(var(--ds-color-black), 0) 98%,
+            rgba(var(--ds-color-black), 1) 101%
+          )
+          0 calc(-1 * var(--ds-radius)) / var(--ds-radius) 100% repeat-y,
+        conic-gradient(rgba(var(--ds-color-black), 1) 0 0) padding-box;
+      border-radius: 0 50% 50% 0;
+    }
 
-    .discogs-submitter__inject__button__icon {
-      animation: ds-spinner 1s linear infinite;
+    &.is-hidden {
+      transform: translate(-100%, -50%);
+      opacity: 0;
+      pointer-events: none;
     }
   }
 
-  &.is-disabled {
-    opacity: 0.5;
-    pointer-events: none;
+  &.is-position-right {
+    right: 0;
+
+    .discogs-submitter__button.is-inject {
+      mask:
+        radial-gradient(
+            var(--ds-radius) at 0 var(--ds-radius),
+            rgba(var(--ds-color-black), 0) 98%,
+            rgba(var(--ds-color-black), 1) 101%
+          )
+          100% calc(-1 * var(--ds-radius)) / var(--ds-radius) 100% repeat-y,
+        conic-gradient(rgba(var(--ds-color-black), 1) 0 0) padding-box;
+      border-radius: 50% 0 0 50%;
+    }
+
+    &.is-hidden {
+      transform: translate(100%, -50%);
+      opacity: 0;
+      pointer-events: none;
+    }
+  }
+
+  &:hover {
+    filter: drop-shadow(0 0 1px rgba(var(--ds-palette-primary-color), 1))
+      drop-shadow(0 0 2px rgba(var(--ds-palette-primary-color), 1));
+
+    .discogs-submitter__button.is-inject {
+      background: rgba(var(--ds-palette-secondary-color), 1);
+    }
   }
 }
 
-.discogs-submitter__inject__button__icon {
-  flex: 0 0 auto;
-  width: 1.25em;
-  height: 1.25em;
+.discogs-submitter__button.is-inject {
+  box-sizing: content-box;
+  border-block: var(--ds-radius) solid rgba(var(--ds-color-black), 0);
+  background: rgba(var(--ds-palette-primary-color), 1);
+  font-size: 14px;
+
+  &.is-icon {
+    padding: 0.15em;
+  }
 }

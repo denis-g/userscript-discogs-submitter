@@ -24,9 +24,9 @@ export class Select {
   constructor(private readonly select: HTMLSelectElement) {
     this.state.isMultiple = select.multiple;
 
-    void this.buildUI().then(() => {
+    this.buildUI().then(() => {
       this.bindEvents();
-      void this.refresh();
+      this.refresh();
     });
 
     // Mark as initialized
@@ -148,6 +148,18 @@ export class Select {
       }
     });
 
+    // Keyboard activation on the combobox trigger (Enter/Space) — pairs with click for parity
+    this.ui.active.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        this.toggleDropdown();
+      }
+      else if (event.key === 'Escape' && this.state.isOpen) {
+        event.preventDefault();
+        this.closeDropdown();
+      }
+    });
+
     // Close on click outside
     document.addEventListener('click', (event) => {
       if (this.ui.container && !this.ui.container.contains(event.target as Node)) {
@@ -160,12 +172,14 @@ export class Select {
     this.state.isOpen = !this.state.isOpen;
 
     this.ui.container?.classList.toggle('is-open', this.state.isOpen);
+    this.ui.active?.setAttribute('aria-expanded', String(this.state.isOpen));
   }
 
   private closeDropdown(): void {
     this.state.isOpen = false;
 
     this.ui.container?.classList.remove('is-open');
+    this.ui.active?.setAttribute('aria-expanded', 'false');
   }
 
   private selectOption(item: HTMLElement): void {
@@ -179,7 +193,7 @@ export class Select {
     if (this.state.isMultiple) {
       option.selected = !option.selected;
 
-      void this.refresh();
+      this.refresh();
       this.triggerChange();
     }
     else {
@@ -191,7 +205,7 @@ export class Select {
       option.selected = true;
 
       this.closeDropdown();
-      void this.refresh();
+      this.refresh();
       this.triggerChange();
     }
   }

@@ -1,0 +1,28 @@
+.discogs-submitter__footer {
+  padding: var(--ds-gap) var(--ds-gap) calc(var(--ds-gap) / 2);
+}
+
+.discogs-submitter__copyright {
+  display: flex;
+  justify-content: center;
+  gap: var(--ds-gap);
+  margin: var(--ds-gap) 0 0;
+  font-size: 10px;
+}
+
+.discogs-submitter__copyright__link {
+  color: currentColor;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  span {
+    display: inline-block;
+    vertical-align: middle;
+    animation: ds-pulse 1s ease-in-out infinite;
+    color: rgba(var(--ds-color-error), 1);
+    font-family: var(--ds-font-monospace);
+  }
+}

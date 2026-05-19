@@ -15,7 +15,6 @@ export class LoaderController {
    */
   constructor(element: HTMLElement | null, getThumb: () => string | null | undefined) {
     this.element = element;
-
     this.getThumb = getThumb;
   }
 

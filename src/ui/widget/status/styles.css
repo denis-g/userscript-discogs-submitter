@@ -1,0 +1,61 @@
+.discogs-submitter__status {
+  --status-color: rgba(var(--ds-palette-secondary-color), 1);
+  display: flex;
+  position: relative;
+  align-items: start;
+  gap: var(--ds-gap);
+  z-index: 1;
+  transition: all 0.3s ease;
+  margin-bottom: var(--ds-gap);
+  border-left: 4px solid var(--status-color);
+  border-radius: calc(var(--ds-radius) / 2);
+  padding: calc(var(--ds-gap) / 2);
+  overflow: hidden;
+
+  &::after {
+    position: absolute;
+    top: 0;
+    left: 0;
+    opacity: 0.1;
+    z-index: -1;
+    transition: all 0.3s ease;
+    background: var(--status-color);
+    width: 100%;
+    height: 100%;
+    content: '';
+  }
+
+  &.is-success {
+    --status-color: rgba(var(--ds-color-success), 1);
+  }
+
+  &.is-error {
+    --status-color: rgba(var(--ds-color-error), 1);
+  }
+
+  &.is-info {
+    --status-color: rgba(var(--ds-color-info), 1);
+  }
+
+  &.is-warning {
+    --status-color: rgba(var(--ds-color-warning), 1);
+  }
+
+  .discogs-submitter__button {
+    flex: 0 0 auto;
+    margin-left: auto;
+
+    &.is-debug {
+      background: none;
+      color: rgba(var(--ds-color-black), 1);
+
+      &.is-success {
+        color: rgba(var(--ds-color-success), 1);
+      }
+
+      &.is-error {
+        color: rgba(var(--ds-color-error), 1);
+      }
+    }
+  }
+}

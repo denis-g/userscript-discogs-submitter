@@ -1,0 +1,95 @@
+.discogs-submitter__header {
+  display: flex;
+  gap: var(--ds-gap);
+  padding: calc(var(--ds-gap) / 2) var(--ds-gap) var(--ds-gap);
+}
+
+.discogs-submitter__header__cover {
+  width: 40px;
+  height: 40px;
+}
+
+.discogs-submitter__header__cover__logo,
+.discogs-submitter__header__cover__image {
+  width: 100%;
+  height: 100%;
+}
+
+.discogs-submitter__header__cover__image {
+  outline: 1px solid rgba(var(--ds-palette-secondary-color), 1);
+  border: 1px solid rgba(var(--ds-palette-primary-color), 1);
+  border-radius: calc(var(--ds-radius) / 2);
+  object-fit: cover;
+}
+
+.discogs-submitter__header__content {
+  display: flex;
+  flex: 1 1 auto;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--ds-gap);
+}
+
+.discogs-submitter__header__title {
+  font-weight: bold;
+  font-size: 20px;
+  text-shadow: 0 0 10px rgba(var(--ds-color-white), 0.5);
+}
+
+.discogs-submitter__header__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-gap);
+
+  .discogs-submitter__button {
+    &.is-to-left,
+    &.is-to-right {
+      background: rgba(var(--ds-palette-secondary-color), 0.3);
+      color: rgba(var(--ds-palette-primary-color), 1);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+
+      &:hover {
+        background: rgba(var(--ds-color-info), 1);
+      }
+    }
+
+    &.is-close {
+      background: rgba(var(--ds-palette-secondary-color), 1);
+      padding: 0.15em;
+      color: rgba(var(--ds-palette-primary-color), 1);
+
+      &:hover {
+        background: rgba(var(--ds-color-error), 1);
+      }
+    }
+  }
+}
+
+/* Modal position specific styles */
+
+.discogs-submitter.is-position-left {
+  .discogs-submitter__header {
+    flex-direction: row-reverse;
+  }
+
+  .discogs-submitter__header__actions {
+    flex-direction: row-reverse;
+
+    .discogs-submitter__button.is-to-left {
+      display: none;
+    }
+  }
+
+  .discogs-submitter__header__content {
+    flex-direction: row-reverse;
+  }
+}
+
+.discogs-submitter.is-position-right {
+  .discogs-submitter__header__actions {
+    .discogs-submitter__button.is-to-right {
+      display: none;
+    }
+  }
+}

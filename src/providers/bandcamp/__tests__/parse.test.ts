@@ -1,8 +1,25 @@
 // @vitest-environment happy-dom
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { bandcamp } from '..';
 
+/** Stubs `unsafeWindow` so `isWebarchive()` sees a Wayback Machine URL. */
+function stubWebarchiveUrl(): void {
+  (globalThis as any).unsafeWindow = {
+    location: { href: 'https://web.archive.org/web/timestamp/http://example.bandcamp.com/album/title' },
+  };
+}
+
 describe('bandcamp provider', () => {
+  afterEach(() => {
+    delete (globalThis as any).unsafeWindow;
+  });
+
+  it('should match web.archive.org URLs that preserve the original port (e.g. :80)', () => {
+    const archivedWithPort = 'https://web.archive.org/web/timestamp/http://example.bandcamp.com:80/album/title';
+
+    expect(bandcamp.test(archivedWithPort)).toBe(true);
+  });
+
   it('should parse basic album data from DOM', async () => {
     document.body.innerHTML = `
       <div id="name-section">
@@ -49,5 +66,105 @@ describe('bandcamp provider', () => {
     const result = await bandcamp.parse();
 
     expect(result.label).toBe('Publisher Name');
+  });
+
+  it('should read release date from .tralbumData on a web.archive.org snapshot', async () => {
+    stubWebarchiveUrl();
+    document.body.innerHTML = `
+      <div id="name-section">
+        <h2 class="trackTitle" itemprop="name">Legacy Album</h2>
+      </div>
+      <div class="tralbumData">
+        released April 13, 2026
+      </div>
+    `;
+
+    const result = await bandcamp.parse();
+
+    expect(result.released).toBe('2026-04-13');
+  });
+
+  it('should read cover from #tralbumArt on a web.archive.org snapshot', async () => {
+    stubWebarchiveUrl();
+    document.body.innerHTML = `
+      <div id="name-section">
+        <h2 class="trackTitle" itemprop="name">Legacy Album</h2>
+      </div>
+      <div id="tralbumArt">
+        <img src="https://example.com/cover.jpg" itemprop="image">
+      </div>
+    `;
+
+    const result = await bandcamp.parse();
+
+    expect(result.thumb).toBe('https://example.com/cover.jpg');
+    expect(result.cover).toBe('https://example.com/cover.jpg');
+  });
+
+  it('should read artist from schema.org MusicGroup meta on a web.archive.org snapshot', async () => {
+    stubWebarchiveUrl();
+    document.body.innerHTML = `
+      <div id="name-section">
+        <h2 class="trackTitle" itemprop="name">Legacy Album</h2>
+      </div>
+      <div itemscope itemtype="http://schema.org/MusicGroup">
+        <meta itemprop="name" content="Legacy Artist">
+      </div>
+    `;
+
+    const result = await bandcamp.parse();
+
+    expect(result.artists[0].name).toBe('Legacy Artist');
+  });
+
+  describe('pre-2008 date filter', () => {
+    function buildDateFixture(dateText: string): void {
+      document.body.innerHTML = `
+        <div id="name-section">
+          <h2 class="trackTitle" itemprop="name">Album</h2>
+        </div>
+        <div class="tralbum-credits">released ${dateText}</div>
+      `;
+    }
+
+    it('nulls release date earlier than 2008-09 (Bandcamp launch month)', async () => {
+      buildDateFixture('December 31, 2007');
+
+      const result = await bandcamp.parse();
+
+      expect(result.released).toBeNull();
+    });
+
+    it('nulls release date in 2008 before September', async () => {
+      buildDateFixture('August 31, 2008');
+
+      const result = await bandcamp.parse();
+
+      expect(result.released).toBeNull();
+    });
+
+    it('keeps release date from 2008-09 onward', async () => {
+      buildDateFixture('September 01, 2008');
+
+      const result = await bandcamp.parse();
+
+      expect(result.released).toBe('2008-09-01');
+    });
+  });
+
+  it('reads cover from `a.popupImage` on the live (non-archive) layout', async () => {
+    document.body.innerHTML = `
+      <div id="name-section">
+        <h2 class="trackTitle" itemprop="name">Album</h2>
+      </div>
+      <a class="popupImage" href="https://example.com/cover-full.jpg">
+        <img src="https://example.com/cover-thumb.jpg" />
+      </a>
+    `;
+
+    const result = await bandcamp.parse();
+
+    expect(result.thumb).toBe('https://example.com/cover-thumb.jpg');
+    expect(result.cover).toBe('https://example.com/cover-full.jpg');
   });
 });

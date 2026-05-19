@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
-import { describe, expect, it } from 'vitest';
-import { getManyTextFromTags, getTextFromTag, getVisibleText } from '../dom';
+import { describe, expect, it, vi } from 'vitest';
+import { bindActivation, getManyTextFromTags, getTextFromTag, getVisibleText } from '../dom';
 
 describe('dom utilities', () => {
   describe('getTextFromTag', () => {
@@ -90,6 +90,64 @@ describe('dom utilities', () => {
       const test = document.querySelector('#hidden');
 
       expect(getVisibleText(test)).toBe('Hidden but direct');
+    });
+  });
+
+  describe('bindActivation', () => {
+    it('fires the handler on click', () => {
+      document.body.innerHTML = '<div id="target" role="button" tabindex="0"></div>';
+
+      const element = document.querySelector<HTMLElement>('#target');
+      const handler = vi.fn();
+
+      bindActivation(element, handler);
+      element?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+      expect(handler).toHaveBeenCalledTimes(1);
+    });
+
+    it('fires the handler on Enter keydown', () => {
+      document.body.innerHTML = '<div id="target" role="button" tabindex="0"></div>';
+
+      const element = document.querySelector<HTMLElement>('#target');
+      const handler = vi.fn();
+
+      bindActivation(element, handler);
+      element?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+      expect(handler).toHaveBeenCalledTimes(1);
+    });
+
+    it('fires the handler on Space keydown', () => {
+      document.body.innerHTML = '<div id="target" role="button" tabindex="0"></div>';
+
+      const element = document.querySelector<HTMLElement>('#target');
+      const handler = vi.fn();
+
+      bindActivation(element, handler);
+      element?.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+
+      expect(handler).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not fire on other keys (e.g. Tab, Escape)', () => {
+      document.body.innerHTML = '<div id="target" role="button" tabindex="0"></div>';
+
+      const element = document.querySelector<HTMLElement>('#target');
+      const handler = vi.fn();
+
+      bindActivation(element, handler);
+      element?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
+      element?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    it('is a no-op when element is null', () => {
+      const handler = vi.fn();
+
+      expect(() => bindActivation(null, handler)).not.toThrow();
+      expect(handler).not.toHaveBeenCalled();
     });
   });
 });

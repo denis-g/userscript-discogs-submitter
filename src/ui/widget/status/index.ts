@@ -1,32 +1,46 @@
 import type { StatusKind } from '../types';
 import type { StoreAdapter } from '@/types';
+import { renderTemplate } from '@/libs/template';
+import { bindActivation } from '@/utils/dom';
+import template from './template.html?raw';
 
 /**
  * Controls the widget status banner: message text, semantic colour class,
  * and the visibility of the "copy debug" button (shown only on terminal states).
- * Also exposes a couple of helpers to build the standard "ready to submit" message
- * and to store the raw JSON payload on the status element for later debug copy.
+ * Also exposes helpers to build the standard "ready to submit" message and to
+ * store the raw JSON payload on the status element for later debug copy.
+ *
+ * Owns its own DOM: renders `status/template.html` into the slot passed in, then
+ * caches references to the inner text + debug button elements.
  */
 export class StatusController {
   private readonly statusElement: HTMLElement | null;
-  private readonly textElement: HTMLElement | null;
-  private readonly debugButton: HTMLElement | null;
   private readonly getStore: () => StoreAdapter | null;
   private readonly hasParsedData: () => boolean;
 
+  private textElement: HTMLElement | null = null;
+  private debugButton: HTMLElement | null = null;
+
   /**
-   * @param statusElement - The `.discogs-submitter__status` container element.
-   * @param textElement - The inner `.discogs-submitter__status__text` element receiving the HTML message.
-   * @param debugButton - The "copy debug" button toggled by semantic kind.
+   * @param statusElement - The `.discogs-submitter__status` slot in the widget shell.
    * @param getStore - Lazy getter for the currently-detected store adapter (drives store-specific warnings).
    * @param hasParsedData - Lazy probe for whether a parse already produced data (gates restoreReady).
    */
-  constructor(statusElement: HTMLElement | null, textElement: HTMLElement | null, debugButton: HTMLElement | null, getStore: () => StoreAdapter | null, hasParsedData: () => boolean) {
+  constructor(statusElement: HTMLElement | null, getStore: () => StoreAdapter | null, hasParsedData: () => boolean) {
     this.statusElement = statusElement;
-    this.textElement = textElement;
-    this.debugButton = debugButton;
     this.getStore = getStore;
     this.hasParsedData = hasParsedData;
+
+    if (this.statusElement) {
+      // Live-region semantics live on the slot itself so screen readers announce updates
+      this.statusElement.setAttribute('role', 'status');
+      this.statusElement.setAttribute('aria-live', 'polite');
+
+      renderTemplate(template, {}, this.statusElement, { replace: true });
+
+      this.textElement = this.statusElement.querySelector('.discogs-submitter__status__text');
+      this.debugButton = this.statusElement.querySelector('.discogs-submitter__button.is-debug');
+    }
   }
 
   /**
@@ -118,6 +132,26 @@ export class StatusController {
    */
   public getRawJson(): string | null {
     return this.statusElement?.dataset.rawJson ?? null;
+  }
+
+  /**
+   * Toggles a one-off feedback class on the debug button. Used by callers to flash the
+   * button after a successful/failed clipboard copy without exposing the button itself.
+   *
+   * @param className - Modifier class (e.g. `is-success`, `is-error`).
+   * @param isActive - Whether to apply or remove the class.
+   */
+  public setDebugFeedback(className: string, isActive: boolean): void {
+    this.debugButton?.classList.toggle(className, isActive);
+  }
+
+  /**
+   * Wires the debug button to the given handler with click + keyboard activation.
+   *
+   * @param handler - Activation callback (typically copies the raw JSON to the clipboard).
+   */
+  public bindDebugCopy(handler: () => void): void {
+    bindActivation(this.debugButton, handler);
   }
 
   private getStoreWarning(): string | null {

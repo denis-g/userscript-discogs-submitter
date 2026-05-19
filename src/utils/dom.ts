@@ -112,3 +112,32 @@ export function getVisibleText(element: HTMLElement | Element | null): string | 
 
   return null;
 }
+
+/**
+ * Wires both click and Enter/Space keyboard activation to the same handler. Use for elements
+ * that act as buttons but aren't native `<button>` (DIVs/SVGs with `role="button"` and
+ * `tabindex="0"`) so keyboard users get the same affordance.
+ *
+ * @param element - The element to wire (no-op when null).
+ * @param handler - Activation callback.
+ *
+ * @example
+ * ```typescript
+ * const closeButton = container.querySelector<HTMLElement>('.is-close');
+ * bindActivation(closeButton, () => widget.close());
+ * ```
+ */
+export function bindActivation(element: HTMLElement | null, handler: () => void): void {
+  if (!element) {
+    return;
+  }
+
+  element.addEventListener('click', handler);
+
+  element.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      handler();
+    }
+  });
+}

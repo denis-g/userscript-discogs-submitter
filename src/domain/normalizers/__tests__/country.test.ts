@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeCountry } from '../country';
+import { normalizeCountry, resolveCountry } from '../country';
 
 describe('normalizeCountry', () => {
   it('should be case-insensitive for allowed countries', () => {
@@ -43,5 +43,30 @@ describe('normalizeCountry', () => {
     expect(normalizeCountry(undefined)).toBe('');
     expect(normalizeCountry('')).toBe('');
     expect(normalizeCountry('   ')).toBe('');
+  });
+});
+
+describe('resolveCountry', () => {
+  it('passes through canonical countries unchanged', () => {
+    expect(resolveCountry('UK')).toBe('UK');
+    expect(resolveCountry('Germany')).toBe('Germany');
+    expect(resolveCountry('Worldwide')).toBe('Worldwide');
+  });
+
+  it('normalizes recognized aliases', () => {
+    expect(resolveCountry('usa')).toBe('US');
+    expect(resolveCountry('Holland')).toBe('Netherlands');
+  });
+
+  it('falls back to "Worldwide" for unrecognized strings (e.g. city/state)', () => {
+    expect(resolveCountry('Texas')).toBe('Worldwide');
+    expect(resolveCountry('Austin')).toBe('Worldwide');
+    expect(resolveCountry('Mars')).toBe('Worldwide');
+  });
+
+  it('falls back to "Worldwide" for empty/null/undefined input', () => {
+    expect(resolveCountry(null)).toBe('Worldwide');
+    expect(resolveCountry(undefined)).toBe('Worldwide');
+    expect(resolveCountry('')).toBe('Worldwide');
   });
 });

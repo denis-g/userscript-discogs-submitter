@@ -1,0 +1,5 @@
+.discogs-submitter__actions {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--ds-gap);
+}

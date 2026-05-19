@@ -5,7 +5,7 @@ import { normalizeDuration } from '@/domain/normalizers/duration';
 import { normalizeTitle, splitArtistTitle } from '@/domain/normalizers/titles';
 import { getManyTextFromTags, getTextFromTag } from '@/utils/dom';
 import { cleanString } from '@/utils/string';
-import { matchUrls } from '@/utils/url';
+import { isWebarchive, matchUrls } from '@/utils/url';
 
 /**
  * Extracts catalog number from credits and about items.
@@ -121,18 +121,20 @@ export const bandcamp: StoreAdapter = {
   id: 'bandcamp',
   test: matchUrls(
     'https://*.bandcamp.com/album/*',
-    'https://web.archive.org/web/*/*://*.bandcamp.com/album/*',
+    // The archived URL preserves the original scheme + port (e.g. `http://...bandcamp.com:80/album/`),
+    // so allow anything between `.com` and `/album/` to swallow the port segment.
+    'https://web.archive.org/web/*/*://*.bandcamp.com*/album/*',
   ),
   supports: {
     formats: ['WAV', 'FLAC', 'AIFF', 'MP3'],
   },
-  target: '.tralbumCommands',
-  injectButton: (button, target) => {
-    target.insertAdjacentElement('afterend', button);
-  },
   parse: async () => {
-    const smallCover = getTextFromTag('a.popupImage img', null, 'src');
-    const albumCover = getTextFromTag('a.popupImage', null, 'href');
+    const smallCover = isWebarchive()
+      ? getTextFromTag('#tralbumArt img[itemprop="image"]', null, 'src')
+      : getTextFromTag('a.popupImage img', null, 'src');
+    const albumCover = isWebarchive()
+      ? getTextFromTag('#tralbumArt img[itemprop="image"]', null, 'src')
+      : getTextFromTag('a.popupImage', null, 'href');
     const albumExtraArtists: ArtistCredit[] = [];
     const about = getManyTextFromTags('.tralbum-about', null, true);
     const credits = getManyTextFromTags('.tralbum-credits', null, true);
@@ -149,7 +151,12 @@ export const bandcamp: StoreAdapter = {
       }
     });
 
-    const albumArtists = normalizeMainArtists(getTextFromTag('#name-section h3 span') || getTextFromTag('#band-name-location .title'), albumExtraArtists);
+    const albumArtists = normalizeMainArtists(
+      isWebarchive()
+        ? getTextFromTag('[itemtype*="MusicGroup"] meta[itemprop="name"]', null, 'content')
+        : getTextFromTag('#name-section h3 span') || getTextFromTag('#band-name-location .title'),
+      albumExtraArtists,
+    );
     const albumTitle = normalizeTitle(getTextFromTag('#name-section .trackTitle'), albumExtraArtists);
     const albumTracks: TrackData[] = Array.from(document.querySelectorAll('#track_table .track_row_view')).map((track, index) => {
       const trackPosition = `${index + 1}`;
@@ -184,7 +191,11 @@ export const bandcamp: StoreAdapter = {
       albumLabel = getTextFromTag('[itemprop="publisher"]');
     }
 
-    let albumReleased = normalizeReleaseDate(getTextFromTag('.tralbum-credits'));
+    let albumReleased = normalizeReleaseDate(
+      isWebarchive()
+        ? getTextFromTag('.tralbumData')
+        : getTextFromTag('.tralbum-credits'),
+    );
 
     // If release date is older than 2008, check publish date (Bandcamp changed behavior)
     if (albumReleased) {

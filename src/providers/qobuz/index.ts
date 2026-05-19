@@ -46,16 +46,13 @@ export const qobuz: StoreAdapter = {
   supports: {
     formats: ['WAV', 'FLAC', 'AIFF', 'MP3'],
   },
-  target: '.album-meta',
-  injectButton: (button, target) => {
-    target.appendChild(button);
-
-    // Qobuz uses infinite scroll for tracks, we need to ensure they are loaded
-    const windowProxy = unsafeWindow as any;
-
-    if (typeof windowProxy.infiniteScroll === 'function') {
+  beforeParse: () => {
+    // Qobuz uses infinite scroll for tracks; nudge the host's loader so every track is in the DOM
+    // before parsing. Best-effort: silently ignore if the helper isn't exposed (page version drift,
+    // or running outside a userscript host like the test environment).
+    if (typeof (unsafeWindow as any).infiniteScroll === 'function') {
       try {
-        windowProxy.infiniteScroll('/v4/ajax/album/load-tracks');
+        (unsafeWindow as any).infiniteScroll('/v4/ajax/album/load-tracks');
       }
       catch (error) {
         console.warn('[Discogs Submitter] Qobuz infiniteScroll trigger failed:', error);

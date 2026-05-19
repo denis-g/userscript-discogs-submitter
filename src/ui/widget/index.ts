@@ -1,14 +1,14 @@
 import type { WidgetState } from './types';
 import type { StoreAdapter } from '@/types';
 import { USERSCRIPT } from '@/config';
-import { ALLOWED_COUNTRIES } from '@/config/countries';
 import { DiscogsMapper } from '@/domain/mapper';
-import { normalizeCountry } from '@/domain/normalizers/country';
+import { resolveCountry } from '@/domain/normalizers/country';
 import { extractFormatFromTitle } from '@/domain/normalizers/format';
 import { normalizeLabel } from '@/domain/normalizers/label';
-import { Draggable } from '@/libs/draggable';
 import { renderTemplate } from '@/libs/template';
-import { CoverController } from './cover';
+import { isWebarchive } from '@/utils/url';
+import { FooterController } from './footer';
+import { HeaderController } from './header';
 import { LoaderController } from './loader';
 import { PreviewController } from './preview';
 import { StatusController } from './status';
@@ -29,8 +29,8 @@ const DEBUG_FEEDBACK_DURATION_MS = 2000;
 
 /**
  * Top-level orchestrator for the floating widget. Owns the shared state, builds the DOM,
- * composes per-concern controllers (loader, cover, status, preview, submission), and wires
- * the high-level lifecycle (`init`, `open`, `reset`) plus shell-level events.
+ * composes per-concern controllers (header, footer, loader, status, preview, submission),
+ * and wires the high-level lifecycle (`init`, `open`, `reset`) plus shell-level events.
  *
  * @example
  * ```typescript
@@ -39,19 +39,39 @@ const DEBUG_FEEDBACK_DURATION_MS = 2000;
  * widget.open(detectedStore);
  * ```
  */
+/**
+ * Lifecycle callbacks the app shell can wire into the widget so it can sync siblings
+ * (inject button visibility, position class, etc.) without the widget needing to know
+ * about them.
+ */
+export interface WidgetHooks {
+  /** Fired right after the widget starts opening (animation in flight). */
+  onOpen?: () => void;
+  /** Fired when the widget is closed (via header button or `reset()`). Safe to call repeatedly. */
+  onClose?: () => void;
+  /** Fired when the user docks the widget to a different side. */
+  onPositionChange?: (_side: 'left' | 'right') => void;
+}
+
 export class Widget {
   private readonly state: WidgetState = createWidgetState();
   private readonly elements: Record<string, HTMLElement | null> = {};
+  private readonly hooks: WidgetHooks;
 
   private loader!: LoaderController;
-  private cover!: CoverController;
+  private header!: HeaderController;
+  private footer!: FooterController;
   private status!: StatusController;
   private preview!: PreviewController;
   private submission!: SubmissionController;
 
+  constructor(hooks: WidgetHooks = {}) {
+    this.hooks = hooks;
+  }
+
   /**
    * Bootstraps the widget: injects its CSS, builds DOM, instantiates controllers,
-   * attaches drag, binds events.
+   * binds events.
    *
    * @returns A promise that resolves when the widget is fully mounted and ready.
    */
@@ -59,9 +79,8 @@ export class Widget {
     this.injectStyles();
 
     await this.buildPopup();
+
     this.composeControllers();
-    this.cover.update();
-    this.bindDraggableEvent();
     this.bindEvents();
   }
 
@@ -93,7 +112,9 @@ export class Widget {
     if (this.elements.widget) {
       this.elements.widget.classList.add('is-open');
 
-      void this.startParsing();
+      this.hooks.onOpen?.();
+
+      this.startParsing();
     }
   }
 
@@ -111,10 +132,10 @@ export class Widget {
 
     this.preview.clear();
     this.status.set('Ready to parse...', 'info');
+    this.submission.setHidden(true);
 
-    this.elements.actionsButtonSubmit?.setAttribute('hidden', 'true');
-
-    this.cover.update();
+    this.header.updateCover();
+    this.hooks.onClose?.();
   }
 
   /**
@@ -125,35 +146,23 @@ export class Widget {
       return;
     }
 
-    const container = document.createElement('aside');
-    const currentUrl = new URL(unsafeWindow.location.href);
-    const isWebArchive = currentUrl.hostname === 'web.archive.org' && currentUrl.pathname.startsWith('/web/');
-
-    container.id = USERSCRIPT.ID;
-    container.className = `${container.id} ${isWebArchive ? 'is-webarchive' : ''}`;
-
     const data = {
+      scriptId: USERSCRIPT.ID,
       scriptName: USERSCRIPT.NAME,
-      scriptVersion: USERSCRIPT.VERSION,
-      homepage: USERSCRIPT.HOMEPAGE,
-      supportURL: USERSCRIPT.SUPPORT_URL,
-      funding: USERSCRIPT.FUNDING_URL,
+      rootClasses: `${USERSCRIPT.ID} is-position-right${isWebarchive() ? ' is-webarchive' : ''}`,
     };
+    const wrapper = document.createElement('div');
 
-    renderTemplate(template, data, container);
+    renderTemplate(template, data, wrapper);
+
+    const container = wrapper.firstElementChild as HTMLElement;
 
     document.body.appendChild(container);
 
     this.elements.widget = container;
     this.elements.header = container.querySelector('.discogs-submitter__header');
-    this.elements.cover = container.querySelector('.discogs-submitter__header__cover');
-    this.elements.headerButtonMove = container.querySelector('.discogs-submitter__header .discogs-submitter__button.is-move');
-    this.elements.headerButtonClose = container.querySelector('.discogs-submitter__header .discogs-submitter__button.is-close');
-    this.elements.status = container.querySelector('.discogs-submitter__status');
-    this.elements.statusText = container.querySelector('.discogs-submitter__status__text');
-    this.elements.statusButtonDebug = container.querySelector('.discogs-submitter__status .discogs-submitter__button.is-debug');
     this.elements.content = container.querySelector('.discogs-submitter__content');
-    this.elements.actionsButtonSubmit = container.querySelector('.discogs-submitter__actions .discogs-submitter__button.is-primary');
+    this.elements.footer = container.querySelector('.discogs-submitter__footer');
     this.elements.loader = container.querySelector('.discogs-submitter__loader');
   }
 
@@ -162,11 +171,21 @@ export class Widget {
    */
   private composeControllers(): void {
     this.loader = new LoaderController(this.elements.loader, () => this.state.editedData?.thumb);
-    this.cover = new CoverController(this.elements.cover, () => this.state.editedData?.thumb);
+    this.header = new HeaderController(
+      this.elements.header,
+      {
+        onClose: () => {
+          this.elements.widget?.classList.remove('is-open');
+
+          this.hooks.onClose?.();
+        },
+        onPositionChange: side => this.setPosition(side),
+      },
+      () => this.state.editedData?.thumb,
+    );
+    this.footer = new FooterController(this.elements.footer);
     this.status = new StatusController(
-      this.elements.status,
-      this.elements.statusText,
-      this.elements.statusButtonDebug,
+      this.footer.statusSlot,
       () => this.state.currentDigitalStore,
       () => Boolean(this.state.originalData),
     );
@@ -178,14 +197,13 @@ export class Widget {
           document.documentElement.style.setProperty('--ds-thumb-url', `url('${this.state.editedData.thumb}')`);
         }
 
-        this.cover.update();
-
-        this.elements.actionsButtonSubmit?.removeAttribute('hidden');
+        this.header.updateCover();
+        this.submission.setHidden(false);
       },
     });
     this.submission = new SubmissionController(
       this.state,
-      this.elements.actionsButtonSubmit,
+      this.footer.actionsSlot,
       this.loader,
       this.status,
     );
@@ -203,20 +221,16 @@ export class Widget {
     this.status.set('Parsing current release...', 'info');
     this.loader.setActive(true);
 
-    this.elements.actionsButtonSubmit?.setAttribute('hidden', 'true');
+    this.submission.setHidden(true);
     this.preview.clear();
     this.status.clearRawJson();
 
     try {
+      await this.state.currentDigitalStore.beforeParse?.();
+
       const data = await this.state.currentDigitalStore.parse();
 
-      // Normalize country and apply label heuristic once during the initial parse
-      if (!data.country) {
-        data.country = 'Worldwide';
-      }
-      else {
-        data.country = ALLOWED_COUNTRIES.includes(data.country) ? data.country : normalizeCountry(data.country);
-      }
+      data.country = resolveCountry(data.country);
 
       const primaryArtistName = (data.artists?.[0]?.name || '').trim();
 
@@ -241,7 +255,7 @@ export class Widget {
           this.state.originalData.notes = tempPayload._previewObject.notes;
         }
 
-        if (!this.state.editedData.submissionNotes && tempPayload._previewObject.submissionNotes) {
+        if (!this.state.editedData.submissionNotes) {
           this.state.editedData.submissionNotes = tempPayload._previewObject.submissionNotes;
           this.state.originalData.submissionNotes = tempPayload._previewObject.submissionNotes;
         }
@@ -268,18 +282,33 @@ export class Widget {
   }
 
   /**
-   * Wires shell-level event listeners (close button, debug copy, submit) and lets the preview
-   * controller bind its own scoped events.
+   * Wires shell-level event listeners (position toggle, close, debug copy, submit) and lets the
+   * preview controller bind its own scoped events.
    */
   private bindEvents(): void {
-    this.elements.headerButtonClose?.addEventListener('click', () => {
-      this.elements.widget?.classList.remove('is-open');
-    });
-
     this.preview.bindEvents();
+    this.submission.bindEvents();
 
-    this.elements.statusButtonDebug?.addEventListener('click', () => void this.handleDebugCopy());
-    this.elements.actionsButtonSubmit?.addEventListener('click', () => void this.submission.submit());
+    this.status.bindDebugCopy(() => void this.handleDebugCopy());
+  }
+
+  /**
+   * Switches the widget between the left and right docks by swapping the `is-position-*` class
+   * on the widget root. No-op when the requested side is already active.
+   *
+   * @param side - Target dock side.
+   */
+  private setPosition(side: 'left' | 'right'): void {
+    const widget = this.elements.widget;
+
+    if (!widget) {
+      return;
+    }
+
+    widget.classList.toggle('is-position-left', side === 'left');
+    widget.classList.toggle('is-position-right', side === 'right');
+
+    this.hooks.onPositionChange?.(side);
   }
 
   /**
@@ -294,38 +323,21 @@ export class Widget {
 
     this.loader.setActive(true);
 
+    const feedback = async (className: 'is-success' | 'is-error') => {
+      this.status.setDebugFeedback(className, true);
+
+      setTimeout(() => {
+        this.status.setDebugFeedback(className, false);
+        this.loader.setActive(false);
+      }, DEBUG_FEEDBACK_DURATION_MS);
+    };
+
     try {
       await GM_setClipboard(textToCopy, 'text');
-
-      this.elements.statusButtonDebug?.classList.add('is-success');
-
-      setTimeout(() => {
-        this.elements.statusButtonDebug?.classList.remove('is-success');
-
-        this.loader.setActive(false);
-      }, DEBUG_FEEDBACK_DURATION_MS);
+      await feedback('is-success');
     }
     catch {
-      this.elements.statusButtonDebug?.classList.add('is-error');
-
-      setTimeout(() => {
-        this.elements.statusButtonDebug?.classList.remove('is-error');
-
-        this.loader.setActive(false);
-      }, DEBUG_FEEDBACK_DURATION_MS);
-    }
-  }
-
-  /**
-   * Initializes the draggable behaviour for the widget shell.
-   */
-  private bindDraggableEvent(): void {
-    if (this.elements.widget && this.elements.headerButtonMove) {
-      const draggable = new Draggable(this.elements.widget, this.elements.headerButtonMove, (isDragging) => {
-        this.elements.headerButtonMove?.classList.toggle('is-draggable', isDragging);
-      });
-
-      draggable.init();
+      await feedback('is-error');
     }
   }
 }

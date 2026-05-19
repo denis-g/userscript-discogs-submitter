@@ -43,10 +43,6 @@ export const sevendigital: StoreAdapter = {
   supports: {
     formats: ['FLAC', 'MP3'],
   },
-  target: '.release-purchase',
-  injectButton: (button, target) => {
-    target.insertAdjacentElement('afterend', button);
-  },
   parse: async () => {
     const data = await getData();
     const smallCover = data[0].release.image?.replace('_800', '_350');

@@ -40,3 +40,29 @@ export function getReleaseIdFromUrl(url: string = unsafeWindow.location.href): s
     return url.split('/').filter(Boolean).at(-1) || null;
   }
 }
+
+/**
+ * Detects whether the current page is a Wayback Machine snapshot by inspecting
+ * `unsafeWindow.location` for a `https://web.archive.org/web/...` URL.
+ *
+ * @returns True when running on an archived snapshot.
+ *
+ * @example
+ * ```typescript
+ * if (isWebarchive()) {
+ *   // pick selectors for the legacy Bandcamp layout
+ * }
+ * ```
+ */
+export function isWebarchive(): boolean {
+  try {
+    const url = new URL(unsafeWindow.location.href);
+
+    return url.hostname === 'web.archive.org' && url.pathname.startsWith('/web/');
+  }
+  catch {
+    // ignore — fall through
+  }
+
+  return false;
+}

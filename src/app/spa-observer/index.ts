@@ -5,7 +5,7 @@ const POST_NAVIGATION_DELAYS_MS = [100, 300, 600, 1000];
  * Callbacks the app registers with the observer.
  */
 export interface SpaObserverHandlers {
-  /** Fired (debounced) whenever the document body mutates — used to re-check inject button targets. */
+  /** Fired (debounced) on `<body>` mutations — lets the app re-detect the active store after SPA renders. */
   onMutate: () => void;
   /** Fired only when `window.location.href` actually changes (after `pushState`, `replaceState`, or `popstate`). */
   onUrlChange: () => void;
@@ -15,7 +15,7 @@ export interface SpaObserverHandlers {
  * Watches the host page for two distinct events the userscript cares about:
  *
  *  1. Generic DOM mutations (new nodes inserted by the host SPA's renderer) — debounced
- *     and reported via `onMutate` so the app can re-attempt button injection.
+ *     and reported via `onMutate` so the app can re-detect the active store.
  *  2. URL changes (SPA navigation via `history.pushState`/`popstate`) — reported via
  *     `onUrlChange`, followed by a series of scheduled `onMutate` calls because the host
  *     page typically re-renders asynchronously after the URL flip.
@@ -75,7 +75,7 @@ export class SpaObserver {
     handlers.onUrlChange();
 
     // The host SPA usually renders the new view asynchronously; trigger several delayed mutates
-    // so the inject button has a chance to find its target as the DOM settles.
+    // so the app can re-detect the active store as the DOM settles.
     POST_NAVIGATION_DELAYS_MS.forEach(delay => setTimeout(handlers.onMutate, delay));
   }
 

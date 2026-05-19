@@ -4,8 +4,6 @@ import { renderTemplate } from '@/libs/template';
 import styles from './styles.css?inline';
 import template from './template.html?raw';
 
-const INJECT_BUTTON_STYLES_ID = `${USERSCRIPT.ID}-inject-button-styles`;
-
 /**
  * Manages the "Inject" button that appears on supported digital store pages.
  */
@@ -18,13 +16,13 @@ export class InjectButton {
   }
 
   private injectStyles(): void {
-    if (document.getElementById(INJECT_BUTTON_STYLES_ID)) {
+    if (document.getElementById(`${USERSCRIPT.ID}-inject-button-styles`)) {
       return;
     }
 
     const style = document.createElement('style');
 
-    style.id = INJECT_BUTTON_STYLES_ID;
+    style.id = `${USERSCRIPT.ID}-inject-button-styles`;
     style.textContent = styles;
 
     document.head.appendChild(style);
@@ -42,46 +40,27 @@ export class InjectButton {
   }
 
   /**
-   * Updates the button's appearance based on the detected digital store.
-   * Removes any previously set store themes before applying the new one.
+   * Docks the button to the given side by toggling the `is-position-*` classes. Kept in sync
+   * with the widget so opening the popup feels like one continuous motion.
    *
-   * @param storeId - The ID of the detected store (e.g., 'bandcamp').
-   *
-   * @example
-   * ```typescript
-   * const button = new InjectButton();
-   * button.setStore('bandcamp');
-   * ```
+   * @param side - Target dock side.
    */
-  public setStore(storeId: string): void {
-    if (this.element) {
-      const classesToRemove: string[] = [];
-
-      this.element.classList.forEach((className) => {
-        if (className.startsWith('is-')) {
-          classesToRemove.push(className);
-        }
-      });
-
-      classesToRemove.forEach(className => this.element?.classList.remove(className));
-
-      this.element.classList.add(`is-${storeId}`);
+  public setPosition(side: 'left' | 'right'): void {
+    if (!this.element) {
+      return;
     }
+
+    this.element.classList.toggle('is-position-left', side === 'left');
+    this.element.classList.toggle('is-position-right', side === 'right');
   }
 
   /**
-   * Toggles the interactive state of the button.
+   * Animates the button in/out by toggling the `is-hidden` class. Used by the app shell to
+   * tuck the button away while the widget is open.
    *
-   * @param disabled - If true, restricts clicks and applies a disabled visual state.
+   * @param hidden - When true, slides the button off-screen on its docked side.
    */
-  public setDisabled(disabled: boolean): void {
-    if (this.element) {
-      if (disabled) {
-        this.element.classList.add('is-disabled');
-      }
-      else {
-        this.element.classList.remove('is-disabled');
-      }
-    }
+  public setHidden(hidden: boolean): void {
+    this.element?.classList.toggle('is-hidden', hidden);
   }
 }

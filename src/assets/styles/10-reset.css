@@ -1,4 +1,5 @@
-.discogs-submitter {
+.discogs-submitter,
+.discogs-submitter__inject {
   font-weight: normal;
   font-size: 14px;
   line-height: 1.2;
