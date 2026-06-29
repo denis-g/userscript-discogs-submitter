@@ -105,7 +105,7 @@ export const DiscogsMapper = {
       extraartists: groupExtraArtists(data.extraartists || []),
       country: normalizeCountry(options?.country !== undefined ? options.country : (data.country || 'Worldwide')),
       released: data.released || '',
-      labels: labelName ? [{ name: labelName, catno: data.number || 'none' }] : [{ name: '', catno: '' }],
+      labels: [{ name: labelName, catno: data.number || 'none' }],
       format: [{
         name: 'File',
         qty: totalTracks,

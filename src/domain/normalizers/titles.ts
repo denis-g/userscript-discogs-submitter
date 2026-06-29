@@ -42,7 +42,7 @@ export function normalizeTitle(rawTitle: string | null | undefined, extraArtists
  * @param rawTitle - The composite string containing artist and title (e.g. "Artist - Title").
  * @param defaultArtists - Fallback artist list if splitting fails.
  * @param extraArtists - Array to accumulate parsed credits.
- * @returns An object containing the extracted `artists` and track `title`.
+ * @returns An object containing the extracted `artists`, track `title`, and parsed `bpm`.
  *
  * @example
  * ```typescript

@@ -77,5 +77,5 @@ export const FILE_FORMATS = [
   'MP3',
   'AIFF',
   'ALAC',
-  'DFS',
+  'DSF',
 ];

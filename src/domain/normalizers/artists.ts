@@ -106,7 +106,7 @@ export function parseArtists(artistString: string | null | undefined, extraArtis
  * const extra = [];
  * const clean = extractExtraArtists('Track Title (Remix by Artist One)', extra);
  * // clean: "Track Title"
- * // extra: [{name: "Artist Name", role: "Remix"}]
+ * // extra: [{name: "Artist One", role: "Remix"}]
  * ```
  */
 export function extractExtraArtists(text: string, extraArtists: ArtistCredit[], preserveRoles: string[] = []): string {
@@ -187,9 +187,7 @@ export function normalizeArtists(artists: string | string[] | null | undefined, 
   if (!isSubcall) {
     const processedString = Array.isArray(artists) ? artists.filter(Boolean).join(', ') : artists;
 
-    if (typeof processedString === 'string') {
-      return parseArtists(processedString, extraArtists);
-    }
+    return parseArtists(processedString, extraArtists);
   }
 
   const artistList = Array.isArray(artists) ? artists : [artists];

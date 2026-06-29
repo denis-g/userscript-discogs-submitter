@@ -235,6 +235,9 @@ export class Select {
 
   /**
    * Helper to initialize the component on a select element.
+   *
+   * @param select - The native select element to enhance, or `null` to no-op.
+   * @param force - When `true`, refreshes an already-initialized instance instead of skipping it.
    */
   public static init(select: HTMLSelectElement | null, force: boolean = false): void {
     if (!select) {

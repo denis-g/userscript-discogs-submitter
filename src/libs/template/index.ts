@@ -98,6 +98,7 @@ function bindCollectedEvents(bindings: EventBinding[], events: Record<string, Ev
  * Supported directives:
  *   • data-loop="items"   – repeats element for each entry in data.items or object maps
  *   • data-if="expr"      – conditionally render elements based on boolean expressions
+ *   • data-text="path"    – sets element textContent from data.path
  *   • data-attr="src:path"– sets HTML attributes (e.g., src, href, alt) from data.path
  *   • data-style="prop:path" – sets CSS style properties on elements from data.path
  *   • data-event="event:handler|..." – binds events from an explicit events map

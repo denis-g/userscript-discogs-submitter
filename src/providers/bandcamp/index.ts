@@ -197,7 +197,7 @@ export const bandcamp: StoreAdapter = {
         : getTextFromTag('.tralbum-credits'),
     );
 
-    // If release date is older than 2008, check publish date (Bandcamp changed behavior)
+    // Discard release dates before Bandcamp's September 2008 launch — they are unreliable
     if (albumReleased) {
       const dateParts = albumReleased.split('-');
       const year = Number.parseInt(dateParts[0], 10);

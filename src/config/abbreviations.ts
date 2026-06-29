@@ -15,6 +15,7 @@ const IGNORE_CAPITALIZATION = [
   'DNA',
   'BBQ',
   'MK',
+  'TV',
   // roman numerals
   'I',
   'II',
@@ -35,6 +36,7 @@ const IGNORE_CAPITALIZATION = [
   'XVII',
   'XVIII',
   'XIX',
+  'MMC',
   // music
   'DJ',
   'MC',
