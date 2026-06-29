@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discogs Submitter
 // @namespace    discogs-submitter
-// @version      3.3.1
+// @version      3.3.2
 // @author       Denis G. <https://github.com/denis-g>
 // @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital, Amazon Music, Bleep, HDtracks and submit releases to Discogs.
 // @license      MIT
@@ -67,7 +67,7 @@
 // ==/UserScript==
 
 (function() {
-    'use strict';
+    "use strict";
     var styles_default$8 = ".discogs-submitter__header__cover__image{opacity:1}";
     var IGNORE_CAPITALIZATION = [
         "FM",
@@ -82,6 +82,7 @@
         "DNA",
         "BBQ",
         "MK",
+        "TV",
         "I",
         "II",
         "III",
@@ -101,6 +102,7 @@
         "XVII",
         "XVIII",
         "XIX",
+        "MMC",
         "DJ",
         "MC",
         "EP",
@@ -326,7 +328,7 @@
         "MP3",
         "AIFF",
         "ALAC",
-        "DFS"
+        "DSF"
     ];
     var ARTIST_JOINERS = [
         ",",
@@ -353,7 +355,7 @@
     var USERSCRIPT = {
         ID: info?.script?.namespace || "discogs-submitter",
         NAME: info?.script?.name || "discogs-submitter",
-        VERSION: info?.script?.version || "3.3.1",
+        VERSION: info?.script?.version || "3.3.2",
         HOMEPAGE: info?.script?.homepage || "https://github.com/denis-g/userscript-discogs-submitter",
         SUPPORT_URL: info?.script?.supportURL || bugs?.url,
         FUNDING_URL: "https://buymeacoffee.com/denis_g"
@@ -493,10 +495,7 @@
             name: "",
             join: ","
         }];}
-        if (!isSubcall) {
-            const processedString = Array.isArray(artists) ? artists.filter(Boolean).join(", ") : artists;
-            if (typeof processedString === "string") return parseArtists(processedString, extraArtists);
-        }
+        if (!isSubcall) return parseArtists(Array.isArray(artists) ? artists.filter(Boolean).join(", ") : artists, extraArtists);
         const normalizedNames = (Array.isArray(artists) ? artists : [artists]).map((rawArtist) => {
             if (!rawArtist) return null;
             let cleaned = cleanString(rawArtist);
@@ -1958,12 +1957,9 @@
             extraartists: groupExtraArtists(data.extraartists || []),
             country: normalizeCountry(options?.country !== void 0 ? options.country : data.country || "Worldwide"),
             released: data.released || "",
-            labels: labelName ? [{
+            labels: [{
                 name: labelName,
                 catno: data.number || "none"
-            }] : [{
-                name: "",
-                catno: ""
             }],
             format: [{
                 name: "File",
