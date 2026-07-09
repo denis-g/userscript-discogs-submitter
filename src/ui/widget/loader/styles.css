@@ -31,13 +31,14 @@
 
 .discogs-submitter__loader__cover {
   animation: ds-pulse 2s ease-in-out infinite;
-  outline: 0.1px solid rgba(var(--ds-palette-secondary-color), 1);
-  border: 0.1px solid rgba(var(--ds-palette-primary-color), 1);
-  border-radius: calc(var(--ds-radius) / 2);
+  outline: 2 solid rgba(var(--ds-palette-secondary-color), 1);
+  outline-offset: 2px;
+  border: 2px solid rgba(var(--ds-palette-primary-color), 1);
+  border-radius: var(--ds-radius);
   background: var(--ds-thumb-url) no-repeat 50%;
   background-size: cover;
-  width: 8em;
-  height: 8em;
+  width: 15em;
+  height: 15em;
   object-fit: cover;
 }
 

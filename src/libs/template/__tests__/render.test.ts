@@ -169,6 +169,23 @@ describe('renderTemplate', () => {
     expect(container.querySelector('span')?.textContent).toBe('Dynamic Text');
   });
 
+  it('handles data-value directive on inputs', () => {
+    const template = '<input data-value="name" /><textarea data-value="notes"></textarea>';
+    const data = { name: 'Artist Name', notes: 'Some notes' };
+
+    renderTemplate(template, data, container);
+    expect(container.querySelector('input')?.value).toBe('Artist Name');
+    expect(container.querySelector('textarea')?.value).toBe('Some notes');
+  });
+
+  it('leaves a data-value attribute set via data-attr on non-form elements untouched', () => {
+    const template = '<div data-attr="data-value:value">Item</div>';
+    const data = { value: 'WAV' };
+
+    renderTemplate(template, data, container);
+    expect(container.querySelector('div')?.dataset.value).toBe('WAV');
+  });
+
   it('handles data-unwrap directive', () => {
     const template = '<div class="wrapper"><span data-unwrap>Inner Content</span></div>';
 

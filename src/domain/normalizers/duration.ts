@@ -53,5 +53,5 @@ export function normalizeDuration(rawDuration: string | number | null | undefine
     return parts.join(':');
   }
 
-  return trimmed || '';
+  return trimmed;
 }

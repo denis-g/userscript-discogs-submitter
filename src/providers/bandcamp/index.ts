@@ -4,8 +4,23 @@ import { normalizeReleaseDate } from '@/domain/normalizers/date';
 import { normalizeDuration } from '@/domain/normalizers/duration';
 import { normalizeTitle, splitArtistTitle } from '@/domain/normalizers/titles';
 import { getManyTextFromTags, getTextFromTag } from '@/utils/dom';
+import { escapeRegExp } from '@/utils/regex';
 import { cleanString } from '@/utils/string';
 import { isWebarchive, matchUrls } from '@/utils/url';
+
+/**
+ * Builds a case-insensitive regex that captures the value following any of the given prefixes.
+ * Each prefix is regex-escaped and its internal whitespace made flexible (`\s+`), so
+ * `'Catalog Number'` also matches `'Catalog  Number'`.
+ *
+ * @param prefixes - Label/catalog prefixes to match (e.g. `['Cat.', 'Catalog Number']`).
+ * @returns A RegExp whose first capture group is the text following the matched prefix.
+ */
+function buildPrefixRegex(prefixes: string[]): RegExp {
+  const escaped = prefixes.map(prefix => escapeRegExp(prefix).replace(/\s+/g, '\\s+'));
+
+  return new RegExp(`(?:${escaped.join('|')})[\\s:-]+(\\S.+)`, 'i');
+}
 
 /**
  * Extracts catalog number from credits and about items.
@@ -32,11 +47,6 @@ function extractCatalogNumber(items: string[]): string | null {
     'Catalogue No',
     'Cat No.',
   ];
-  const buildPrefixRegex = (prefixes: string[]) => {
-    const escaped = prefixes.map(prefix => prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+'));
-
-    return new RegExp(`(?:${escaped.join('|')})[\\s:-]+(\\S.+)`, 'i');
-  };
   const catRegex = buildPrefixRegex(catPrefixes);
   const bracketedCatRegex = /\[([A-Z0-9-]{3,15})\]/;
   let labelNumber: string | null = null;
@@ -84,11 +94,6 @@ function extractCatalogNumber(items: string[]): string | null {
  */
 function extractLabelName(items: string[], credits: string[]): string | null {
   const labelPrefixes = ['Label', 'Released on', 'Record Label'];
-  const buildPrefixRegex = (prefixes: string[]) => {
-    const escaped = prefixes.map(prefix => prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+'));
-
-    return new RegExp(`(?:${escaped.join('|')})[\\s:-]+(\\S.+)`, 'i');
-  };
   const labelRegex = buildPrefixRegex(labelPrefixes);
   let albumLabel: string | null = null;
 
@@ -153,7 +158,9 @@ export const bandcamp: StoreAdapter = {
 
     const albumArtists = normalizeMainArtists(
       isWebarchive()
-        ? getTextFromTag('[itemtype*="MusicGroup"] meta[itemprop="name"]', null, 'content')
+        // Older snapshots expose the artist as schema.org microdata; newer snapshots mirror the
+        // live layout, so fall back to the same `#name-section` heading the live branch reads.
+        ? getTextFromTag('[itemtype*="MusicGroup"] meta[itemprop="name"]', null, 'content') || getTextFromTag('#name-section h3 span')
         : getTextFromTag('#name-section h3 span') || getTextFromTag('#band-name-location .title'),
       albumExtraArtists,
     );
@@ -175,7 +182,6 @@ export const bandcamp: StoreAdapter = {
     });
     const location = document.querySelector('#band-name-location');
     let albumLabel = location ? getTextFromTag('.title', location) : null;
-    const labelCountry = location ? getTextFromTag('.location', location)?.split(',').pop()?.trim() || null : null;
     let labelNumber = null;
     const aboutItems = about.flatMap(credit => credit.split(/\r?\n/).map(line => cleanString(line)).filter(Boolean) as string[]);
     const creditItems = credits.flatMap(credit => credit.split(/\r?\n/).map(line => cleanString(line)).filter(Boolean) as string[]);
@@ -193,7 +199,10 @@ export const bandcamp: StoreAdapter = {
 
     let albumReleased = normalizeReleaseDate(
       isWebarchive()
-        ? getTextFromTag('.tralbumData')
+        // Newer snapshots keep the "released …" line in `.tralbum-credits` (matched first, since the
+        // generic `.tralbumData` class also tags the dateless `.tralbum-about` block); older snapshots
+        // only carry `.tralbumData`, so keep it as the fallback.
+        ? getTextFromTag('.tralbum-credits') || getTextFromTag('.tralbumData')
         : getTextFromTag('.tralbum-credits'),
     );
 
@@ -219,7 +228,6 @@ export const bandcamp: StoreAdapter = {
       title: albumTitle,
       label: albumLabel,
       number: labelNumber,
-      country: labelCountry,
       released: albumReleased,
       tracks: albumTracks,
     };

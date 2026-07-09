@@ -46,7 +46,12 @@ export class StatusController {
   /**
    * Sets the visible status banner and toggles the debug button.
    *
-   * @param message - The HTML to render inside the status text container.
+   * The message is rendered as HTML so callers can include trusted static markup
+   * (`<br />`, `<strong>`, store warnings). Any untrusted interpolation — notably
+   * error text that may embed scraped page values — MUST be run through `escapeHtml`
+   * by the caller before being passed here.
+   *
+   * @param message - The (trusted) HTML to render inside the status text container.
    * @param kind - Semantic kind that drives styling and debug button visibility.
    */
   public set(message: string, kind: StatusKind = 'info'): void {

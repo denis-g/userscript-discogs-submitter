@@ -1,3 +1,5 @@
+import { escapeRegExp } from './regex';
+
 /**
  * Converts glob-style URL patterns (using * as wildcard) into RegExp testers.
  *
@@ -12,7 +14,8 @@
  */
 export function matchUrls(...patterns: string[]): (_url: string) => boolean {
   const regexes = patterns.map(pattern =>
-    new RegExp(`^${pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\\*/g, '.*')}$`, 'i'),
+    // Escape the literal pattern, then turn the escaped `\*` wildcard back into `.*`.
+    new RegExp(`^${escapeRegExp(pattern).replace(/\\\*/g, '.*')}$`, 'i'),
   );
 
   return (url: string) => regexes.some(regex => regex.test(url));
@@ -65,4 +68,35 @@ export function isWebarchive(): boolean {
   }
 
   return false;
+}
+
+/**
+ * Checks whether a value is an absolute `http:`/`https:` URL. Scraped image URLs are gated
+ * through this before they reach a CSS `url()` sink or a cross-origin `GM_xmlhttpRequest`,
+ * so a hostile store page cannot smuggle a `file:`, `data:`, `blob:`, or `javascript:` URL
+ * into a local-resource fetch or a stylesheet.
+ *
+ * @param value - The URL string to validate.
+ * @returns True when `value` parses as an absolute `http:` or `https:` URL.
+ *
+ * @example
+ * ```typescript
+ * console.log(isHttpUrl('https://f4.bcbits.com/img/a1.jpg')); // true
+ * console.log(isHttpUrl('file:///etc/passwd'));               // false
+ * console.log(isHttpUrl(null));                               // false
+ * ```
+ */
+export function isHttpUrl(value: string | null | undefined): boolean {
+  if (!value) {
+    return false;
+  }
+
+  try {
+    const { protocol } = new URL(value);
+
+    return protocol === 'http:' || protocol === 'https:';
+  }
+  catch {
+    return false;
+  }
 }

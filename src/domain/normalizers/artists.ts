@@ -2,6 +2,11 @@ import type { ArtistCredit } from '@/types';
 import { ARTIST_CREDIT_ROLES, ARTIST_JOINERS, joinerPattern, oxfordPattern, REMOVE_FROM_ARTIST, VARIOUS_ARTISTS } from '@/config';
 import { capitalizeString, cleanString } from '@/utils/string';
 
+/** Promotional words that disqualify a captured phrase from being treated as an artist credit. */
+const PROMO_BLACKLIST_PATTERN = /\b(?:tracks?|music|album|exclusive|material|songs?|ep|lp|release|available|digital|vinyl|download|stream|out\s+now|listen|debut|compilation|collection)\b/i;
+/** Lowercased tokens that legitimately precede a full stop inside a name (titles/abbreviations). */
+const NAME_PREFIXES = new Set(['mr', 'mrs', 'dr', 'st', 'vs', 'feat', 'ft', 'prof', 'bros', 'inc', 'ltd', 'vol']);
+
 /**
  * Heuristic check to determine if a captured string is likely a credit (artist name)
  * or just ordinary descriptive text (prose).
@@ -22,9 +27,7 @@ export function isValidCreditPhrase(text: string | null | undefined): boolean {
   }
 
   // Remove common promotional words
-  const promoBlacklist = /\b(?:tracks?|music|album|exclusive|material|songs?|ep|lp|release|available|digital|vinyl|download|stream|out\s+now|listen|debut|compilation|collection)\b/i;
-
-  if (promoBlacklist.test(text)) {
+  if (PROMO_BLACKLIST_PATTERN.test(text)) {
     return false;
   }
 
@@ -128,14 +131,13 @@ export function extractExtraArtists(text: string, extraArtists: ArtistCredit[], 
 
         if (chunks.length > 1) {
           let validName = chunks[0];
-          const namePrefixes = new Set(['mr', 'mrs', 'dr', 'st', 'vs', 'feat', 'ft', 'prof', 'bros', 'inc', 'ltd', 'vol']);
 
           for (let chunkIndex = 1; chunkIndex < chunks.length; chunkIndex++) {
             const prevChunk = chunks[chunkIndex - 1];
             const words = prevChunk.split(/\s+/);
             const lastWord = words.at(-1)?.toLowerCase() || '';
 
-            if (lastWord.length === 1 || namePrefixes.has(lastWord)) {
+            if (lastWord.length === 1 || NAME_PREFIXES.has(lastWord)) {
               validName += `. ${chunks[chunkIndex]}`;
             }
             else {

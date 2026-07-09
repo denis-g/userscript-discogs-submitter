@@ -19,18 +19,18 @@ It extracts metadata from the source page, normalizes it to meet Discogs formatt
 
 ### Supported Digital Stores
 
-| Store             | Release page URL pattern            | Country | Catalog Number | BPM info | 24-bit | Hi-Res Cover | Web Archive |
-| ----------------- |-------------------------------------| :-----: | :------------: | :------: | :----: |:------------:|:-----------:|
-| **Bandcamp**      | `*.bandcamp.com/album/*`            |   🟡    |       🟡       |    🟡    |   ✅   |       ✅      |     ✅       |
-| **Qobuz**         | `*.qobuz.com/*`                     |   ❌    |       ❌       |    ❌    |   ✅   |      ✅       |      ❌      |
-| **Juno Download** | `*.junodownload.com/*`              |   ❌    |       ✅       |    ✅    |   ❌   |      ❌       |      ❌      |
-| **Beatport**      | `*.beatport.com/*`                  |   ❌    |       ✅       |    ✅    |   ✅   |      ✅       |      ❌      |
-| **7digital**      | `*.7digital.com/artist/*/release/*` |   ❌    |       ❌       |    ❌    |   ✅   |      ❌       |      ❌      |
-| **Amazon Music**  | `*.amazon.*/*`                      |   ❌    |       ❌       |    ❌    |   ❌   |      ❌       |      ❌      |
-| **Bleep**         | `bleep.com/*`                       |   ❌    |       ✅       |    ❌    |   ✅   |      ❌       |      ❌      |
-| **HDtracks**      | `*.hdtracks.com/*`                  |   ❌    |       ❌       |    ❌    |   ✅   |      ✅       |      ❌      |
+| Store             | Release page URL pattern            | Catalog Number | BPM info | 24-bit | Hi-Res Cover | Web Archive |
+| ----------------- |-------------------------------------| :------------: | :------: | :----: |:------------:|:-----------:|
+| **Bandcamp**      | `*.bandcamp.com/album/*`            |       🟡       |    🟡    |   ✅   |       ✅      |     ✅       |
+| **Qobuz**         | `*.qobuz.com/*`                     |       ❌       |    ❌    |   ✅   |      ✅       |      ❌      |
+| **Juno Download** | `*.junodownload.com/*`              |       ✅       |    ✅    |   ❌   |      ❌       |      ❌      |
+| **Beatport**      | `*.beatport.com/*`                  |       ✅       |    ✅    |   ✅   |      ✅       |      ❌      |
+| **7digital**      | `*.7digital.com/artist/*/release/*` |       ❌       |    ❌    |   ✅   |      ❌       |      ❌      |
+| **Amazon Music**  | `*.amazon.*/*`                      |       ❌       |    ❌    |   ❌   |      ❌       |      ❌      |
+| **Bleep**         | `bleep.com/*`                       |       ✅       |    ❌    |   ✅   |      ❌       |      ❌      |
+| **HDtracks**      | `*.hdtracks.com/*`                  |       ❌       |    ❌    |   ✅   |      ✅       |      ❌      |
 
-<div><sup><strong>Bandcamp</strong>: Catalog number and BPM extraction relies on both the release credits and description. Country is extracted from the publisher location.</sup></div>
+<div><sup><strong>Bandcamp</strong>: Catalog number and BPM extraction relies on both the release credits and description.</sup></div>
 <div><sup><strong>Juno Download</strong>: Cover art maximum size is 700x700.</sup></div>
 <div><sup><strong>7digital</strong>: Cover art maximum size is 800x800, definitely available for all releases.</sup></div>
 <div><sup><strong>Web Archive</strong>: Almost all sites had different designs and layouts in different years.</sup></div>
@@ -98,7 +98,7 @@ It extracts metadata from the source page, normalizes it to meet Discogs formatt
 ## Features
 
 - **Metadata Extraction:** Automatically parses artist names (`VA` normalization), release titles, label names (with case-insensitive `Self-released` support), catalog numbers, release dates, and complete tracklists with track artists. If a release is identified as a compilation (e.g., contains "Compiled by..." or "Selected by..."), the compiler is automatically prioritized as the primary release artist.
-- **Interactive Editing:** **Every field** in the widget preview is directly editable. You can fix misparsed metadata, adjust track titles, or swap labels on the fly before sending the data to Discogs.
+- **Interactive Editing:** **Every field** in the widget preview is directly editable. You can fix misparsed metadata, adjust track titles, or swap labels on the fly before sending the data to Discogs. Release artists, track artists, and credits (including their roles) can also be **added or removed** on the fly — even when a release starts with a single artist.
 - **Credit Extraction:** Automatically identifies and extracts credit roles from titles and descriptions, moving them to the "Extra Artists" section while keeping the original title text clean.
 - **Smart Normalization:** Automatically filters out technical tags, standardizes punctuation, and applies intelligent casing to all fields.
 - **Cover Art & BPM:** Automatically fetches and attaches cover art, ensuring BPM data is included in the Discogs release notes when available.
@@ -158,7 +158,7 @@ Compiled By, Artwork, Producer, Mastered By, Written-By
 1. Open a music release page on any supported store.
 2. Click the **Discogs Submitter** button (usually located near the album buy/download controls).
 3. The floating widget will appear and parse the data automatically.
-4. **Review and Edit:** All fields in the preview area are manually editable. If the script misses something or formats it incorrectly, you can fix it directly in the widget. Use the **Restore** button (↺) to revert any field to its original parsed value.
+4. **Review and Edit:** All fields in the preview area are manually editable. If the script misses something or formats it incorrectly, you can fix it directly in the widget. Use the **Restore** button (↺) to revert an original field to its parsed value (added entries have no Restore button), the **Add** button (+) to append a new artist or credit, and the **Remove** button (×) to delete one. The **Restore all** button (next to Submit) discards every edit and reverts the whole release to the parsed data.
 5. **Format & Description:** Select the primary **Format** (e.g., `WAV`, `FLAC`, `MP3`) and any additional **Descriptions** (e.g., `24-bit`, `Album`, `EP`). For MP3, you can specify the bitrate (default is `320 kbps`) in the free-text field.
 6. **Submit to Discogs:** Click **Submit to Discogs** to create your draft. A new tab will open with the Discogs release editor.
 

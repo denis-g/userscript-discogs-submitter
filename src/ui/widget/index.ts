@@ -2,11 +2,11 @@ import type { WidgetState } from './types';
 import type { StoreAdapter } from '@/types';
 import { USERSCRIPT } from '@/config';
 import { DiscogsMapper } from '@/domain/mapper';
-import { resolveCountry } from '@/domain/normalizers/country';
 import { extractFormatFromTitle } from '@/domain/normalizers/format';
 import { normalizeLabel } from '@/domain/normalizers/label';
 import { renderTemplate } from '@/libs/template';
-import { isWebarchive } from '@/utils/url';
+import { escapeHtml } from '@/utils/string';
+import { isHttpUrl, isWebarchive } from '@/utils/url';
 import { FooterController } from './footer';
 import { HeaderController } from './header';
 import { LoaderController } from './loader';
@@ -193,8 +193,12 @@ export class Widget {
       onRendered: (rawJson) => {
         this.status.setRawJson(rawJson);
 
-        if (this.elements.widget && this.state.editedData?.thumb) {
-          document.documentElement.style.setProperty('--ds-thumb-url', `url('${this.state.editedData.thumb}')`);
+        // Only inject the thumb into CSS when it is a real http(s) URL — a scraped `file:`/`data:`
+        // value must never reach the `url()` sink.
+        const thumbUrl = this.state.editedData?.thumb;
+
+        if (this.elements.widget && isHttpUrl(thumbUrl)) {
+          document.documentElement.style.setProperty('--ds-thumb-url', `url('${thumbUrl}')`);
         }
 
         this.header.updateCover();
@@ -206,7 +210,39 @@ export class Widget {
       this.footer.actionsSlot,
       this.loader,
       this.status,
+      () => void this.resetEditsToOriginal(),
     );
+  }
+
+  /**
+   * Resets the format-related UI selections to the same defaults applied right after a parse:
+   * first supported format (or `WAV`), descriptions extracted from the title, empty free text.
+   * Shared by the initial parse and the "Restore all" action so both stay in sync.
+   */
+  private primeFormatDefaults(): void {
+    this.state.selectedFormat = this.state.currentDigitalStore?.supports?.formats?.[0] || 'WAV';
+    this.state.selectedDescriptions = extractFormatFromTitle(this.state.originalData?.title);
+    this.state.formatText = '';
+  }
+
+  /**
+   * Discards every user edit by restoring `editedData` from the pristine parsed `originalData`,
+   * re-priming the format defaults, and re-rendering the preview. No-op before the first parse.
+   *
+   * @returns A promise that resolves once the preview has re-rendered.
+   */
+  private async resetEditsToOriginal(): Promise<void> {
+    if (!this.state.originalData) {
+      return;
+    }
+
+    this.state.editedData = JSON.parse(JSON.stringify(this.state.originalData));
+
+    this.primeFormatDefaults();
+
+    await this.preview.render();
+
+    this.status.set(this.status.getReadyMessage(), 'success');
   }
 
   /**
@@ -230,7 +266,9 @@ export class Widget {
 
       const data = await this.state.currentDigitalStore.parse();
 
-      data.country = resolveCountry(data.country);
+      // Country is never auto-detected: default every release to "Worldwide" and let the user pick a
+      // specific country from the editable select if needed.
+      data.country = 'Worldwide';
 
       const primaryArtistName = (data.artists?.[0]?.name || '').trim();
 
@@ -239,9 +277,7 @@ export class Widget {
       this.state.originalData = JSON.parse(JSON.stringify(data));
       this.state.editedData = JSON.parse(JSON.stringify(data));
 
-      this.state.selectedFormat = this.state.currentDigitalStore.supports?.formats?.[0] || 'WAV';
-      this.state.selectedDescriptions = extractFormatFromTitle(this.state.originalData?.title);
-      this.state.formatText = '';
+      this.primeFormatDefaults();
 
       // Pre-fill notes/submissionNotes from DiscogsMapper output so they show up in edit fields
       if (this.state.editedData && this.state.originalData) {
@@ -272,7 +308,9 @@ export class Widget {
 
       const errorMessage = (error as Error).message || String(error);
 
-      this.status.set(errorMessage, 'error');
+      // Provider parse() may throw with scraped page text embedded in the message;
+      // escape it before it reaches the innerHTML-backed status banner.
+      this.status.set(escapeHtml(errorMessage), 'error');
 
       this.status.setRawError(`URL: ${unsafeWindow.location.href}\nVersion: ${USERSCRIPT.VERSION}\nError Trace:\n${(error as Error).stack || error}`);
     }

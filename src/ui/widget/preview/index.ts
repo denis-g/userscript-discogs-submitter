@@ -1,10 +1,11 @@
 import type { WidgetState } from '../types';
+import type { ArtistCredit } from '@/types';
 import { DiscogsMapper } from '@/domain/mapper';
 import { EditableHelper } from '@/libs/editable';
 import { Select } from '@/ui/select';
 import { getValueByPath, setValueByPath } from '@/utils/object';
 import { renderFragment } from './renderer';
-import { resolvePath } from './resolver';
+import { resolveCollectionPath, resolveEntryRemoval, resolvePath } from './resolver';
 
 /**
  * Side-effects performed after the preview renders. Allows the widget shell to update
@@ -23,6 +24,8 @@ export class PreviewController {
   private readonly state: WidgetState;
   private readonly contentElement: HTMLElement | null;
   private readonly hooks: PreviewControllerHooks;
+  /** Artist/credit entries the user added this session; tracked by reference so they never show a restore button. */
+  private readonly addedEntries = new WeakSet<ArtistCredit>();
 
   /**
    * @param state - Shared widget state (read+write).
@@ -75,11 +78,14 @@ export class PreviewController {
         },
         this.contentElement,
         this.state.editedData,
+        this.addedEntries,
       );
 
       Select.init(this.contentElement.querySelector('.is-format'));
       Select.init(this.contentElement.querySelector('.is-description'));
       Select.init(this.contentElement.querySelector('.is-country'));
+
+      this.contentElement.querySelectorAll<HTMLTextAreaElement>('textarea.is-edit').forEach(textarea => this.autosizeTextarea(textarea));
     }
 
     this.hooks.onRendered(rawJsonString);
@@ -87,7 +93,8 @@ export class PreviewController {
 
   /**
    * Wires every preview-scoped DOM event to the `.discogs-submitter__content` container.
-   * Idempotent only if called once at widget mount time.
+   * Must be called exactly once at widget mount; not safe to call repeatedly
+   * (it adds listeners unconditionally with no deduplication).
    */
   public bindEvents(): void {
     if (!this.contentElement) {
@@ -97,11 +104,10 @@ export class PreviewController {
     this.contentElement.addEventListener('change', event => void this.handleChange(event));
 
     this.contentElement.addEventListener('click', async (event) => {
-      const target = event.target as HTMLElement;
-      const fieldButton = target.closest('.discogs-submitter__results__field .discogs-submitter__button');
+      const action = this.resolveActionButton(event.target as HTMLElement);
 
-      if (fieldButton) {
-        await this.handleRestore(fieldButton as HTMLElement);
+      if (action) {
+        await this.runAction(action.kind, action.button);
       }
     });
 
@@ -114,14 +120,13 @@ export class PreviewController {
         return;
       }
 
-      // Keyboard activation for restore buttons (mirrors the delegated click handler above)
+      // Keyboard activation for action buttons (mirrors the delegated click handler above)
       if (event.key === 'Enter' || event.key === ' ') {
-        const fieldButton = target.closest('.discogs-submitter__results__field .discogs-submitter__button');
+        const action = this.resolveActionButton(target);
 
-        if (fieldButton) {
+        if (action) {
           event.preventDefault();
-
-          this.handleRestore(fieldButton as HTMLElement);
+          void this.runAction(action.kind, action.button);
         }
       }
     });
@@ -132,18 +137,14 @@ export class PreviewController {
       }
     });
 
-    this.contentElement.addEventListener('paste', (event) => {
-      if ((event.target as HTMLElement).classList.contains('is-edit')) {
-        EditableHelper.handlePaste(event);
+    // Keep auto-height textareas sized to their content as the user types.
+    this.contentElement.addEventListener('input', (event) => {
+      const target = event.target;
+
+      if (target instanceof HTMLTextAreaElement && target.classList.contains('is-edit')) {
+        this.autosizeTextarea(target);
       }
     });
-
-    // Trigger handleChange on blur for contenteditable fields
-    this.contentElement.addEventListener('blur', (event) => {
-      if ((event.target as HTMLElement).classList.contains('is-edit')) {
-        this.handleChange(event);
-      }
-    }, true);
   }
 
   /**
@@ -171,12 +172,70 @@ export class PreviewController {
       await this.render();
     }
     else if (target.classList.contains('is-edit') && this.state.editedData) {
-      const value = target.contentEditable === 'plaintext-only' || target.contentEditable === 'true'
-        ? target.textContent?.trim() || ''
-        : (target as HTMLInputElement | HTMLTextAreaElement).value;
+      const value = (target as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement).value;
 
       this.updateEditedData(target, value);
       await this.render();
+    }
+  }
+
+  /**
+   * Grows an editable `<textarea>` to fit its content: long values wrap and the field expands
+   * vertically instead of overflowing. Resetting `height` to `auto` first lets the field also
+   * shrink when content is removed. This is the cross-browser fallback for `field-sizing: content`.
+   *
+   * @param textarea - The editable textarea to size.
+   */
+  private autosizeTextarea(textarea: HTMLTextAreaElement): void {
+    textarea.style.height = 'auto';
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }
+
+  /**
+   * Maps an event target to the preview action button it belongs to, matching add → remove →
+   * restore in priority order. Shared by the click and keyboard handlers.
+   *
+   * @param target - The event target.
+   * @returns The matched action kind and its button, or `null` when the target is not an action button.
+   */
+  private resolveActionButton(target: HTMLElement): { kind: 'add' | 'remove' | 'restore'; button: HTMLElement } | null {
+    const addButton = target.closest('.discogs-submitter__button.is-add');
+
+    if (addButton) {
+      return { kind: 'add', button: addButton as HTMLElement };
+    }
+
+    const removeButton = target.closest('.discogs-submitter__button.is-remove');
+
+    if (removeButton) {
+      return { kind: 'remove', button: removeButton as HTMLElement };
+    }
+
+    const restoreButton = target.closest('.discogs-submitter__results__field .discogs-submitter__button');
+
+    if (restoreButton) {
+      return { kind: 'restore', button: restoreButton as HTMLElement };
+    }
+
+    return null;
+  }
+
+  /**
+   * Dispatches a resolved preview action to its handler.
+   *
+   * @param kind - The action kind from `resolveActionButton`.
+   * @param button - The button element carrying the action's metadata.
+   * @returns A promise that resolves once the action's re-render completes.
+   */
+  private async runAction(kind: 'add' | 'remove' | 'restore', button: HTMLElement): Promise<void> {
+    if (kind === 'add') {
+      await this.handleAdd(button);
+    }
+    else if (kind === 'remove') {
+      await this.handleRemove(button);
+    }
+    else {
+      await this.handleRestore(button);
     }
   }
 
@@ -209,6 +268,62 @@ export class PreviewController {
     }
 
     await this.render();
+  }
+
+  /**
+   * Appends a new blank entry to the artist/credit collection targeted by an "add" button and
+   * re-renders. Credits get an empty `role`; artists get a default `,` join.
+   *
+   * @param element - The add button carrying the collection's `data-field` (and track `data-index`).
+   */
+  private async handleAdd(element: HTMLElement): Promise<void> {
+    if (!this.state.editedData) {
+      return;
+    }
+
+    const arrayPath = resolveCollectionPath(element);
+
+    if (!arrayPath) {
+      return;
+    }
+
+    const collection = getValueByPath<ArtistCredit[]>(this.state.editedData, arrayPath);
+
+    if (!Array.isArray(collection)) {
+      return;
+    }
+
+    const entry: ArtistCredit = arrayPath.endsWith('extraartists') ? { name: '', role: '' } : { name: '', join: ',' };
+
+    this.addedEntries.add(entry);
+    collection.push(entry);
+
+    await this.render();
+  }
+
+  /**
+   * Removes the artist/credit entry targeted by a "remove" button and re-renders.
+   *
+   * @param element - The remove button sharing its sibling field's `data-field`/index metadata.
+   */
+  private async handleRemove(element: HTMLElement): Promise<void> {
+    if (!this.state.editedData) {
+      return;
+    }
+
+    const removal = resolveEntryRemoval(element);
+
+    if (!removal) {
+      return;
+    }
+
+    const collection = getValueByPath<ArtistCredit[]>(this.state.editedData, removal.arrayPath);
+
+    if (Array.isArray(collection)) {
+      collection.splice(removal.index, 1);
+
+      await this.render();
+    }
   }
 
   private updateEditedData(element: HTMLElement, value: string): void {

@@ -22,10 +22,6 @@
   &.is-tracklist {
     grid-template-columns: 20px 1fr 1fr 50px;
 
-    &.is-no-artist {
-      grid-template-columns: 20px 1fr 50px;
-    }
-
     > .discogs-submitter__results__head {
       text-align: left;
     }
@@ -74,6 +70,21 @@
   &.is-inner {
     padding-left: calc(var(--ds-gap) / 2);
   }
+
+  .discogs-submitter__button.is-icon {
+    vertical-align: top;
+    padding: calc(var(--ds-gap) / 6);
+
+    &.is-remove {
+      fill: rgba(var(--ds-color-error), 1);
+    }
+  }
+}
+
+.discogs-submitter__textarea.is-join {
+  padding-inline: calc(var(--ds-gap) / 8);
+  min-width: 1em;
+  text-align: center;
 }
 
 .discogs-submitter__results__field {
@@ -84,12 +95,20 @@
   width: 100%;
 
   .discogs-submitter__textarea {
-    width: 100%;
-    min-height: 60px;
+    overflow: hidden;
+    /* Single-line-with-wrap: JS/field-sizing grows height to fit, so no manual resize or scrollbar. */
+    resize: none;
+
+    /* Notes fields stay full-width, multi-line, and user-resizable. */
+    &.is-multiline {
+      width: 100%;
+      min-height: 60px;
+      overflow: auto;
+      resize: vertical;
+    }
   }
 
-  .discogs-submitter__button {
+  .discogs-submitter__button.is-icon {
     flex: 0 0 auto;
-    padding: calc(var(--ds-gap) / 6);
   }
 }

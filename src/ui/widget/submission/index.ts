@@ -4,35 +4,42 @@ import type { WidgetState } from '../types';
 import { networkRequest } from '@/libs/network';
 import { renderTemplate } from '@/libs/template';
 import { bindActivation } from '@/utils/dom';
+import { escapeHtml } from '@/utils/string';
+import { isHttpUrl } from '@/utils/url';
 import template from './template.html?raw';
 
 const MIN_STEP_DURATION_MS = 5000;
 
 /**
  * Submits the parsed release payload to Discogs and optionally uploads the cover image.
- * Owns the submit button: renders the template into the slot, manages its hidden state during
- * the flow, and wires click/keyboard activation. Each network step is shown in the loader for
- * at least `MIN_STEP_DURATION_MS` so messages don't flash past the user when calls are fast.
+ * Owns the submit button: renders the template into the slot and wires click/keyboard activation.
+ * During submission the button stays visible while progress is shown in the loader; each network
+ * step is held in the loader for at least `MIN_STEP_DURATION_MS` so messages don't flash past the
+ * user when calls are fast.
  */
 export class SubmissionController {
   private readonly state: WidgetState;
   private readonly slot: HTMLElement | null;
   private readonly loader: LoaderController;
   private readonly status: StatusController;
+  private readonly onRestoreAll: () => void;
 
   private submitButton: HTMLElement | null = null;
+  private restoreAllButton: HTMLElement | null = null;
 
   /**
    * @param state - Shared widget state (reads `currentPayload`, `editedData.cover`).
    * @param slot - The `.discogs-submitter__actions` slot in the widget shell.
    * @param loader - Loader controller used to display per-step progress labels.
    * @param status - Status controller used to set the terminal success/warning/error state.
+   * @param onRestoreAll - Invoked when the user activates the "Restore all" button.
    */
-  constructor(state: WidgetState, slot: HTMLElement | null, loader: LoaderController, status: StatusController) {
+  constructor(state: WidgetState, slot: HTMLElement | null, loader: LoaderController, status: StatusController, onRestoreAll: () => void) {
     this.state = state;
     this.slot = slot;
     this.loader = loader;
     this.status = status;
+    this.onRestoreAll = onRestoreAll;
 
     if (!this.slot) {
       return;
@@ -41,38 +48,43 @@ export class SubmissionController {
     renderTemplate(template, {}, this.slot, { replace: true });
 
     this.submitButton = this.slot.querySelector('.discogs-submitter__button.is-primary');
+    this.restoreAllButton = this.slot.querySelector('.discogs-submitter__button.is-danger');
   }
 
   /**
-   * Wires click + keyboard activation on the submit button.
-   * Idempotent only at widget mount time.
+   * Wires click + keyboard activation on the submit and restore-all buttons.
+   * Must be called exactly once at widget mount; not safe to call repeatedly
+   * (it adds listeners unconditionally with no deduplication).
    */
   public bindEvents(): void {
     bindActivation(this.submitButton, () => void this.submit());
+    bindActivation(this.restoreAllButton, () => this.onRestoreAll());
   }
 
   /**
-   * Shows or hides the submit button. Used by the shell to reveal the button once parsing
-   * completes and to hide it again on reset/SPA navigation.
+   * Shows or hides the action buttons (submit + restore-all). Used by the shell to reveal them
+   * once parsing completes and to hide them again on reset/SPA navigation.
    *
-   * @param hidden - Whether the button should be hidden.
+   * @param hidden - Whether the buttons should be hidden.
    */
   public setHidden(hidden: boolean): void {
-    if (!this.submitButton) {
-      return;
-    }
+    for (const button of [this.submitButton, this.restoreAllButton]) {
+      if (!button) {
+        continue;
+      }
 
-    if (hidden) {
-      this.submitButton.setAttribute('hidden', 'true');
-    }
-    else {
-      this.submitButton.removeAttribute('hidden');
+      if (hidden) {
+        button.setAttribute('hidden', 'true');
+      }
+      else {
+        button.removeAttribute('hidden');
+      }
     }
   }
 
   /**
    * Runs the full submission flow: create draft → optional cover upload → open Discogs editor tab.
-   * Surfaces all outcomes via `status`/`loader` and re-enables the submit button on completion.
+   * Surfaces all outcomes via `status`/`loader`.
    *
    * @returns A promise that resolves when the submission flow (success, warning, or error) concludes.
    */
@@ -81,7 +93,6 @@ export class SubmissionController {
       return;
     }
 
-    this.submitButton?.setAttribute('hidden', 'true');
     this.loader.setActive(true, 'Sending to Discogs...');
 
     let coverUploadFailed = false;
@@ -107,9 +118,16 @@ export class SubmissionController {
 
       releaseId = jsonData.id;
 
-      if (this.state.editedData?.cover) {
-        const coverUrl = this.state.editedData.cover;
+      const coverUrl = this.state.editedData?.cover;
 
+      if (coverUrl && !isHttpUrl(coverUrl)) {
+        // Refuse to fetch a non-http(s) cover (e.g. `file:`/`data:` smuggled by a hostile page);
+        // flag it so the user is told to add the cover manually.
+        console.warn('[Discogs Submitter] Skipping cover upload: unsupported URL scheme:', coverUrl);
+
+        coverUploadFailed = true;
+      }
+      else if (coverUrl) {
         try {
           await this.runStep('Draft created. Uploading cover image...', async () => {
             const coverBlob = await networkRequest<Blob>({
@@ -156,14 +174,12 @@ export class SubmissionController {
       }
 
       this.status.set(
-        `Failed to create Discogs draft:<br />${errorMessage}`,
+        `Failed to create Discogs draft:<br />${escapeHtml(errorMessage)}`,
         'error',
       );
     }
     finally {
       this.loader.setActive(false);
-
-      this.submitButton?.removeAttribute('hidden');
     }
   }
 

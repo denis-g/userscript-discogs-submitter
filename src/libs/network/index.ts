@@ -26,7 +26,7 @@
  * });
  * ```
  */
-export function networkRequest<T = any>(options: Tampermonkey.Request, retries = 2, timeout = 15000): Promise<T> {
+export function networkRequest<T = unknown>(options: Tampermonkey.Request, retries = 2, timeout = 15000): Promise<T> {
   const attempt = (currentTry: number): Promise<T> =>
     new Promise<T>((resolve, reject) => {
       const config: Tampermonkey.Request = {

@@ -1,5 +1,11 @@
 .discogs-submitter__actions {
   display: flex;
   flex-wrap: nowrap;
+  align-items: center;
   gap: var(--ds-gap);
+
+  .discogs-submitter__button.is-icon {
+    flex: none;
+    padding: calc(var(--ds-gap) / 6);
+  }
 }

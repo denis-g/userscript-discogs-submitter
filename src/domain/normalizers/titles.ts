@@ -37,6 +37,18 @@ export function normalizeTitle(rawTitle: string | null | undefined, extraArtists
 }
 
 /**
+ * Result of splitting a composite title into its artist and title components.
+ */
+export interface SplitArtistTitleResult {
+  /** The artists extracted from the artist portion (or the supplied fallback). */
+  artists: ArtistCredit[];
+  /** The normalized track title. */
+  title: string;
+  /** The BPM parsed from the raw title, if present. */
+  bpm: number | undefined;
+}
+
+/**
  * Attempts to split a single string (often a track title) into separate artist and title components.
  *
  * @param rawTitle - The composite string containing artist and title (e.g. "Artist - Title").
@@ -49,7 +61,7 @@ export function normalizeTitle(rawTitle: string | null | undefined, extraArtists
  * const split = splitArtistTitle('Artist Name - Track Title', [], []);
  * ```
  */
-export function splitArtistTitle(rawTitle: string | null | undefined, defaultArtists: ArtistCredit[], extraArtists: ArtistCredit[]) {
+export function splitArtistTitle(rawTitle: string | null | undefined, defaultArtists: ArtistCredit[], extraArtists: ArtistCredit[]): SplitArtistTitleResult {
   let cleanTitleForSplit = rawTitle || '';
 
   REMOVE_FROM_TITLE.forEach((pattern) => {

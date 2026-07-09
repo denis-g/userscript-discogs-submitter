@@ -10,7 +10,7 @@ const FORBIDDEN_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
  * @param key - The property name.
  * @param value - The value to assign.
  */
-function defineOwnProperty(target: any, key: string, value: any): void {
+function defineOwnProperty(target: object, key: string, value: unknown): void {
   Object.defineProperty(target, key, {
     value,
     writable: true,
@@ -33,7 +33,7 @@ function defineOwnProperty(target: any, key: string, value: any): void {
  * const name = getValueByPath<string>(data, 'user.name'); // 'John'
  * ```
  */
-export function getValueByPath<T = any>(object: any, path: string): T | undefined {
+export function getValueByPath<T = unknown>(object: any, path: string): T | undefined {
   if (!path) {
     return object;
   }

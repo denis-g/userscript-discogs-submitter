@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { getReleaseIdFromUrl, isWebarchive, matchUrls } from '../url';
+import { getReleaseIdFromUrl, isHttpUrl, isWebarchive, matchUrls } from '../url';
 
 /** Stubs `unsafeWindow.location.href` for URL-based environment checks in tests. */
 function stubLocation(href: string): void {
@@ -61,6 +61,28 @@ describe('url utilities', () => {
 
     it('returns false (no throw) when `unsafeWindow` is not defined', () => {
       expect(isWebarchive()).toBe(false);
+    });
+  });
+
+  describe('isHttpUrl', () => {
+    it('accepts absolute http and https URLs', () => {
+      expect(isHttpUrl('https://example.com/cover.jpg')).toBe(true);
+      expect(isHttpUrl('http://example.com/cover.jpg')).toBe(true);
+    });
+
+    it('rejects non-http(s) schemes that could smuggle local/inline resources', () => {
+      expect(isHttpUrl('file:///etc/passwd')).toBe(false);
+      expect(isHttpUrl('data:image/png;base64,AAAA')).toBe(false);
+      expect(isHttpUrl('javascript:alert(1)')).toBe(false);
+      expect(isHttpUrl('blob:https://example.com/uuid')).toBe(false);
+    });
+
+    it('rejects empty, relative, or malformed values', () => {
+      expect(isHttpUrl(null)).toBe(false);
+      expect(isHttpUrl(undefined)).toBe(false);
+      expect(isHttpUrl('')).toBe(false);
+      expect(isHttpUrl('/relative/path.jpg')).toBe(false);
+      expect(isHttpUrl('not a url')).toBe(false);
     });
   });
 });

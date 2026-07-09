@@ -13,7 +13,8 @@ import template from './template.html?raw';
  * ```
  */
 export class Select {
-  private static readonly DATA_KEY = 'dsSelectInstance';
+  /** Tracks enhanced select elements without stashing the instance on the DOM node itself. */
+  private static readonly instances = new WeakMap<HTMLSelectElement, Select>();
   private readonly ui: Record<string, HTMLElement | null> = {};
   private readonly state = {
     isOpen: false,
@@ -30,7 +31,7 @@ export class Select {
     });
 
     // Mark as initialized
-    (this.select as any)[Select.DATA_KEY] = this;
+    Select.instances.set(this.select, this);
   }
 
   /**
@@ -244,7 +245,7 @@ export class Select {
       return;
     }
 
-    const instance = (select as any)[Select.DATA_KEY] as Select;
+    const instance = Select.instances.get(select);
 
     if (instance) {
       if (force) {

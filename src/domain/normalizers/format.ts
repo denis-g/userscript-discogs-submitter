@@ -1,4 +1,5 @@
 import { TITLE_FORMAT } from '@/config';
+import { escapeRegExp } from '@/utils/regex';
 
 /**
  * Extracts Discogs format descriptions from a release title based on configurable keywords.
@@ -20,7 +21,7 @@ export function extractFormatFromTitle(title: string | null | undefined): string
     }
 
     // Escape special characters in keywords and join them with OR
-    const escapedKeywords = keywords.map(keyword => keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const escapedKeywords = keywords.map(keyword => escapeRegExp(keyword));
     const pattern = `\\b(?:${escapedKeywords.join('|')})\\b`;
     const regex = new RegExp(pattern, 'i');
 

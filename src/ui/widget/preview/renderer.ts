@@ -1,5 +1,5 @@
 import type { PreviewRenderOptions } from './types';
-import type { DiscogsPayloadData, ReleaseData } from '@/types';
+import type { ArtistCredit, DiscogsPayloadData, ReleaseData } from '@/types';
 import { FILE_FORMATS, RELEASE_TYPES } from '@/config';
 import { ALLOWED_COUNTRIES } from '@/config/countries';
 import { renderTemplate } from '@/libs/template';
@@ -14,22 +14,30 @@ import template from './template.html?raw';
  * @param options - UI configuration (selected format/descriptions/free text, supported formats).
  * @param container - Target DOM node receiving the rendered fragment.
  * @param editedData - The current edited release data (used to populate editable fields).
+ * @param addedEntries - Set of artist/credit entries the user added; they cannot be restored.
  */
 export async function renderFragment(
   release: DiscogsPayloadData,
   options: PreviewRenderOptions,
   container: HTMLElement,
   editedData: ReleaseData,
+  addedEntries: WeakSet<ArtistCredit>,
 ): Promise<void> {
   const { selectedFormat, selectedDescriptions, formatText, supports } = options;
   const tracks = release.tracks || [];
-  const hasTrackArtists = tracks.some(track => (track.artists || []).length > 0);
+  const releaseArtists = editedData.artists || [];
+  // The mapper empties track artists in the payload when they all match the release artists.
+  // In that case we hide the duplicated name fields but still expose the per-track "add" button.
+  const showTrackArtists = tracks.some(track => (track.artists || []).length > 0);
   const data = {
     ...release,
-    releaseArtists: (editedData.artists || []).map((artist, index) => ({
+    releaseArtists: releaseArtists.map((artist, index) => ({
       ...artist,
       _index: index,
-      _last: index === (editedData.artists || []).length - 1,
+      _last: index === releaseArtists.length - 1,
+      _canRestore: !addedEntries.has(artist),
+      // A release must keep at least one artist, so the last remaining one cannot be removed.
+      _canRemove: releaseArtists.length > 1,
     })),
     rawTitle: editedData.title,
     rawLabel: editedData.label || '',
@@ -40,8 +48,8 @@ export async function renderFragment(
     rawExtraartists: (editedData.extraartists || []).map((credit, index) => ({
       ...credit,
       _index: index,
+      _canRestore: !addedEntries.has(credit),
     })),
-    showExtraArtists: (editedData.extraartists || []).length > 0,
     rawNotes: editedData.notes,
     rawSubmissionNotes: editedData.submissionNotes,
     availableCountries: ALLOWED_COUNTRIES.map(country => ({
@@ -59,8 +67,6 @@ export async function renderFragment(
       isSelected: selectedDescriptions.includes(type),
     })),
     // Prepared tracklist data
-    hasTrackArtists,
-    rowClass: `${hasTrackArtists ? '' : 'is-no-artist'}`,
     tracks: tracks.map((track, trackIndex) => {
       const rawTrack = editedData.tracks[trackIndex];
 
@@ -72,15 +78,16 @@ export async function renderFragment(
           _trackIndex: trackIndex,
           _index: artistIndex,
           _last: artistIndex === (rawTrack?.artists || []).length - 1,
+          _canRestore: !addedEntries.has(artist),
         })),
         // Track-level credits from editedData
         trackExtraartists: (rawTrack?.extraartists || []).map((credit, creditIndex) => ({
           ...credit,
           _trackIndex: trackIndex,
           _index: creditIndex,
+          _canRestore: !addedEntries.has(credit),
         })),
-        hasTrackArtists,
-        rowClass: `${hasTrackArtists ? '' : 'is-no-artist'}`,
+        showTrackArtists,
         _index: trackIndex,
       };
     }),

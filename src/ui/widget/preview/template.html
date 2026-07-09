@@ -4,13 +4,19 @@
     <div class="discogs-submitter__results__body is-multiple">
       <var data-loop="releaseArtists">
         <div class="discogs-submitter__results__field">
-          <span class="discogs-submitter__input is-edit" contenteditable="plaintext-only" spellcheck="false" role="textbox" aria-label="Release artist" data-field="artists.name" data-text="name" data-attr="data-index:_index" placeholder="Artist..."></span>
-          <svg class="discogs-submitter__button is-icon" role="button" tabindex="0" data-field="artists.name" data-attr="data-index:_index" title="Restore original artist" aria-label="Restore original artist"><use href="#ds-rotate-left"></use></svg>
+          <textarea class="discogs-submitter__textarea is-edit" rows="1" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="Release artist" data-field="artists.name" data-value="name" data-attr="data-index:_index" placeholder="Artist..."></textarea>
+          <var data-if="_canRestore"><svg class="discogs-submitter__button is-icon" role="button" tabindex="0" data-field="artists.name" data-attr="data-index:_index" title="Restore original artist" aria-label="Restore original artist"><use href="#ds-rotate-left"></use></svg></var>
+          <var data-if="_canRemove"><svg class="discogs-submitter__button is-icon is-remove" role="button" tabindex="0" data-field="artists.name" data-attr="data-index:_index" title="Remove artist" aria-label="Remove artist"><use href="#ds-icon-trash"></use></svg></var>
         </div>
         <var data-if="!_last">
-          <var data-if="join"><var>join</var></var>
+          <div class="discogs-submitter__results__field">
+            <textarea class="discogs-submitter__textarea is-edit is-join" rows="1" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="Artist join" data-field="artists.join" data-value="join" data-attr="data-index:_index" placeholder=","></textarea>
+          </div>
         </var>
       </var>
+      <div class="discogs-submitter__results__field">
+        <svg class="discogs-submitter__button is-icon is-add" role="button" tabindex="0" data-field="artists" title="Add artist" aria-label="Add artist"><use href="#ds-icon-plus"></use></svg>
+      </div>
     </div>
   </div>
 
@@ -18,7 +24,7 @@
     <div class="discogs-submitter__results__head">Title</div>
     <div class="discogs-submitter__results__body">
       <div class="discogs-submitter__results__field">
-        <span class="discogs-submitter__input is-edit" contenteditable="plaintext-only" spellcheck="false" role="textbox" aria-label="Release title" data-field="title" data-text="rawTitle" placeholder="Title..."></span>
+        <textarea class="discogs-submitter__textarea is-edit" rows="1" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="Release title" data-field="title" data-value="rawTitle" placeholder="Title..."></textarea>
         <svg class="discogs-submitter__button is-icon" role="button" tabindex="0" data-field="title" title="Restore original title" aria-label="Restore original title"><use href="#ds-rotate-left"></use></svg>
       </div>
     </div>
@@ -28,7 +34,7 @@
     <div class="discogs-submitter__results__head">Label</div>
     <div class="discogs-submitter__results__body">
       <div class="discogs-submitter__results__field">
-        <span class="discogs-submitter__input is-edit" contenteditable="plaintext-only" spellcheck="false" role="textbox" aria-label="Record label" data-field="label" data-text="rawLabel" placeholder="Label..."></span>
+        <textarea class="discogs-submitter__textarea is-edit" rows="1" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="Record label" data-field="label" data-value="rawLabel" placeholder="Label..."></textarea>
         <svg class="discogs-submitter__button is-icon" role="button" tabindex="0" data-field="label" title="Restore original label" aria-label="Restore original label"><use href="#ds-rotate-left"></use></svg>
       </div>
     </div>
@@ -38,7 +44,7 @@
     <div class="discogs-submitter__results__head">Catalog</div>
     <div class="discogs-submitter__results__body">
       <div class="discogs-submitter__results__field">
-        <span class="discogs-submitter__input is-edit" contenteditable="plaintext-only" spellcheck="false" role="textbox" aria-label="Catalog number" data-field="number" data-text="rawNumber" placeholder="Catalog..."></span>
+        <textarea class="discogs-submitter__textarea is-edit" rows="1" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="Catalog number" data-field="number" data-value="rawNumber" placeholder="Catalog..."></textarea>
         <svg class="discogs-submitter__button is-icon" role="button" tabindex="0" data-field="number" title="Restore original catalog" aria-label="Restore original catalog number"><use href="#ds-rotate-left"></use></svg>
       </div>
     </div>
@@ -48,7 +54,7 @@
     <div class="discogs-submitter__results__head">Released</div>
     <div class="discogs-submitter__results__body">
       <div class="discogs-submitter__results__field">
-        <span class="discogs-submitter__input is-edit" contenteditable="plaintext-only" spellcheck="false" role="textbox" aria-label="Release date" data-field="released" data-text="rawReleased" placeholder="Date..."></span>
+        <textarea class="discogs-submitter__textarea is-edit" rows="1" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="Release date" data-field="released" data-value="rawReleased" placeholder="Date..."></textarea>
         <svg class="discogs-submitter__button is-icon" role="button" tabindex="0" data-field="released" title="Restore original release date" aria-label="Restore original release date"><use href="#ds-rotate-left"></use></svg>
       </div>
     </div>
@@ -91,16 +97,14 @@
         </select>
       </div>
       <div class="discogs-submitter__results__field">
-        <span class="discogs-submitter__input is-edit is-format-text" contenteditable="plaintext-only" spellcheck="false" role="textbox" aria-label="Format details" data-field="formatText" data-text="formatText" placeholder="Free Text..."></span>
+        <textarea class="discogs-submitter__textarea is-edit is-format-text" rows="1" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="Format details" data-field="formatText" data-value="formatText" placeholder="Free Text..."></textarea>
       </div>
     </div>
   </div>
 
-  <div class="discogs-submitter__results__row is-tracklist" data-attr="class:rowClass">
+  <div class="discogs-submitter__results__row is-tracklist">
     <div class="discogs-submitter__results__head">#</div>
-    <var data-if="hasTrackArtists">
-      <div class="discogs-submitter__results__head">Artist</div>
-    </var>
+    <div class="discogs-submitter__results__head">Artist</div>
     <div class="discogs-submitter__results__head">Title / Credits</div>
     <div class="discogs-submitter__results__head">Duration</div>
   </div>
@@ -112,63 +116,77 @@
   </var>
 
   <var data-loop="tracks">
-    <div class="discogs-submitter__results__row is-tracklist" data-attr="class:rowClass" data-attr="data-index:_index">
+    <div class="discogs-submitter__results__row is-tracklist" data-attr="data-index:_index">
       <div class="discogs-submitter__results__body"><var>pos</var></div>
-      <var data-if="hasTrackArtists">
-        <div class="discogs-submitter__results__body is-multiple">
+      <div class="discogs-submitter__results__body is-multiple">
+        <var data-if="showTrackArtists">
           <var data-loop="trackArtists">
             <div class="discogs-submitter__results__field">
-              <span class="discogs-submitter__input is-edit is-track-artists" contenteditable="plaintext-only" spellcheck="false" role="textbox" aria-label="Track artist" data-field="tracks.artists.name" data-text="name" data-attr="data-index:_trackIndex|data-subindex:_index" placeholder="Artist..."></span>
-              <svg class="discogs-submitter__button is-icon" role="button" tabindex="0" data-field="tracks.artists.name" data-attr="data-index:_trackIndex|data-subindex:_index" title="Restore original artist" aria-label="Restore original track artist"><use href="#ds-rotate-left"></use></svg>
+              <textarea class="discogs-submitter__textarea is-edit is-track-artists" rows="1" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="Track artist" data-field="tracks.artists.name" data-value="name" data-attr="data-index:_trackIndex|data-subindex:_index" placeholder="Artist..."></textarea>
+              <var data-if="_canRestore"><svg class="discogs-submitter__button is-icon" role="button" tabindex="0" data-field="tracks.artists.name" data-attr="data-index:_trackIndex|data-subindex:_index" title="Restore original artist" aria-label="Restore original track artist"><use href="#ds-rotate-left"></use></svg></var>
+              <svg class="discogs-submitter__button is-icon is-remove" role="button" tabindex="0" data-field="tracks.artists.name" data-attr="data-index:_trackIndex|data-subindex:_index" title="Remove artist" aria-label="Remove track artist"><use href="#ds-icon-trash"></use></svg>
             </div>
             <var data-if="!_last">
-              <var data-if="join"><var>join</var></var>
+              <div class="discogs-submitter__results__field">
+                <textarea class="discogs-submitter__textarea is-edit is-join" rows="1" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="Track artist join" data-field="tracks.artists.join" data-value="join" data-attr="data-index:_trackIndex|data-subindex:_index" placeholder=","></textarea>
+              </div>
             </var>
           </var>
+        </var>
+        <div class="discogs-submitter__results__field">
+          <svg class="discogs-submitter__button is-icon is-add" role="button" tabindex="0" data-field="tracks.artists" data-attr="data-index:_index" title="Add artist" aria-label="Add track artist"><use href="#ds-icon-plus"></use></svg>
         </div>
-      </var>
+      </div>
       <div class="discogs-submitter__results__body">
         <div class="discogs-submitter__results__field">
-          <span class="discogs-submitter__input is-edit is-track-title" contenteditable="plaintext-only" spellcheck="false" role="textbox" aria-label="Track title" data-field="tracks.title" data-text="title" data-attr="data-index:_index" placeholder="Title..."></span>
+          <textarea class="discogs-submitter__textarea is-edit is-track-title" rows="1" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="Track title" data-field="tracks.title" data-value="title" data-attr="data-index:_index" placeholder="Title..."></textarea>
           <svg class="discogs-submitter__button is-icon" role="button" tabindex="0" data-field="tracks.title" data-attr="data-index:_index" title="Restore original title" aria-label="Restore original track title"><use href="#ds-rotate-left"></use></svg>
         </div>
-        <var data-if="trackExtraartists.length">
-          <var data-loop="trackExtraartists">
-            <div class="discogs-submitter__results__body is-multiple is-inner">
-              <small><var>role</var> – </small>
-              <div class="discogs-submitter__results__field">
-                <span class="discogs-submitter__input is-edit is-track-extraartists" contenteditable="plaintext-only" spellcheck="false" role="textbox" aria-label="Track credit artist" data-field="tracks.extraartists.name" data-text="name" data-attr="data-index:_trackIndex|data-subindex:_index" placeholder="Artist..."></span>
-                <svg class="discogs-submitter__button is-icon" role="button" tabindex="0" data-field="tracks.extraartists.name" data-attr="data-index:_trackIndex|data-subindex:_index" title="Restore original credit" aria-label="Restore original track credit"><use href="#ds-rotate-left"></use></svg>
-              </div>
+        <var data-loop="trackExtraartists">
+          <div class="discogs-submitter__results__body is-multiple is-inner">
+            <div class="discogs-submitter__results__field">
+              <textarea class="discogs-submitter__textarea is-edit is-track-credit-role" rows="1" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="Track credit role" data-field="tracks.extraartists.role" data-value="role" data-attr="data-index:_trackIndex|data-subindex:_index" placeholder="Role..."></textarea>
+              <small> – </small>
+              <textarea class="discogs-submitter__textarea is-edit is-track-extraartists" rows="1" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="Track credit artist" data-field="tracks.extraartists.name" data-value="name" data-attr="data-index:_trackIndex|data-subindex:_index" placeholder="Artist..."></textarea>
+              <var data-if="_canRestore"><svg class="discogs-submitter__button is-icon" role="button" tabindex="0" data-field="tracks.extraartists.name" data-attr="data-index:_trackIndex|data-subindex:_index" title="Restore original credit" aria-label="Restore original track credit"><use href="#ds-rotate-left"></use></svg></var>
+              <svg class="discogs-submitter__button is-icon is-remove" role="button" tabindex="0" data-field="tracks.extraartists.name" data-attr="data-index:_trackIndex|data-subindex:_index" title="Remove credit" aria-label="Remove track credit"><use href="#ds-icon-trash"></use></svg>
             </div>
-          </var>
+          </div>
         </var>
+        <div class="discogs-submitter__results__body is-multiple is-inner">
+          <div class="discogs-submitter__results__field">
+            <svg class="discogs-submitter__button is-icon is-add" role="button" tabindex="0" data-field="tracks.extraartists" data-attr="data-index:_index" title="Add credit" aria-label="Add track credit"><use href="#ds-icon-plus"></use></svg>
+          </div>
+        </div>
       </div>
       <div class="discogs-submitter__results__body"><var>duration</var></div>
     </div>
   </var>
 
-  <var data-if="showExtraArtists">
-    <div class="discogs-submitter__results__row is-notes">
-      <div class="discogs-submitter__results__head">Credits</div>
-      <div class="discogs-submitter__results__body is-multiple">
-        <var data-loop="rawExtraartists">
-          <var>role</var> –
-          <div class="discogs-submitter__results__field">
-            <span class="discogs-submitter__input is-edit" contenteditable="plaintext-only" role="textbox" aria-label="Credit artist" data-field="extraartists.name" data-text="name" data-attr="data-index:_index" placeholder="Artist..."></span>
-            <svg class="discogs-submitter__button is-icon" role="button" tabindex="0" data-field="extraartists.name" data-attr="data-index:_index" title="Restore original credit" aria-label="Restore original credit"><use href="#ds-rotate-left"></use></svg>
-          </div>
-          <br />
-        </var>
+  <div class="discogs-submitter__results__row is-notes">
+    <div class="discogs-submitter__results__head">Credits</div>
+    <div class="discogs-submitter__results__body is-multiple">
+      <var data-loop="rawExtraartists">
+        <div class="discogs-submitter__results__field">
+          <textarea class="discogs-submitter__textarea is-edit is-credit-role" rows="1" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="Credit role" data-field="extraartists.role" data-value="role" data-attr="data-index:_index" placeholder="Role..."></textarea>
+          <small> – </small>
+          <textarea class="discogs-submitter__textarea is-edit" rows="1" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="Credit artist" data-field="extraartists.name" data-value="name" data-attr="data-index:_index" placeholder="Artist..."></textarea>
+          <var data-if="_canRestore"><svg class="discogs-submitter__button is-icon" role="button" tabindex="0" data-field="extraartists.name" data-attr="data-index:_index" title="Restore original credit" aria-label="Restore original credit"><use href="#ds-rotate-left"></use></svg></var>
+          <svg class="discogs-submitter__button is-icon is-remove" role="button" tabindex="0" data-field="extraartists.name" data-attr="data-index:_index" title="Remove credit" aria-label="Remove credit"><use href="#ds-icon-trash"></use></svg>
+        </div>
+        <br />
+      </var>
+      <div class="discogs-submitter__results__field">
+        <svg class="discogs-submitter__button is-icon is-add" role="button" tabindex="0" data-field="extraartists" title="Add credit" aria-label="Add credit"><use href="#ds-icon-plus"></use></svg>
       </div>
     </div>
-  </var>
+  </div>
 
   <div class="discogs-submitter__results__row is-notes">
     <div class="discogs-submitter__results__head">Notes</div>
     <div class="discogs-submitter__results__body">
       <div class="discogs-submitter__results__field">
-        <span class="discogs-submitter__textarea is-edit" contenteditable="plaintext-only" spellcheck="false" role="textbox" aria-multiline="true" aria-label="Release notes" data-field="notes" data-text="rawNotes" placeholder="Notes..."></span>
+        <textarea class="discogs-submitter__textarea is-edit is-multiline" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="Release notes" data-field="notes" data-value="rawNotes" placeholder="Notes..."></textarea>
         <svg class="discogs-submitter__button is-icon" role="button" tabindex="0" data-field="notes" title="Restore original notes" aria-label="Restore original notes"><use href="#ds-rotate-left"></use></svg>
       </div>
     </div>
@@ -178,7 +196,7 @@
     <div class="discogs-submitter__results__head">Submission Notes</div>
     <div class="discogs-submitter__results__body">
       <div class="discogs-submitter__results__field">
-        <span class="discogs-submitter__textarea is-edit" contenteditable="plaintext-only" spellcheck="false" role="textbox" aria-multiline="true" aria-label="Submission notes" data-field="submissionNotes" data-text="rawSubmissionNotes" placeholder="Submission Notes..."></span>
+        <textarea class="discogs-submitter__textarea is-edit is-multiline" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="Submission notes" data-field="submissionNotes" data-value="rawSubmissionNotes" placeholder="Submission Notes..."></textarea>
         <svg class="discogs-submitter__button is-icon" role="button" tabindex="0" data-field="submissionNotes" title="Restore original submission notes" aria-label="Restore original submission notes"><use href="#ds-rotate-left"></use></svg>
       </div>
     </div>

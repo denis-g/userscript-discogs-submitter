@@ -56,7 +56,7 @@ export function escapeRegExp(text: string): string {
  * Builds a combined regex pattern for splitting artist lists based on provided joiner strings.
  *
  * @param joiners - List of string joiners (e.g., `["&", "vs"]`).
- * @returns A global, case-insensitive regex for splitting artists.
+ * @returns A case-insensitive regex for splitting artists.
  *
  * @example
  * ```typescript

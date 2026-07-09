@@ -99,6 +99,7 @@ function bindCollectedEvents(bindings: EventBinding[], events: Record<string, Ev
  *   • data-loop="items"   – repeats element for each entry in data.items or object maps
  *   • data-if="expr"      – conditionally render elements based on boolean expressions
  *   • data-text="path"    – sets element textContent from data.path
+ *   • data-value="path"   – sets the value of an input/textarea/select from data.path
  *   • data-attr="src:path"– sets HTML attributes (e.g., src, href, alt) from data.path
  *   • data-style="prop:path" – sets CSS style properties on elements from data.path
  *   • data-event="event:handler|..." – binds events from an explicit events map
@@ -371,6 +372,36 @@ const processText: DirectiveProcessor = (element, context) => {
   return false;
 };
 /**
+ * Processes the data-value directive by assigning the resolved value to the form element's
+ * `value` property (for `<input>`, `<textarea>`, and `<select>`).
+ *
+ * @param element - The element to set the value on.
+ * @param context - Current data context.
+ * @returns Always false.
+ */
+const processValue: DirectiveProcessor = (element, context) => {
+  // `data-value` is a form-field directive only. Other elements (e.g. a custom-select list item
+  // storing its option value in a `data-value` attribute via `data-attr`) must keep the attribute.
+  const isFormField = element instanceof HTMLInputElement
+    || element instanceof HTMLTextAreaElement
+    || element instanceof HTMLSelectElement;
+
+  if (!isFormField || element.dataset.value == null) {
+    return false;
+  }
+
+  const path = element.dataset.value.trim();
+  const value = path === ''
+    ? (context && typeof context === 'object' && '_value' in context ? context._value : context)
+    : getValueByPath(context, path);
+
+  (element as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement).value = value != null ? String(value) : '';
+
+  element.removeAttribute('data-value');
+
+  return false;
+};
+/**
  * Processes data-event directive.
  *
  * @param element - The element to collect events from.
@@ -478,6 +509,7 @@ function walk(node: Node, context: any, eventBindings: EventBinding[] | null = n
     processStyle(element, context, walk, eventBindings);
     processAttr(element, context, walk, eventBindings);
     processText(element, context, walk, eventBindings);
+    processValue(element, context, walk, eventBindings);
     processEvent(element, context, walk, eventBindings);
 
     if (processVar(element, context, walk, eventBindings)) {

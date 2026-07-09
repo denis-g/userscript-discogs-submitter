@@ -1,8 +1,29 @@
 import { ignoreCapitalizationMap } from '@/config';
 
 /**
+ * Zero-width and invisible formatting characters that carry no visible content but survive a
+ * plain `\s` whitespace collapse (which does not match them). Left in place they silently break
+ * comparisons and duplicate detection, so they are stripped outright from every scraped value:
+ * soft hyphen (U+00AD), Arabic letter mark (U+061C), Mongolian vowel separator (U+180E),
+ * zero-width space/non-joiner/joiner plus directional marks (U+200B to U+200F), bidirectional
+ * embedding / override controls (U+202A to U+202E), word joiner (U+2060), bidirectional isolate
+ * controls (U+2066 to U+2069), and the BOM / zero-width no-break space (U+FEFF).
+ */
+const INVISIBLE_CHARACTERS_PATTERN = /[\u00AD\u061C\u180E\u200B-\u200F\u202A-\u202E\u2060\u2066-\u2069\uFEFF]/g;
+/** Ellipsis characters (horizontal U+2026, midline U+22EF) normalized to three ASCII dots. */
+const ELLIPSIS_PATTERN = /[\u2026\u22EF]/g;
+/**
+ * Dash characters normalized to a plain ASCII hyphen-minus (`-`): hyphen / non-breaking hyphen /
+ * figure dash / en dash / em dash / horizontal bar (U+2010 to U+2015), minus sign (U+2212), and the
+ * small / fullwidth hyphen-minus forms (U+FE58, U+FE63, U+FF0D).
+ */
+const DASH_PATTERN = /[\u2010-\u2015\u2212\uFE58\uFE63\uFF0D]/g;
+
+/**
  * Trims whitespace, optionally collapses multiple spaces/newlines/tabs into a single space,
- * and replaces HTML non-breaking space entities (`&nbsp;`).
+ * replaces HTML non-breaking space entities (`&nbsp;`), converts non-breaking spaces (U+00A0)
+ * to regular spaces, strips zero-width / invisible formatting characters, and normalizes
+ * typographic ellipses (`…`) to `...` and dash variants (en/em dash, minus, etc.) to `-`.
  *
  * @param text - The sequence of characters to clean.
  * @param collapseWhitespace - Whether to collapse multiple whitespace characters into one (default: true).
@@ -12,6 +33,9 @@ import { ignoreCapitalizationMap } from '@/config';
  * ```typescript
  * const clean = cleanString('  Hello &nbsp;  World  ');
  * console.log(clean); // 'Hello World'
+ *
+ * // Strips a zero-width space hidden between letters
+ * console.log(cleanString('Arti\u200Bst')); // 'Artist'
  * ```
  */
 export function cleanString(text: string | null | undefined, collapseWhitespace = true): string | null {
@@ -19,7 +43,14 @@ export function cleanString(text: string | null | undefined, collapseWhitespace 
     return null;
   }
 
-  let cleaned = text.replace(/&nbsp;/gi, ' ');
+  let cleaned = text
+    .replace(/&nbsp;/gi, ' ')
+    .replace(INVISIBLE_CHARACTERS_PATTERN, '')
+    // Normalize any non-breaking space to a regular space (also handled by the `\s` collapse
+    // below, but done explicitly so it applies even when collapsing is disabled).
+    .replace(/\u00A0/g, ' ')
+    .replace(ELLIPSIS_PATTERN, '...')
+    .replace(DASH_PATTERN, '-');
 
   if (collapseWhitespace) {
     cleaned = cleaned.replace(/\s+/g, ' ');
@@ -151,4 +182,32 @@ export function extractBpm(text: string | null | undefined): number | undefined 
   const match = text.match(/[([-]?\s*\b(\d{2,3})\s*bpm\b\s*[)\]]?/i);
 
   return match ? Number.parseInt(match[1], 10) : undefined;
+}
+
+const HTML_ESCAPE_MAP: Record<string, string> = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  '\'': '&#39;',
+};
+
+/**
+ * Escapes the five HTML-significant characters so untrusted text (e.g. scraped values
+ * surfaced inside an error message) can be safely interpolated into an `innerHTML` string.
+ *
+ * @param text - The untrusted text to escape.
+ * @returns The text with `&`, `<`, `>`, `"`, and `'` replaced by their HTML entities.
+ *
+ * @example
+ * ```typescript
+ * escapeHtml('<img src=x onerror=alert(1)>'); // '&lt;img src=x onerror=alert(1)&gt;'
+ * ```
+ */
+export function escapeHtml(text: string | null | undefined): string {
+  if (!text) {
+    return '';
+  }
+
+  return String(text).replace(/[&<>"']/g, character => HTML_ESCAPE_MAP[character]);
 }

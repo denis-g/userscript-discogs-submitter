@@ -2,8 +2,10 @@ import iconBug from '@/assets/icons/bug.svg?raw';
 import iconChevronDown from '@/assets/icons/chevron-down.svg?raw';
 import iconClose from '@/assets/icons/close.svg?raw';
 import imageLogo from '@/assets/icons/logo.svg?raw';
+import iconPlus from '@/assets/icons/plus.svg?raw';
 import iconRotateLeft from '@/assets/icons/rotate-left.svg?raw';
 import iconSquareCheck from '@/assets/icons/square-check.svg?raw';
+import iconTrash from '@/assets/icons/trash.svg?raw';
 import { USERSCRIPT } from '@/config';
 
 /**
@@ -17,6 +19,8 @@ const ICON_REGISTRY: Record<string, string> = {
   'ds-icon-chevron-down': iconChevronDown,
   'ds-square-check': iconSquareCheck,
   'ds-rotate-left': iconRotateLeft,
+  'ds-icon-plus': iconPlus,
+  'ds-icon-trash': iconTrash,
 };
 
 /**

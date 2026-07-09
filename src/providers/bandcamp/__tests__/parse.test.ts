@@ -84,6 +84,35 @@ describe('bandcamp provider', () => {
     expect(result.released).toBe('2026-04-13');
   });
 
+  it('should read release date from .tralbum-credits on a newer web.archive.org snapshot', async () => {
+    stubWebarchiveUrl();
+    document.body.innerHTML = `
+      <div id="name-section">
+        <h2 class="trackTitle" itemprop="name">Album Title</h2>
+      </div>
+      <div class="tralbumData tralbum-about">Some description without a date.</div>
+      <div class="tralbumData tralbum-credits">released April 14, 2023</div>
+    `;
+
+    const result = await bandcamp.parse();
+
+    expect(result.released).toBe('2023-04-14');
+  });
+
+  it('should read artist from #name-section on a newer web.archive.org snapshot', async () => {
+    stubWebarchiveUrl();
+    document.body.innerHTML = `
+      <div id="name-section">
+        <h2 class="trackTitle" itemprop="name">Album Title</h2>
+        <h3>by <span><a href="#">Artist Name</a></span></h3>
+      </div>
+    `;
+
+    const result = await bandcamp.parse();
+
+    expect(result.artists[0].name).toBe('Artist Name');
+  });
+
   it('should read cover from #tralbumArt on a web.archive.org snapshot', async () => {
     stubWebarchiveUrl();
     document.body.innerHTML = `

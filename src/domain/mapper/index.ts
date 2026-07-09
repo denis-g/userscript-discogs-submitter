@@ -6,7 +6,6 @@ import type {
   ReleaseData,
 } from '@/types';
 import { groupExtraArtists } from '@/domain/normalizers/artists';
-import { normalizeCountry } from '@/domain/normalizers/country';
 import { extractFormatFromTitle } from '@/domain/normalizers/format';
 
 /**
@@ -22,7 +21,7 @@ export const DiscogsMapper = {
    *
    * NOTE: This method prioritizes manually edited data provided in the `data` object.
    * Heuristics that must be visible and editable in the UI (e.g. the "Not On Label"
-   * label normalization or the `resolveCountry` fallback) are applied by the widget
+   * label normalization or the default "Worldwide" country) are applied by the widget
    * before the data lands here; the same defaults are re-applied inside this method as
    * a safety net for the case where the user clears an editable field to an empty value.
    *
@@ -39,7 +38,7 @@ export const DiscogsMapper = {
    */
   mapToPayload: (data: ReleaseData, sourceUrl: string, options?: BuildPayloadOptions): DiscogsPayload => {
     const { format = 'WAV' } = options || {};
-    const releaseArtistsArr = data.artists || [];
+    const releaseArtists = data.artists || [];
     const tracks = data.tracks || [];
     // Determine if all tracks have the same artist list
     const firstTrackArtists = tracks[0]?.artists || [];
@@ -54,24 +53,25 @@ export const DiscogsMapper = {
     });
     // If all tracks match, we elevate the common track artist to the release level.
     // However, we only do this if no release artists are provided to avoid overwriting manual edits.
-    let finalReleaseArtists = releaseArtistsArr;
+    let finalReleaseArtists = releaseArtists;
 
     if ((!finalReleaseArtists.length || (finalReleaseArtists.length === 1 && !finalReleaseArtists[0].name)) && allTracksShareSameArtists && firstTrackArtists.length > 0) {
       finalReleaseArtists = firstTrackArtists;
     }
 
-    // Check if the final release artists match the track artists (for deduplication)
+    // Check if the final release artists match the track artists (for deduplication).
+    // Sort the release names once, then compare element-wise instead of stringifying per track.
+    const releaseArtistNames = finalReleaseArtists.map(artist => (artist.name || '').trim().toLowerCase()).sort();
     const allTracksMatchRelease = tracks.length > 0 && tracks.every((track) => {
       const trackArtists = track.artists || [];
 
-      if (trackArtists.length !== finalReleaseArtists.length) {
+      if (trackArtists.length !== releaseArtistNames.length) {
         return false;
       }
 
       const trackArtistNames = trackArtists.map(artist => (artist.name || '').trim().toLowerCase()).sort();
-      const releaseArtistNames = finalReleaseArtists.map(artist => (artist.name || '').trim().toLowerCase()).sort();
 
-      return JSON.stringify(trackArtistNames) === JSON.stringify(releaseArtistNames);
+      return trackArtistNames.every((name, index) => name === releaseArtistNames[index]);
     });
     // Label logic: Default to "Not On Label" if missing.
     const labelName = data.label || 'Not On Label';
@@ -103,7 +103,7 @@ export const DiscogsMapper = {
       title: data.title || '',
       artists: finalArtists.length ? finalArtists : [{ name: '', join: ',' }],
       extraartists: groupExtraArtists(data.extraartists || []),
-      country: normalizeCountry(options?.country !== undefined ? options.country : (data.country || 'Worldwide')),
+      country: options?.country !== undefined ? options.country : (data.country || 'Worldwide'),
       released: data.released || '',
       labels: [{ name: labelName, catno: data.number || 'none' }],
       format: [{

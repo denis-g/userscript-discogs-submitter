@@ -105,8 +105,13 @@ export default defineConfig({
         manualChunks: undefined,
       },
     },
-    // Prevent esbuild from stripping some things during bundling
-    target: 'esnext',
+    target: ['esnext'],
+    // Specify minimum supported browsers
+    // https://caniuse.com/mdn-css_properties_field-sizing_content
+    cssTarget: [
+      'chrome123',
+      'firefox152',
+    ],
   },
   resolve: {
     alias: {
