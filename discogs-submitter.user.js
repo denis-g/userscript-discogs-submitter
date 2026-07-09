@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discogs Submitter
 // @namespace    discogs-submitter
-// @version      3.3.2
+// @version      3.3.3
 // @author       Denis G. <https://github.com/denis-g>
 // @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital, Amazon Music, Bleep, HDtracks and submit releases to Discogs.
 // @license      MIT
@@ -355,7 +355,7 @@
     var USERSCRIPT = {
         ID: info?.script?.namespace || "discogs-submitter",
         NAME: info?.script?.name || "discogs-submitter",
-        VERSION: info?.script?.version || "3.3.2",
+        VERSION: info?.script?.version || "3.3.3",
         HOMEPAGE: info?.script?.homepage || "https://github.com/denis-g/userscript-discogs-submitter",
         SUPPORT_URL: info?.script?.supportURL || bugs?.url,
         FUNDING_URL: "https://buymeacoffee.com/denis_g"
@@ -375,9 +375,12 @@
         "Různí",
         "Různí interpreti"
     ], ["^{{p}}$"]);
+    var INVISIBLE_CHARACTERS_PATTERN = /[\u00AD\u061C\u180E\u200B-\u200F\u202A-\u202E\u2060\u2066-\u2069\uFEFF]/g;
+    var ELLIPSIS_PATTERN = /[\u2026\u22EF]/g;
+    var DASH_PATTERN = /[\u2010-\u2015\u2212\uFE58\uFE63\uFF0D]/g;
     function cleanString(text, collapseWhitespace = true) {
         if (typeof text !== "string") return null;
-        let cleaned = text.replace(/&nbsp;/gi, " ");
+        let cleaned = text.replace(/&nbsp;/gi, " ").replace(INVISIBLE_CHARACTERS_PATTERN, "").replace(/\u00A0/g, " ").replace(ELLIPSIS_PATTERN, "...").replace(DASH_PATTERN, "-");
         if (collapseWhitespace) cleaned = cleaned.replace(/\s+/g, " ");
         return cleaned.trim() || null;
     }
@@ -419,9 +422,35 @@
         const match = text.match(/[([-]?\s*\b(\d{2,3})\s*bpm\b\s*[)\]]?/i);
         return match ? Number.parseInt(match[1], 10) : void 0;
     }
+    var HTML_ESCAPE_MAP = {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "\"": "&quot;",
+        "'": "&#39;"
+    };
+    function escapeHtml(text) {
+        if (!text) return "";
+        return String(text).replace(/[&<>"']/g, (character) => HTML_ESCAPE_MAP[character]);
+    }
+    var PROMO_BLACKLIST_PATTERN = /\b(?:tracks?|music|album|exclusive|material|songs?|ep|lp|release|available|digital|vinyl|download|stream|out\s+now|listen|debut|compilation|collection)\b/i;
+    var NAME_PREFIXES = new Set([
+        "mr",
+        "mrs",
+        "dr",
+        "st",
+        "vs",
+        "feat",
+        "ft",
+        "prof",
+        "bros",
+        "inc",
+        "ltd",
+        "vol"
+    ]);
     function isValidCreditPhrase(text) {
         if (!text || text.length > 150) return false;
-        if (/\b(?:tracks?|music|album|exclusive|material|songs?|ep|lp|release|available|digital|vinyl|download|stream|out\s+now|listen|debut|compilation|collection)\b/i.test(text)) return false;
+        if (PROMO_BLACKLIST_PATTERN.test(text)) return false;
         return !text.split(joinerPattern).filter(Boolean).some((block) => {
             return block.trim().replace(/[.,;!"'()[\]{}<>:]/g, "").split(/\s+/).filter(Boolean).length > 5;
         });
@@ -456,23 +485,9 @@
             const chunks = cleanCapture.split(/\.\s+/);
             if (chunks.length > 1) {
                 let validName = chunks[0];
-                const namePrefixes = new Set([
-                    "mr",
-                    "mrs",
-                    "dr",
-                    "st",
-                    "vs",
-                    "feat",
-                    "ft",
-                    "prof",
-                    "bros",
-                    "inc",
-                    "ltd",
-                    "vol"
-                ]);
                 for (let chunkIndex = 1; chunkIndex < chunks.length; chunkIndex++) {
                     const lastWord = chunks[chunkIndex - 1].split(/\s+/).at(-1)?.toLowerCase() || "";
-                    if (lastWord.length === 1 || namePrefixes.has(lastWord)) validName += `. ${chunks[chunkIndex]}`;
+                    if (lastWord.length === 1 || NAME_PREFIXES.has(lastWord)) validName += `. ${chunks[chunkIndex]}`;
                     else break;
                 }
                 cleanCapture = validName;
@@ -642,7 +657,7 @@
             parts[0] = Number.parseInt(parts[0], 10).toString();
             return parts.join(":");
         }
-        return trimmed || "";
+        return trimmed;
     }
     function normalizeTitle(rawTitle, extraArtists = null) {
         if (!rawTitle) return "";
@@ -753,7 +768,7 @@
         });
     }
     function matchUrls(...patterns) {
-        const regexes = patterns.map((pattern) => new RegExp(`^${pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\\\*/g, ".*")}$`, "i"));
+        const regexes = patterns.map((pattern) => new RegExp(`^${escapeRegExp(pattern).replace(/\\\*/g, ".*")}$`, "i"));
         return (url) => regexes.some((regex) => regex.test(url));
     }
     function getReleaseIdFromUrl(url = unsafeWindow.location.href) {
@@ -769,6 +784,15 @@
             return url.hostname === "web.archive.org" && url.pathname.startsWith("/web/");
         } catch {}
         return false;
+    }
+    function isHttpUrl(value) {
+        if (!value) return false;
+        try {
+            const { protocol } = new URL(value);
+            return protocol === "http:" || protocol === "https:";
+        } catch {
+            return false;
+        }
     }
     async function getData$3() {
         const releaseId = getTextFromTag(".release-info", null, "data-releaseid");
@@ -852,8 +876,12 @@
             };
         }
     };
+    function buildPrefixRegex(prefixes) {
+        const escaped = prefixes.map((prefix) => escapeRegExp(prefix).replace(/\s+/g, "\\s+"));
+        return new RegExp(`(?:${escaped.join("|")})[\\s:-]+(\\S.+)`, "i");
+    }
     function extractCatalogNumber(items) {
-        const catPrefixes = [
+        const catRegex = buildPrefixRegex([
             "Catalog Number",
             "Calalog No",
             "Catalogue N°",
@@ -870,12 +898,7 @@
             "Catalogue #",
             "Catalogue No",
             "Cat No."
-        ];
-        const buildPrefixRegex = (prefixes) => {
-            const escaped = prefixes.map((prefix) => prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+"));
-            return new RegExp(`(?:${escaped.join("|")})[\\s:-]+(\\S.+)`, "i");
-        };
-        const catRegex = buildPrefixRegex(catPrefixes);
+        ]);
         const bracketedCatRegex = /\[([A-Z0-9-]{3,15})\]/;
         let labelNumber = null;
         items.some((element) => {
@@ -898,16 +921,11 @@
         return labelNumber;
     }
     function extractLabelName(items, credits) {
-        const labelPrefixes = [
+        const labelRegex = buildPrefixRegex([
             "Label",
             "Released on",
             "Record Label"
-        ];
-        const buildPrefixRegex = (prefixes) => {
-            const escaped = prefixes.map((prefix) => prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+"));
-            return new RegExp(`(?:${escaped.join("|")})[\\s:-]+(\\S.+)`, "i");
-        };
-        const labelRegex = buildPrefixRegex(labelPrefixes);
+        ]);
         let albumLabel = null;
         items.some((element) => {
             if (/label|released\s+on/i.test(element) && element.length < 100) {
@@ -941,7 +959,7 @@
                 const trimmedLine = line.trim();
                 if (trimmedLine) normalizeTitle(trimmedLine, albumExtraArtists);
             });
-            const albumArtists = normalizeMainArtists(isWebarchive() ? getTextFromTag("[itemtype*=\"MusicGroup\"] meta[itemprop=\"name\"]", null, "content") : getTextFromTag("#name-section h3 span") || getTextFromTag("#band-name-location .title"), albumExtraArtists);
+            const albumArtists = normalizeMainArtists(isWebarchive() ? getTextFromTag("[itemtype*=\"MusicGroup\"] meta[itemprop=\"name\"]", null, "content") || getTextFromTag("#name-section h3 span") : getTextFromTag("#name-section h3 span") || getTextFromTag("#band-name-location .title"), albumExtraArtists);
             const albumTitle = normalizeTitle(getTextFromTag("#name-section .trackTitle"), albumExtraArtists);
             const albumTracks = Array.from(document.querySelectorAll("#track_table .track_row_view")).map((track, index) => {
                 const trackPosition = `${index + 1}`;
@@ -958,7 +976,6 @@
             });
             const location = document.querySelector("#band-name-location");
             let albumLabel = location ? getTextFromTag(".title", location) : null;
-            const labelCountry = location ? getTextFromTag(".location", location)?.split(",").pop()?.trim() || null : null;
             let labelNumber = null;
             const aboutItems = about.flatMap((credit) => credit.split(/\r?\n/).map((line) => cleanString(line)).filter(Boolean));
             const creditItems = credits.flatMap((credit) => credit.split(/\r?\n/).map((line) => cleanString(line)).filter(Boolean));
@@ -966,7 +983,7 @@
             labelNumber = extractCatalogNumber(combinedItems);
             if (!albumLabel) albumLabel = extractLabelName(combinedItems, creditItems);
             if (!albumLabel) albumLabel = getTextFromTag("[itemprop=\"publisher\"]");
-            let albumReleased = normalizeReleaseDate(isWebarchive() ? getTextFromTag(".tralbumData") : getTextFromTag(".tralbum-credits"));
+            let albumReleased = normalizeReleaseDate(isWebarchive() ? getTextFromTag(".tralbum-credits") || getTextFromTag(".tralbumData") : getTextFromTag(".tralbum-credits"));
             if (albumReleased) {
                 const dateParts = albumReleased.split("-");
                 const year = Number.parseInt(dateParts[0], 10);
@@ -981,7 +998,6 @@
                 title: albumTitle,
                 label: albumLabel,
                 number: labelNumber,
-                country: labelCountry,
                 released: albumReleased,
                 tracks: albumTracks
             };
@@ -1469,6 +1485,14 @@
         element.removeAttribute("data-text");
         return false;
     };
+    var processValue = (element, context) => {
+        if (!(element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement) || element.dataset.value == null) return false;
+        const path = element.dataset.value.trim();
+        const value = path === "" ? context && typeof context === "object" && "_value" in context ? context._value : context : getValueByPath(context, path);
+        element.value = value != null ? String(value) : "";
+        element.removeAttribute("data-value");
+        return false;
+    };
     var processEvent = (element, context, walk, eventBindings) => {
         if (!eventBindings || !element.dataset.event) return false;
         const parsed = parseDataEventDeclaration(element.dataset.event);
@@ -1513,13 +1537,14 @@
             processStyle(element, context, walk, eventBindings);
             processAttr(element, context, walk, eventBindings);
             processText(element, context, walk, eventBindings);
+            processValue(element, context, walk, eventBindings);
             processEvent(element, context, walk, eventBindings);
             if (processVar(element, context, walk, eventBindings)) return;
             for (const child of Array.from(element.childNodes)) walk(child, context, eventBindings);
         }
     }
-    var styles_default$7 = ".discogs-submitter__inject{z-index:999998;filter:drop-shadow(0 0 1px rgba(var(--ds-palette-secondary-color), 1)) drop-shadow(0 0 2px rgba(var(--ds-palette-secondary-color), 1));flex-direction:column;transition:all .5s;display:flex;position:fixed;top:50%;transform:translateY(-50%);&.is-position-left{left:0;& .discogs-submitter__button.is-inject{mask:radial-gradient(var(--ds-radius) at 100% var(--ds-radius), rgba(var(--ds-color-black), 0) 98%, rgba(var(--ds-color-black), 1) 101%) 0 calc(-1 * var(--ds-radius)) / var(--ds-radius) 100% repeat-y, conic-gradient(rgba(var(--ds-color-black), 1) 0 0) padding-box;border-radius:0 50% 50% 0}&.is-hidden{opacity:0;pointer-events:none;transform:translate(-100%,-50%)}}&.is-position-right{right:0;& .discogs-submitter__button.is-inject{mask:radial-gradient(var(--ds-radius) at 0 var(--ds-radius), rgba(var(--ds-color-black), 0) 98%, rgba(var(--ds-color-black), 1) 101%) 100% calc(-1 * var(--ds-radius)) / var(--ds-radius) 100% repeat-y, conic-gradient(rgba(var(--ds-color-black), 1) 0 0) padding-box;border-radius:50% 0 0 50%}&.is-hidden{opacity:0;pointer-events:none;transform:translate(100%,-50%)}}&:hover{filter:drop-shadow(0 0 1px rgba(var(--ds-palette-primary-color), 1)) drop-shadow(0 0 2px rgba(var(--ds-palette-primary-color), 1));& .discogs-submitter__button.is-inject{background:rgba(var(--ds-palette-secondary-color), 1)}}}.discogs-submitter__button.is-inject{box-sizing:content-box;border-block:var(--ds-radius) solid rgba(var(--ds-color-black), 0);background:rgba(var(--ds-palette-primary-color), 1);font-size:14px;&.is-icon{padding:.15em}}";
-    var template_default$8 = "<div class=\"discogs-submitter__inject\" role=\"button\" tabindex=\"0\" data-attr=\"title:scriptName|aria-label:scriptName\">\n  <svg class=\"discogs-submitter__button is-icon is-inject\" aria-hidden=\"true\"><use href=\"#ds-logo\"></use></svg>\n</div>\n";
+    var styles_default$7 = ".discogs-submitter__inject{z-index:999998;filter:drop-shadow(0 0 1px rgba(var(--ds-palette-secondary-color), 1)) drop-shadow(0 0 2px rgba(var(--ds-palette-secondary-color), 1));flex-direction:column;transition:all .5s;display:flex;position:fixed;top:50%;transform:translateY(-50%);&.is-position-left{left:0;& .discogs-submitter__button.is-inject{mask:radial-gradient(var(--ds-radius) at 100% var(--ds-radius), rgba(var(--ds-color-black), 0) 98%, rgba(var(--ds-color-black), 1) 101%) 0 calc(-1 * var(--ds-radius)) / var(--ds-radius) 100% repeat-y, conic-gradient(rgba(var(--ds-color-black), 1) 0 0) padding-box;border-radius:0 50% 50% 0}&.is-hidden{opacity:0;pointer-events:none;transform:translate(-100%,-50%)}}&.is-position-right{right:0;& .discogs-submitter__button.is-inject{mask:radial-gradient(var(--ds-radius) at 0 var(--ds-radius), rgba(var(--ds-color-black), 0) 98%, rgba(var(--ds-color-black), 1) 101%) 100% calc(-1 * var(--ds-radius)) / var(--ds-radius) 100% repeat-y, conic-gradient(rgba(var(--ds-color-black), 1) 0 0) padding-box;border-radius:50% 0 0 50%}&.is-hidden{opacity:0;pointer-events:none;transform:translate(100%,-50%)}}&:hover{filter:drop-shadow(0 0 1px rgba(var(--ds-palette-primary-color), 1)) drop-shadow(0 0 2px rgba(var(--ds-palette-primary-color), 1));& .discogs-submitter__button.is-inject{background:rgba(var(--ds-palette-secondary-color), 1)}}}.discogs-submitter__button.is-inject{box-sizing:content-box;border-block:var(--ds-radius) solid rgba(var(--ds-color-black), 0);background:rgba(var(--ds-palette-primary-color), 1);font-size:14px;&.is-icon{padding:.5em}}";
+    var template_default$8 = "<div class=\"discogs-submitter__inject\" role=\"button\" tabindex=\"0\" data-attr=\"title:scriptName|aria-label:scriptName\">\n  <svg class=\"discogs-submitter__button is-icon is-large is-inject\" aria-hidden=\"true\"><use href=\"#ds-logo\"></use></svg>\n</div>\n";
     var InjectButton = class {
         element = null;
         constructor() {
@@ -1550,11 +1575,320 @@
     };
     var styles_default$6 = ".discogs-submitter__footer{padding:var(--ds-gap) var(--ds-gap) calc(var(--ds-gap) / 2)}.discogs-submitter__copyright{justify-content:center;gap:var(--ds-gap);margin:var(--ds-gap) 0 0;font-size:10px;display:flex}.discogs-submitter__copyright__link{color:currentColor;text-decoration:none;&:hover{text-decoration:underline}& span{vertical-align:middle;color:rgba(var(--ds-color-error), 1);font-family:var(--ds-font-monospace);animation:1s ease-in-out infinite ds-pulse;display:inline-block}}";
     var styles_default$5 = ".discogs-submitter__header{gap:var(--ds-gap);padding:calc(var(--ds-gap) / 2) var(--ds-gap) var(--ds-gap);display:flex}.discogs-submitter__header__cover{width:40px;height:40px}.discogs-submitter__header__cover__logo,.discogs-submitter__header__cover__image{width:100%;height:100%}.discogs-submitter__header__cover__image{outline:1px solid rgba(var(--ds-palette-secondary-color), 1);border:1px solid rgba(var(--ds-palette-primary-color), 1);border-radius:calc(var(--ds-radius) / 2);object-fit:cover}.discogs-submitter__header__content{justify-content:space-between;align-items:center;gap:var(--ds-gap);flex:auto;display:flex}.discogs-submitter__header__title{text-shadow:0 0 10px rgba(var(--ds-color-white), .5);font-size:20px;font-weight:700}.discogs-submitter__header__actions{align-items:center;gap:var(--ds-gap);display:flex;& .discogs-submitter__button{&.is-to-left,&.is-to-right{background:rgba(var(--ds-palette-secondary-color), .3);color:rgba(var(--ds-palette-primary-color), 1);letter-spacing:.05em;text-transform:uppercase;&:hover{background:rgba(var(--ds-color-info), 1)}}&.is-close{background:rgba(var(--ds-palette-secondary-color), 1);color:rgba(var(--ds-palette-primary-color), 1);padding:.15em;&:hover{background:rgba(var(--ds-color-error), 1)}}}}.discogs-submitter.is-position-left{& .discogs-submitter__header{flex-direction:row-reverse}& .discogs-submitter__header__actions{flex-direction:row-reverse;& .discogs-submitter__button.is-to-left{display:none}}& .discogs-submitter__header__content{flex-direction:row-reverse}}.discogs-submitter.is-position-right{& .discogs-submitter__header__actions{& .discogs-submitter__button.is-to-right{display:none}}}";
-    var styles_default$4 = ".discogs-submitter__loader{justify-content:center;align-items:center;gap:var(--ds-gap);visibility:hidden;opacity:0;z-index:-1;backdrop-filter:blur(5px);background:rgba(var(--ds-palette-primary-color), .8);flex-direction:column;width:100%;height:100%;transition:all 1s;display:flex;position:absolute;top:0;left:0;&.is-loading{visibility:visible;opacity:1;z-index:10}}.discogs-submitter__loader__icon{width:4em;height:4em;animation:.5s linear infinite ds-spinner}.discogs-submitter__loader__cover{outline:.1px solid rgba(var(--ds-palette-secondary-color), 1);border:.1px solid rgba(var(--ds-palette-primary-color), 1);border-radius:calc(var(--ds-radius) / 2);background:var(--ds-thumb-url) no-repeat 50%;object-fit:cover;background-size:cover;width:8em;height:8em;animation:2s ease-in-out infinite ds-pulse}.discogs-submitter__loader__label{color:rgba(var(--ds-palette-secondary-color), 1);font-size:12px}";
-    var styles_default$3 = ".discogs-submitter__results{gap:0 var(--ds-gap);font-size:10px;line-height:normal;font-family:var(--ds-font-monospace);flex-wrap:wrap;display:flex}.discogs-submitter__results__row{gap:calc(var(--ds-gap) / 2);border-bottom:2px dotted rgba(var(--ds-palette-secondary-color), .15);grid-template-columns:60px 1fr;width:100%;padding:2px 0;display:grid;&.is-half{width:calc(50% - var(--ds-gap) / 2)}&.is-tracklist{grid-template-columns:20px 1fr 1fr 50px;&.is-no-artist{grid-template-columns:20px 1fr 50px}&>.discogs-submitter__results__head{text-align:left}&>.discogs-submitter__results__body:last-child{text-align:right}}&.is-notes{gap:calc(var(--ds-gap) / 6);grid-template-columns:1fr;&>.discogs-submitter__results__head{text-align:left}}}.discogs-submitter__results__head{text-align:right;padding-top:3px;font-weight:700}.discogs-submitter__results__body{align-items:start;gap:calc(var(--ds-gap) / 6);flex-direction:column;display:flex;& small{font-size:9px}&.is-multiple{display:block;& .discogs-submitter__results__field{vertical-align:middle;width:auto;display:inline-flex}}&.is-inner{padding-left:calc(var(--ds-gap) / 2)}}.discogs-submitter__results__field{align-items:start;gap:calc(var(--ds-gap) / 6);flex-wrap:nowrap;width:100%;display:flex;& .discogs-submitter__textarea{width:100%;min-height:60px}& .discogs-submitter__button{padding:calc(var(--ds-gap) / 6);flex:none}}";
+    var styles_default$4 = ".discogs-submitter__loader{justify-content:center;align-items:center;gap:var(--ds-gap);visibility:hidden;opacity:0;z-index:-1;backdrop-filter:blur(5px);background:rgba(var(--ds-palette-primary-color), .8);flex-direction:column;width:100%;height:100%;transition:all 1s;display:flex;position:absolute;top:0;left:0;&.is-loading{visibility:visible;opacity:1;z-index:10}}.discogs-submitter__loader__icon{width:4em;height:4em;animation:.5s linear infinite ds-spinner}.discogs-submitter__loader__cover{outline:2 solid rgba(var(--ds-palette-secondary-color), 1);outline-offset:2px;border:2px solid rgba(var(--ds-palette-primary-color), 1);border-radius:var(--ds-radius);background:var(--ds-thumb-url) no-repeat 50%;object-fit:cover;background-size:cover;width:15em;height:15em;animation:2s ease-in-out infinite ds-pulse}.discogs-submitter__loader__label{color:rgba(var(--ds-palette-secondary-color), 1);font-size:12px}";
+    var styles_default$3 = ".discogs-submitter__results{gap:0 var(--ds-gap);font-size:10px;line-height:normal;font-family:var(--ds-font-monospace);flex-wrap:wrap;display:flex}.discogs-submitter__results__row{gap:calc(var(--ds-gap) / 2);border-bottom:2px dotted rgba(var(--ds-palette-secondary-color), .15);grid-template-columns:60px 1fr;width:100%;padding:2px 0;display:grid;&.is-half{width:calc(50% - var(--ds-gap) / 2)}&.is-tracklist{grid-template-columns:20px 1fr 1fr 50px;&>.discogs-submitter__results__head{text-align:left}&>.discogs-submitter__results__body:last-child{text-align:right}}&.is-notes{gap:calc(var(--ds-gap) / 6);grid-template-columns:1fr;&>.discogs-submitter__results__head{text-align:left}}}.discogs-submitter__results__head{text-align:right;padding-top:3px;font-weight:700}.discogs-submitter__results__body{align-items:start;gap:calc(var(--ds-gap) / 6);flex-direction:column;display:flex;& small{font-size:9px}&.is-multiple{display:block;& .discogs-submitter__results__field{vertical-align:middle;width:auto;display:inline-flex}}&.is-inner{padding-left:calc(var(--ds-gap) / 2)}& .discogs-submitter__button.is-icon{vertical-align:top;padding:calc(var(--ds-gap) / 6);&.is-remove{fill:rgba(var(--ds-color-error), 1)}}}.discogs-submitter__textarea.is-join{padding-inline:calc(var(--ds-gap) / 8);text-align:center;min-width:1em}.discogs-submitter__results__field{align-items:start;gap:calc(var(--ds-gap) / 6);flex-wrap:nowrap;width:100%;display:flex;& .discogs-submitter__textarea{resize:none;overflow:hidden;&.is-multiline{resize:vertical;width:100%;min-height:60px;overflow:auto}}& .discogs-submitter__button.is-icon{flex:none}}";
     var styles_default$2 = ".discogs-submitter__status{--status-color:rgba(var(--ds-palette-secondary-color), 1);align-items:start;gap:var(--ds-gap);z-index:1;margin-bottom:var(--ds-gap);border-left:4px solid var(--status-color);border-radius:calc(var(--ds-radius) / 2);padding:calc(var(--ds-gap) / 2);transition:all .3s;display:flex;position:relative;overflow:hidden;&:after{opacity:.1;z-index:-1;background:var(--status-color);content:\"\";width:100%;height:100%;transition:all .3s;position:absolute;top:0;left:0}&.is-success{--status-color:rgba(var(--ds-color-success), 1)}&.is-error{--status-color:rgba(var(--ds-color-error), 1)}&.is-info{--status-color:rgba(var(--ds-color-info), 1)}&.is-warning{--status-color:rgba(var(--ds-color-warning), 1)}& .discogs-submitter__button{flex:none;margin-left:auto;&.is-debug{color:rgba(var(--ds-color-black), 1);background:0 0;&.is-success{color:rgba(var(--ds-color-success), 1)}&.is-error{color:rgba(var(--ds-color-error), 1)}}}}";
     var styles_default$1 = ".discogs-submitter{visibility:hidden;opacity:0;z-index:999999;box-shadow:0 0 15px rgba(var(--ds-color-black), .3);background:rgba(var(--ds-palette-primary-color), 1);width:calc(100% - (var(--ds-gap) * 2));max-width:500px;color:rgba(var(--ds-palette-secondary-color), 1);flex-direction:column;justify-content:start;transition:all .5s;display:flex;position:fixed;top:0;bottom:0;overflow:hidden;&:after{z-index:-1;mask-image:linear-gradient(to bottom, rgba(var(--ds-color-black), 1) 0%, rgba(var(--ds-color-black), .025) 150px);filter:blur(4px)opacity(80%);background:var(--ds-thumb-url) no-repeat 50% 0;content:\"\";background-size:100%;width:100%;height:100%;position:absolute;top:0;left:0;overflow:hidden;transform:scale(1.04)}&.is-open{visibility:visible;opacity:1}&.is-position-left{border-right:1px solid rgba(var(--ds-palette-primary-color), 1);left:0;transform:translate(-100%);&.is-open{transform:translate(0)}}&.is-position-right{border-left:1px solid rgba(var(--ds-palette-primary-color), 1);right:0;transform:translate(100%);&.is-open{transform:translate(0)}}&.is-webarchive{top:var(--wm-toolbar-height)}}.discogs-submitter__content{margin:0 calc(var(--ds-gap) - 2px);scrollbar-color:rgba(var(--ds-palette-secondary-color), 1) transparent;scrollbar-width:thin;-webkit-overflow-scrolling:touch;height:100%;padding:0 2px;overflow:auto;&::-webkit-scrollbar{width:6px}}@keyframes ds-spinner{0%{transform:rotate(0)}to{transform:rotate(360deg)}}@keyframes ds-pulse{0%{transform:scale(1)}50%{transform:scale(1.2)}to{transform:scale(1)}}";
-    var styles_default = ".discogs-submitter__actions{gap:var(--ds-gap);flex-wrap:nowrap;display:flex}";
+    var styles_default = ".discogs-submitter__actions{align-items:center;gap:var(--ds-gap);flex-wrap:nowrap;display:flex;& .discogs-submitter__button.is-icon{padding:calc(var(--ds-gap) / 6);flex:none}}";
+    function extractFormatFromTitle(title) {
+        if (!title) return [];
+        const detectedFormats = new Set();
+        for (const [description, keywords] of Object.entries(TITLE_FORMAT)) {
+            if (keywords.length === 0) continue;
+            const pattern = `\\b(?:${keywords.map((keyword) => escapeRegExp(keyword)).join("|")})\\b`;
+            if (new RegExp(pattern, "i").test(title)) detectedFormats.add(description);
+        }
+        return Array.from(detectedFormats);
+    }
+    var DiscogsMapper = { mapToPayload: (data, sourceUrl, options) => {
+        const { format = "WAV" } = options || {};
+        const releaseArtists = data.artists || [];
+        const tracks = data.tracks || [];
+        const firstTrackArtists = tracks[0]?.artists || [];
+        const allTracksShareSameArtists = tracks.length > 0 && tracks.every((track) => {
+            const trackArtists = track.artists || [];
+            if (trackArtists.length !== firstTrackArtists.length) return false;
+            return trackArtists.every((artist, index) => artist.name === firstTrackArtists[index].name && artist.join === firstTrackArtists[index].join);
+        });
+        let finalReleaseArtists = releaseArtists;
+        if ((!finalReleaseArtists.length || finalReleaseArtists.length === 1 && !finalReleaseArtists[0].name) && allTracksShareSameArtists && firstTrackArtists.length > 0) finalReleaseArtists = firstTrackArtists;
+        const releaseArtistNames = finalReleaseArtists.map((artist) => (artist.name || "").trim().toLowerCase()).sort();
+        const allTracksMatchRelease = tracks.length > 0 && tracks.every((track) => {
+            const trackArtists = track.artists || [];
+            if (trackArtists.length !== releaseArtistNames.length) return false;
+            return trackArtists.map((artist) => (artist.name || "").trim().toLowerCase()).sort().every((name, index) => name === releaseArtistNames[index]);
+        });
+        const labelName = data.label || "Not On Label";
+        let formatText = options?.formatText ?? "";
+        if (!formatText) {
+            if (format === "MP3") formatText = "320 kbps";
+        }
+        const releaseFormat = options?.descriptions || extractFormatFromTitle(data.title);
+        const totalTracks = data.tracks?.length ? `${data.tracks.length}` : "1";
+        const validBpmTracks = (data.tracks || []).filter((track) => track.bpm);
+        const infoBpm = validBpmTracks.length > 0 ? `BPM's:\n${validBpmTracks.map((track) => `${track.pos}: ${track.bpm}`).join("\n")}` : "";
+        let finalArtists = finalReleaseArtists;
+        if ((!finalArtists.length || finalArtists[0]?.name === "") && tracks.length > 1) {
+            if (new Set(tracks.map((track) => (track.artists?.[0]?.name || "").toLowerCase()).filter(Boolean)).size >= 4) {finalArtists = [{
+                name: "Various",
+                join: ","
+            }];}
+        }
+        const payload = {
+            cover: data.cover || null,
+            title: data.title || "",
+            artists: finalArtists.length ? finalArtists : [{
+                name: "",
+                join: ","
+            }],
+            extraartists: groupExtraArtists(data.extraartists || []),
+            country: options?.country !== void 0 ? options.country : data.country || "Worldwide",
+            released: data.released || "",
+            labels: [{
+                name: labelName,
+                catno: data.number || "none"
+            }],
+            format: [{
+                name: "File",
+                qty: totalTracks,
+                desc: [format, ...releaseFormat],
+                text: formatText
+            }],
+            tracks: (data.tracks || []).map((track) => ({
+                pos: track.pos || "",
+                artists: allTracksMatchRelease ? [] : track.artists || [],
+                extraartists: groupExtraArtists(track.extraartists || []),
+                title: track.title || "",
+                duration: track.duration || ""
+            })),
+            notes: data.notes ?? infoBpm,
+            submissionNotes: data.submissionNotes || `${sourceUrl}\n---\nA digital release has been added.`
+        };
+        return {
+            _previewObject: payload,
+            full_data: JSON.stringify(payload),
+            sub_notes: payload.submissionNotes
+        };
+    } };
+    function normalizeLabel(label, primaryArtistName) {
+        const cleanLabel = cleanString(label) || "";
+        const cleanArtist = cleanString(primaryArtistName) || "";
+        if (!cleanLabel) return "Not On Label";
+        if (cleanArtist && cleanLabel.toLowerCase() === cleanArtist.toLowerCase()) return `Not On Label (${cleanArtist} Self-released)`;
+        return cleanLabel;
+    }
+    var template_default$7 = "<div class=\"discogs-submitter__status\"></div>\n\n<div class=\"discogs-submitter__actions\"></div>\n\n<div class=\"discogs-submitter__copyright\">\n  <a class=\"discogs-submitter__copyright__link\" data-attr=\"href:homepage\" target=\"_blank\">Homepage</a>\n  <a class=\"discogs-submitter__copyright__link\" data-attr=\"href:supportURL\" target=\"_blank\">Report Bug</a>\n  <a class=\"discogs-submitter__copyright__link\" data-attr=\"href:funding\" target=\"_blank\">Made with <span>♥</span> for music</a>\n</div>\n";
+    var FooterController = class {
+        slot;
+        statusSlot = null;
+        actionsSlot = null;
+        constructor(slot) {
+            this.slot = slot;
+            if (!this.slot) return;
+            renderTemplate(template_default$7, {
+                homepage: USERSCRIPT.HOMEPAGE,
+                supportURL: USERSCRIPT.SUPPORT_URL,
+                funding: USERSCRIPT.FUNDING_URL
+            }, this.slot, { replace: true });
+            this.statusSlot = this.slot.querySelector(".discogs-submitter__status");
+            this.actionsSlot = this.slot.querySelector(".discogs-submitter__actions");
+        }
+    };
+    var template_default$6 = "<div class=\"discogs-submitter__header__cover\">\n  <var data-if=\"thumb\">\n    <img class=\"discogs-submitter__header__cover__image\" data-attr=\"src:thumb\" alt=\"\" />\n  </var>\n\n  <var data-if=\"!thumb\">\n    <svg class=\"discogs-submitter__header__cover__logo\" aria-hidden=\"true\"><use href=\"#ds-logo\"></use></svg>\n  </var>\n</div>\n\n<div class=\"discogs-submitter__header__content\">\n  <div class=\"discogs-submitter__header__title\">\n    <var>scriptName</var>\n  </div>\n\n  <div class=\"discogs-submitter__header__actions\">\n    <div class=\"discogs-submitter__button is-to-left\" role=\"button\" tabindex=\"0\" aria-label=\"Dock widget to left side\">Move to left</div>\n    <div class=\"discogs-submitter__button is-to-right\" role=\"button\" tabindex=\"0\" aria-label=\"Dock widget to right side\">Move to right</div>\n    <svg class=\"discogs-submitter__button is-icon is-large is-close\" role=\"button\" tabindex=\"0\" title=\"Close widget\" aria-label=\"Close widget\"><use href=\"#ds-icon-close\"></use></svg>\n  </div>\n</div>\n";
+    var HeaderController = class {
+        slot;
+        hooks;
+        getThumb;
+        buttonToLeft = null;
+        buttonToRight = null;
+        buttonClose = null;
+        constructor(slot, hooks, getThumb) {
+            this.slot = slot;
+            this.hooks = hooks;
+            this.getThumb = getThumb;
+            this.refresh();
+        }
+        updateCover() {
+            this.refresh();
+        }
+        refresh() {
+            if (!this.slot) return;
+            renderTemplate(template_default$6, {
+                scriptName: USERSCRIPT.NAME,
+                thumb: this.getThumb()
+            }, this.slot, { replace: true });
+            this.buttonToLeft = this.slot.querySelector(".discogs-submitter__button.is-to-left");
+            this.buttonToRight = this.slot.querySelector(".discogs-submitter__button.is-to-right");
+            this.buttonClose = this.slot.querySelector(".discogs-submitter__button.is-close");
+            bindActivation(this.buttonToLeft, () => this.hooks.onPositionChange?.("left"));
+            bindActivation(this.buttonToRight, () => this.hooks.onPositionChange?.("right"));
+            bindActivation(this.buttonClose, () => this.hooks.onClose?.());
+        }
+    };
+    var template_default$5 = "<var data-if=\"thumb\">\n  <img class=\"discogs-submitter__loader__cover\" data-attr=\"src:thumb\" alt=\"\" />\n</var>\n\n<var data-if=\"!thumb\">\n  <svg class=\"discogs-submitter__loader__icon\" aria-hidden=\"true\"><use href=\"#ds-logo\"></use></svg>\n</var>\n\n<div class=\"discogs-submitter__loader__label\"><var>label</var></div>\n";
+    var LoaderController = class {
+        element;
+        getThumb;
+        constructor(element, getThumb) {
+            this.element = element;
+            this.getThumb = getThumb;
+        }
+        setActive(isActive, label = "Please wait...") {
+            if (!this.element) return;
+            this.element.classList.toggle("is-loading", isActive);
+            if (isActive) {renderTemplate(template_default$5, {
+                thumb: this.getThumb(),
+                label
+            }, this.element, { replace: true });}
+        }
+        setLabel(message) {
+            const labelElement = this.element?.querySelector(".discogs-submitter__loader__label");
+            if (labelElement) labelElement.textContent = message;
+        }
+    };
+    var EditableHelper = { handleKeydown: (event) => {
+        const target = event.target;
+        const isMultiline = target.classList.contains("is-multiline");
+        if (event.key === "Enter" && !isMultiline) {
+            event.preventDefault();
+            target.blur();
+        }
+        event.stopPropagation();
+    } };
+    var template_item_default = "<div class=\"discogs-submitter__select__list__item\" role=\"option\" data-attr=\"class:itemClass|data-value:value|aria-selected:isSelected\">\n  <var data-if=\"isMultiple\">\n    <svg class=\"discogs-submitter__checkbox\" aria-hidden=\"true\"><use href=\"#ds-square-check\"></use></svg>\n    <span><var>text</var></span>\n  </var>\n\n  <var data-if=\"!isMultiple\">\n    <var>text</var>\n  </var>\n</div>\n";
+    var template_default$4 = "<div class=\"discogs-submitter__select\" data-attr=\"class:containerClass\">\n  <div class=\"discogs-submitter__select__label\" role=\"combobox\" tabindex=\"0\" aria-haspopup=\"listbox\" aria-expanded=\"false\">\n    <div class=\"discogs-submitter__select__placeholder\"><var>placeholder</var></div>\n    <var data-if=\"isMultiple\">\n      <div class=\"discogs-submitter__select__count\"><var>count</var></div>\n    </var>\n\n    <svg class=\"discogs-submitter__select__arrow\" aria-hidden=\"true\"><use href=\"#ds-icon-chevron-down\"></use></svg>\n  </div>\n\n  <div class=\"discogs-submitter__select__list\" role=\"listbox\" data-attr=\"aria-multiselectable:isMultiple\"></div>\n</div>\n";
+    var Select = class Select {
+        select;
+        static instances = new WeakMap();
+        ui = {};
+        state = {
+            isOpen: false,
+            isBusy: false,
+            isMultiple: false
+        };
+        constructor(select) {
+            this.select = select;
+            this.state.isMultiple = select.multiple;
+            this.buildUI().then(() => {
+                this.bindEvents();
+                this.refresh();
+            });
+            Select.instances.set(this.select, this);
+        }
+        async buildUI() {
+            const placeholder = this.select.dataset.placeholder || (this.state.isMultiple ? "Select options..." : "Select an option...");
+            const data = {
+                containerClass: `${this.state.isMultiple ? "is-multiple" : "is-single"}`,
+                placeholder,
+                count: "",
+                isMultiple: this.state.isMultiple
+            };
+            const wrapper = document.createElement("div");
+            renderTemplate(template_default$4, data, wrapper);
+            const container = wrapper.firstElementChild;
+            if (!container) return;
+            this.ui.container = container;
+            this.ui.active = container.querySelector(".discogs-submitter__select__label");
+            this.ui.list = container.querySelector(".discogs-submitter__select__list");
+            this.ui.placeholder = container.querySelector(".discogs-submitter__select__placeholder");
+            this.ui.count = container.querySelector(".discogs-submitter__select__count");
+            this.select.setAttribute("hidden", "true");
+            this.select.parentElement?.insertBefore(container, this.select);
+            container.appendChild(this.select);
+        }
+        async refresh() {
+            if (!this.ui.active || !this.ui.list) return;
+            this.ui.list.innerHTML = "";
+            const options = Array.from(this.select.options);
+            const selectedOptions = options.filter((option) => option.selected);
+            for (const option of options) await this.addListItem(option.value, option.text, option.selected);
+            this.updateLabel(selectedOptions);
+        }
+        updateLabel(selectedOptions) {
+            if (!this.ui.placeholder) return;
+            const count = selectedOptions.length;
+            if (count === 0) {
+                if (this.ui.count) this.ui.count.textContent = "";
+                this.ui.placeholder.textContent = this.select.dataset.placeholder || (this.state.isMultiple ? "Select options..." : "Select an option...");
+                this.ui.placeholder.classList.remove("is-selected");
+            } else if (count === 1) {
+                if (this.ui.count) this.ui.count.textContent = "";
+                this.ui.placeholder.textContent = selectedOptions[0].text;
+                this.ui.placeholder.classList.add("is-selected");
+            } else {
+                if (this.ui.count) this.ui.count.textContent = `+${count - 1}`;
+                this.ui.placeholder.textContent = selectedOptions[0].text;
+                this.ui.placeholder.classList.add("is-selected");
+            }
+        }
+        bindEvents() {
+            if (!this.ui.container || !this.ui.active || !this.ui.list) return;
+            this.ui.list.addEventListener("click", (event) => {
+                const item = event.target.closest(".discogs-submitter__select__list__item");
+                if (!item || this.state.isBusy) return;
+                this.selectOption(item);
+            });
+            this.ui.active.addEventListener("click", (event) => {
+                const arrow = event.target.closest(".discogs-submitter__select__arrow");
+                const placeholder = event.target.closest(".discogs-submitter__select__placeholder");
+                if (arrow || placeholder || event.target === this.ui.active) this.toggleDropdown();
+            });
+            this.ui.active.addEventListener("keydown", (event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    this.toggleDropdown();
+                } else if (event.key === "Escape" && this.state.isOpen) {
+                    event.preventDefault();
+                    this.closeDropdown();
+                }
+            });
+            document.addEventListener("click", (event) => {
+                if (this.ui.container && !this.ui.container.contains(event.target)) this.closeDropdown();
+            });
+        }
+        toggleDropdown() {
+            this.state.isOpen = !this.state.isOpen;
+            this.ui.container?.classList.toggle("is-open", this.state.isOpen);
+            this.ui.active?.setAttribute("aria-expanded", String(this.state.isOpen));
+        }
+        closeDropdown() {
+            this.state.isOpen = false;
+            this.ui.container?.classList.remove("is-open");
+            this.ui.active?.setAttribute("aria-expanded", "false");
+        }
+        selectOption(item) {
+            const value = item.dataset.value ?? "";
+            const option = Array.from(this.select.options).find((option) => option.value === value);
+            if (!option) return;
+            if (this.state.isMultiple) {
+                option.selected = !option.selected;
+                this.refresh();
+                this.triggerChange();
+            } else {
+                Array.from(this.select.options).forEach((otherOption) => {
+                    otherOption.selected = false;
+                });
+                option.selected = true;
+                this.closeDropdown();
+                this.refresh();
+                this.triggerChange();
+            }
+        }
+        async addListItem(value, text, isSelected) {
+            if (!this.ui.list) return;
+            const itemClass = `${isSelected ? "is-selected" : ""}`;
+            renderTemplate(template_item_default, {
+                value,
+                text,
+                isSelected,
+                isMultiple: this.state.isMultiple,
+                itemClass
+            }, this.ui.list);
+        }
+        triggerChange() {
+            const event = new Event("change", { bubbles: true });
+            this.select.dispatchEvent(event);
+        }
+        static init(select, force = false) {
+            if (!select) return;
+            const instance = Select.instances.get(select);
+            if (instance) {
+                if (force) instance.refresh();
+                return;
+            }
+            new Select(select);
+        }
+    };
     var ALLOWED_COUNTRIES = [
         "Worldwide",
         "Australia",
@@ -1866,370 +2200,20 @@
         "Zanzibar",
         "Zimbabwe"
     ];
-    var COUNTRY_MAP = new Map([
-        ["usa", "US"],
-        ["united states", "US"],
-        ["united states of america", "US"],
-        ["united kingdom", "UK"],
-        ["the uk", "UK"],
-        ["great britain", "UK"],
-        ["bahamas", "Bahamas, The"],
-        ["micronesia", "Micronesia, Federated States of"],
-        ["moldova", "Moldova, Republic of"],
-        ["russian federation", "Russia"],
-        ["holland", "Netherlands"],
-        ["republic of korea", "South Korea"],
-        ["dprk", "North Korea"],
-        ["uae", "United Arab Emirates"],
-        ["bolivarian republic of venezuela", "Venezuela"],
-        ["syrian arab republic", "Syria"],
-        ["viet nam", "Vietnam"],
-        ["lao peoples democratic republic", "Laos"],
-        ["brunei darussalam", "Brunei"],
-        ["macao", "Macau"],
-        ["czechia", "Czech Republic"]
-    ]);
-    var LOWERCASE_ALLOWED_COUNTRIES = new Map(ALLOWED_COUNTRIES.map((country) => [country.toLowerCase(), country]));
-    function normalizeCountry(country) {
-        if (!country) return "";
-        const cleaned = country.replace(/\./g, "").trim().toLowerCase();
-        const mapped = COUNTRY_MAP.get(cleaned);
-        if (mapped) return mapped;
-        return LOWERCASE_ALLOWED_COUNTRIES.get(cleaned) || "";
-    }
-    function resolveCountry(raw) {
-        if (!raw) return "Worldwide";
-        if (ALLOWED_COUNTRIES.includes(raw)) return raw;
-        return normalizeCountry(raw) || "Worldwide";
-    }
-    function extractFormatFromTitle(title) {
-        if (!title) return [];
-        const detectedFormats = new Set();
-        for (const [description, keywords] of Object.entries(TITLE_FORMAT)) {
-            if (keywords.length === 0) continue;
-            const pattern = `\\b(?:${keywords.map((keyword) => keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})\\b`;
-            if (new RegExp(pattern, "i").test(title)) detectedFormats.add(description);
-        }
-        return Array.from(detectedFormats);
-    }
-    var DiscogsMapper = { mapToPayload: (data, sourceUrl, options) => {
-        const { format = "WAV" } = options || {};
-        const releaseArtistsArr = data.artists || [];
-        const tracks = data.tracks || [];
-        const firstTrackArtists = tracks[0]?.artists || [];
-        const allTracksShareSameArtists = tracks.length > 0 && tracks.every((track) => {
-            const trackArtists = track.artists || [];
-            if (trackArtists.length !== firstTrackArtists.length) return false;
-            return trackArtists.every((artist, index) => artist.name === firstTrackArtists[index].name && artist.join === firstTrackArtists[index].join);
-        });
-        let finalReleaseArtists = releaseArtistsArr;
-        if ((!finalReleaseArtists.length || finalReleaseArtists.length === 1 && !finalReleaseArtists[0].name) && allTracksShareSameArtists && firstTrackArtists.length > 0) finalReleaseArtists = firstTrackArtists;
-        const allTracksMatchRelease = tracks.length > 0 && tracks.every((track) => {
-            const trackArtists = track.artists || [];
-            if (trackArtists.length !== finalReleaseArtists.length) return false;
-            const trackArtistNames = trackArtists.map((artist) => (artist.name || "").trim().toLowerCase()).sort();
-            const releaseArtistNames = finalReleaseArtists.map((artist) => (artist.name || "").trim().toLowerCase()).sort();
-            return JSON.stringify(trackArtistNames) === JSON.stringify(releaseArtistNames);
-        });
-        const labelName = data.label || "Not On Label";
-        let formatText = options?.formatText ?? "";
-        if (!formatText) {
-            if (format === "MP3") formatText = "320 kbps";
-        }
-        const releaseFormat = options?.descriptions || extractFormatFromTitle(data.title);
-        const totalTracks = data.tracks?.length ? `${data.tracks.length}` : "1";
-        const validBpmTracks = (data.tracks || []).filter((track) => track.bpm);
-        const infoBpm = validBpmTracks.length > 0 ? `BPM's:\n${validBpmTracks.map((track) => `${track.pos}: ${track.bpm}`).join("\n")}` : "";
-        let finalArtists = finalReleaseArtists;
-        if ((!finalArtists.length || finalArtists[0]?.name === "") && tracks.length > 1) {
-            if (new Set(tracks.map((track) => (track.artists?.[0]?.name || "").toLowerCase()).filter(Boolean)).size >= 4) {finalArtists = [{
-                name: "Various",
-                join: ","
-            }];}
-        }
-        const payload = {
-            cover: data.cover || null,
-            title: data.title || "",
-            artists: finalArtists.length ? finalArtists : [{
-                name: "",
-                join: ","
-            }],
-            extraartists: groupExtraArtists(data.extraartists || []),
-            country: normalizeCountry(options?.country !== void 0 ? options.country : data.country || "Worldwide"),
-            released: data.released || "",
-            labels: [{
-                name: labelName,
-                catno: data.number || "none"
-            }],
-            format: [{
-                name: "File",
-                qty: totalTracks,
-                desc: [format, ...releaseFormat],
-                text: formatText
-            }],
-            tracks: (data.tracks || []).map((track) => ({
-                pos: track.pos || "",
-                artists: allTracksMatchRelease ? [] : track.artists || [],
-                extraartists: groupExtraArtists(track.extraartists || []),
-                title: track.title || "",
-                duration: track.duration || ""
-            })),
-            notes: data.notes ?? infoBpm,
-            submissionNotes: data.submissionNotes || `${sourceUrl}\n---\nA digital release has been added.`
-        };
-        return {
-            _previewObject: payload,
-            full_data: JSON.stringify(payload),
-            sub_notes: payload.submissionNotes
-        };
-    } };
-    function normalizeLabel(label, primaryArtistName) {
-        const cleanLabel = cleanString(label) || "";
-        const cleanArtist = cleanString(primaryArtistName) || "";
-        if (!cleanLabel) return "Not On Label";
-        if (cleanArtist && cleanLabel.toLowerCase() === cleanArtist.toLowerCase()) return `Not On Label (${cleanArtist} Self-released)`;
-        return cleanLabel;
-    }
-    var template_default$7 = "<div class=\"discogs-submitter__status\"></div>\n\n<div class=\"discogs-submitter__actions\"></div>\n\n<div class=\"discogs-submitter__copyright\">\n  <a class=\"discogs-submitter__copyright__link\" data-attr=\"href:homepage\" target=\"_blank\">Homepage</a>\n  <a class=\"discogs-submitter__copyright__link\" data-attr=\"href:supportURL\" target=\"_blank\">Report Bug</a>\n  <a class=\"discogs-submitter__copyright__link\" data-attr=\"href:funding\" target=\"_blank\">Made with <span>♥</span> for music</a>\n</div>\n";
-    var FooterController = class {
-        slot;
-        statusSlot = null;
-        actionsSlot = null;
-        constructor(slot) {
-            this.slot = slot;
-            if (!this.slot) return;
-            renderTemplate(template_default$7, {
-                homepage: USERSCRIPT.HOMEPAGE,
-                supportURL: USERSCRIPT.SUPPORT_URL,
-                funding: USERSCRIPT.FUNDING_URL
-            }, this.slot, { replace: true });
-            this.statusSlot = this.slot.querySelector(".discogs-submitter__status");
-            this.actionsSlot = this.slot.querySelector(".discogs-submitter__actions");
-        }
-    };
-    var template_default$6 = "<div class=\"discogs-submitter__header__cover\">\n  <var data-if=\"thumb\">\n    <img class=\"discogs-submitter__header__cover__image\" data-attr=\"src:thumb\" alt=\"\" />\n  </var>\n\n  <var data-if=\"!thumb\">\n    <svg class=\"discogs-submitter__header__cover__logo\" aria-hidden=\"true\"><use href=\"#ds-logo\"></use></svg>\n  </var>\n</div>\n\n<div class=\"discogs-submitter__header__content\">\n  <div class=\"discogs-submitter__header__title\">\n    <var>scriptName</var>\n  </div>\n\n  <div class=\"discogs-submitter__header__actions\">\n    <div class=\"discogs-submitter__button is-to-left\" role=\"button\" tabindex=\"0\" aria-label=\"Dock widget to left side\">Move to left</div>\n    <div class=\"discogs-submitter__button is-to-right\" role=\"button\" tabindex=\"0\" aria-label=\"Dock widget to right side\">Move to right</div>\n    <svg class=\"discogs-submitter__button is-icon is-large is-close\" role=\"button\" tabindex=\"0\" title=\"Close widget\" aria-label=\"Close widget\"><use href=\"#ds-icon-close\"></use></svg>\n  </div>\n</div>\n";
-    var HeaderController = class {
-        slot;
-        hooks;
-        getThumb;
-        buttonToLeft = null;
-        buttonToRight = null;
-        buttonClose = null;
-        constructor(slot, hooks, getThumb) {
-            this.slot = slot;
-            this.hooks = hooks;
-            this.getThumb = getThumb;
-            this.refresh();
-        }
-        updateCover() {
-            this.refresh();
-        }
-        refresh() {
-            if (!this.slot) return;
-            renderTemplate(template_default$6, {
-                scriptName: USERSCRIPT.NAME,
-                thumb: this.getThumb()
-            }, this.slot, { replace: true });
-            this.buttonToLeft = this.slot.querySelector(".discogs-submitter__button.is-to-left");
-            this.buttonToRight = this.slot.querySelector(".discogs-submitter__button.is-to-right");
-            this.buttonClose = this.slot.querySelector(".discogs-submitter__button.is-close");
-            bindActivation(this.buttonToLeft, () => this.hooks.onPositionChange?.("left"));
-            bindActivation(this.buttonToRight, () => this.hooks.onPositionChange?.("right"));
-            bindActivation(this.buttonClose, () => this.hooks.onClose?.());
-        }
-    };
-    var template_default$5 = "<var data-if=\"thumb\">\n  <img class=\"discogs-submitter__loader__cover\" data-attr=\"src:thumb\" alt=\"\" />\n</var>\n\n<var data-if=\"!thumb\">\n  <svg class=\"discogs-submitter__loader__icon\" aria-hidden=\"true\"><use href=\"#ds-logo\"></use></svg>\n</var>\n\n<div class=\"discogs-submitter__loader__label\"><var>label</var></div>\n";
-    var LoaderController = class {
-        element;
-        getThumb;
-        constructor(element, getThumb) {
-            this.element = element;
-            this.getThumb = getThumb;
-        }
-        setActive(isActive, label = "Please wait...") {
-            if (!this.element) return;
-            this.element.classList.toggle("is-loading", isActive);
-            if (isActive) {renderTemplate(template_default$5, {
-                thumb: this.getThumb(),
-                label
-            }, this.element, { replace: true });}
-        }
-        setLabel(message) {
-            const labelElement = this.element?.querySelector(".discogs-submitter__loader__label");
-            if (labelElement) labelElement.textContent = message;
-        }
-    };
-    var EditableHelper = {
-        handlePaste: (event) => {
-            event.preventDefault();
-            const text = (event.clipboardData || unsafeWindow.clipboardData).getData("text/plain");
-            document.execCommand("insertText", false, text);
-        },
-        handleKeydown: (event) => {
-            const target = event.target;
-            const isTextArea = target.classList.contains("discogs-submitter__textarea");
-            if (event.key === "Enter" && !isTextArea) {
-                event.preventDefault();
-                target.blur();
-            }
-            event.stopPropagation();
-        }
-    };
-    var template_item_default = "<div class=\"discogs-submitter__select__list__item\" role=\"option\" data-attr=\"class:itemClass|data-value:value|aria-selected:isSelected\">\n  <var data-if=\"isMultiple\">\n    <svg class=\"discogs-submitter__checkbox\" aria-hidden=\"true\"><use href=\"#ds-square-check\"></use></svg>\n    <span><var>text</var></span>\n  </var>\n\n  <var data-if=\"!isMultiple\">\n    <var>text</var>\n  </var>\n</div>\n";
-    var template_default$4 = "<div class=\"discogs-submitter__select\" data-attr=\"class:containerClass\">\n  <div class=\"discogs-submitter__select__label\" role=\"combobox\" tabindex=\"0\" aria-haspopup=\"listbox\" aria-expanded=\"false\">\n    <div class=\"discogs-submitter__select__placeholder\"><var>placeholder</var></div>\n    <var data-if=\"isMultiple\">\n      <div class=\"discogs-submitter__select__count\"><var>count</var></div>\n    </var>\n\n    <svg class=\"discogs-submitter__select__arrow\" aria-hidden=\"true\"><use href=\"#ds-icon-chevron-down\"></use></svg>\n  </div>\n\n  <div class=\"discogs-submitter__select__list\" role=\"listbox\" data-attr=\"aria-multiselectable:isMultiple\"></div>\n</div>\n";
-    var Select = class Select {
-        select;
-        static DATA_KEY = "dsSelectInstance";
-        ui = {};
-        state = {
-            isOpen: false,
-            isBusy: false,
-            isMultiple: false
-        };
-        constructor(select) {
-            this.select = select;
-            this.state.isMultiple = select.multiple;
-            this.buildUI().then(() => {
-                this.bindEvents();
-                this.refresh();
-            });
-            this.select[Select.DATA_KEY] = this;
-        }
-        async buildUI() {
-            const placeholder = this.select.dataset.placeholder || (this.state.isMultiple ? "Select options..." : "Select an option...");
-            const data = {
-                containerClass: `${this.state.isMultiple ? "is-multiple" : "is-single"}`,
-                placeholder,
-                count: "",
-                isMultiple: this.state.isMultiple
-            };
-            const wrapper = document.createElement("div");
-            renderTemplate(template_default$4, data, wrapper);
-            const container = wrapper.firstElementChild;
-            if (!container) return;
-            this.ui.container = container;
-            this.ui.active = container.querySelector(".discogs-submitter__select__label");
-            this.ui.list = container.querySelector(".discogs-submitter__select__list");
-            this.ui.placeholder = container.querySelector(".discogs-submitter__select__placeholder");
-            this.ui.count = container.querySelector(".discogs-submitter__select__count");
-            this.select.setAttribute("hidden", "true");
-            this.select.parentElement?.insertBefore(container, this.select);
-            container.appendChild(this.select);
-        }
-        async refresh() {
-            if (!this.ui.active || !this.ui.list) return;
-            this.ui.list.innerHTML = "";
-            const options = Array.from(this.select.options);
-            const selectedOptions = options.filter((option) => option.selected);
-            for (const option of options) await this.addListItem(option.value, option.text, option.selected);
-            this.updateLabel(selectedOptions);
-        }
-        updateLabel(selectedOptions) {
-            if (!this.ui.placeholder) return;
-            const count = selectedOptions.length;
-            if (count === 0) {
-                if (this.ui.count) this.ui.count.textContent = "";
-                this.ui.placeholder.textContent = this.select.dataset.placeholder || (this.state.isMultiple ? "Select options..." : "Select an option...");
-                this.ui.placeholder.classList.remove("is-selected");
-            } else if (count === 1) {
-                if (this.ui.count) this.ui.count.textContent = "";
-                this.ui.placeholder.textContent = selectedOptions[0].text;
-                this.ui.placeholder.classList.add("is-selected");
-            } else {
-                if (this.ui.count) this.ui.count.textContent = `+${count - 1}`;
-                this.ui.placeholder.textContent = selectedOptions[0].text;
-                this.ui.placeholder.classList.add("is-selected");
-            }
-        }
-        bindEvents() {
-            if (!this.ui.container || !this.ui.active || !this.ui.list) return;
-            this.ui.list.addEventListener("click", (event) => {
-                const item = event.target.closest(".discogs-submitter__select__list__item");
-                if (!item || this.state.isBusy) return;
-                this.selectOption(item);
-            });
-            this.ui.active.addEventListener("click", (event) => {
-                const arrow = event.target.closest(".discogs-submitter__select__arrow");
-                const placeholder = event.target.closest(".discogs-submitter__select__placeholder");
-                if (arrow || placeholder || event.target === this.ui.active) this.toggleDropdown();
-            });
-            this.ui.active.addEventListener("keydown", (event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    this.toggleDropdown();
-                } else if (event.key === "Escape" && this.state.isOpen) {
-                    event.preventDefault();
-                    this.closeDropdown();
-                }
-            });
-            document.addEventListener("click", (event) => {
-                if (this.ui.container && !this.ui.container.contains(event.target)) this.closeDropdown();
-            });
-        }
-        toggleDropdown() {
-            this.state.isOpen = !this.state.isOpen;
-            this.ui.container?.classList.toggle("is-open", this.state.isOpen);
-            this.ui.active?.setAttribute("aria-expanded", String(this.state.isOpen));
-        }
-        closeDropdown() {
-            this.state.isOpen = false;
-            this.ui.container?.classList.remove("is-open");
-            this.ui.active?.setAttribute("aria-expanded", "false");
-        }
-        selectOption(item) {
-            const value = item.dataset.value ?? "";
-            const option = Array.from(this.select.options).find((option) => option.value === value);
-            if (!option) return;
-            if (this.state.isMultiple) {
-                option.selected = !option.selected;
-                this.refresh();
-                this.triggerChange();
-            } else {
-                Array.from(this.select.options).forEach((otherOption) => {
-                    otherOption.selected = false;
-                });
-                option.selected = true;
-                this.closeDropdown();
-                this.refresh();
-                this.triggerChange();
-            }
-        }
-        async addListItem(value, text, isSelected) {
-            if (!this.ui.list) return;
-            const itemClass = `${isSelected ? "is-selected" : ""}`;
-            renderTemplate(template_item_default, {
-                value,
-                text,
-                isSelected,
-                isMultiple: this.state.isMultiple,
-                itemClass
-            }, this.ui.list);
-        }
-        triggerChange() {
-            const event = new Event("change", { bubbles: true });
-            this.select.dispatchEvent(event);
-        }
-        static init(select, force = false) {
-            if (!select) return;
-            const instance = select[Select.DATA_KEY];
-            if (instance) {
-                if (force) instance.refresh();
-                return;
-            }
-            new Select(select);
-        }
-    };
-    var template_default$3 = "<div class=\"discogs-submitter__results\">\n  <div class=\"discogs-submitter__results__row\">\n    <div class=\"discogs-submitter__results__head\">Artists</div>\n    <div class=\"discogs-submitter__results__body is-multiple\">\n      <var data-loop=\"releaseArtists\">\n        <div class=\"discogs-submitter__results__field\">\n          <span class=\"discogs-submitter__input is-edit\" contenteditable=\"plaintext-only\" spellcheck=\"false\" role=\"textbox\" aria-label=\"Release artist\" data-field=\"artists.name\" data-text=\"name\" data-attr=\"data-index:_index\" placeholder=\"Artist...\"></span>\n          <svg class=\"discogs-submitter__button is-icon\" role=\"button\" tabindex=\"0\" data-field=\"artists.name\" data-attr=\"data-index:_index\" title=\"Restore original artist\" aria-label=\"Restore original artist\"><use href=\"#ds-rotate-left\"></use></svg>\n        </div>\n        <var data-if=\"!_last\">\n          <var data-if=\"join\"><var>join</var></var>\n        </var>\n      </var>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row\">\n    <div class=\"discogs-submitter__results__head\">Title</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <span class=\"discogs-submitter__input is-edit\" contenteditable=\"plaintext-only\" spellcheck=\"false\" role=\"textbox\" aria-label=\"Release title\" data-field=\"title\" data-text=\"rawTitle\" placeholder=\"Title...\"></span>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" tabindex=\"0\" data-field=\"title\" title=\"Restore original title\" aria-label=\"Restore original title\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row is-half\">\n    <div class=\"discogs-submitter__results__head\">Label</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <span class=\"discogs-submitter__input is-edit\" contenteditable=\"plaintext-only\" spellcheck=\"false\" role=\"textbox\" aria-label=\"Record label\" data-field=\"label\" data-text=\"rawLabel\" placeholder=\"Label...\"></span>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" tabindex=\"0\" data-field=\"label\" title=\"Restore original label\" aria-label=\"Restore original label\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row is-half\">\n    <div class=\"discogs-submitter__results__head\">Catalog</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <span class=\"discogs-submitter__input is-edit\" contenteditable=\"plaintext-only\" spellcheck=\"false\" role=\"textbox\" aria-label=\"Catalog number\" data-field=\"number\" data-text=\"rawNumber\" placeholder=\"Catalog...\"></span>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" tabindex=\"0\" data-field=\"number\" title=\"Restore original catalog\" aria-label=\"Restore original catalog number\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row is-half\">\n    <div class=\"discogs-submitter__results__head\">Released</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <span class=\"discogs-submitter__input is-edit\" contenteditable=\"plaintext-only\" spellcheck=\"false\" role=\"textbox\" aria-label=\"Release date\" data-field=\"released\" data-text=\"rawReleased\" placeholder=\"Date...\"></span>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" tabindex=\"0\" data-field=\"released\" title=\"Restore original release date\" aria-label=\"Restore original release date\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row is-half\">\n    <div class=\"discogs-submitter__results__head\">Country</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <select class=\"is-edit is-country\" autocomplete=\"off\" data-field=\"country\" data-placeholder=\"Country...\">\n          <option value=\"\">–</option>\n          <optgroup data-unwrap data-loop=\"availableCountries\">\n            <option data-attr=\"value:_value\" data-if=\"isSelected\" data-text=\"_value\" selected></option>\n            <option data-attr=\"value:_value\" data-if=\"!isSelected\" data-text=\"_value\"></option>\n          </optgroup>\n        </select>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" tabindex=\"0\" data-field=\"country\" title=\"Restore original country\" aria-label=\"Restore original country\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row\">\n    <div class=\"discogs-submitter__results__head\">Format</div>\n    <div class=\"discogs-submitter__results__body is-multiple\">\n      <var data-loop=\"format\"> <var>qty</var> x <var>name</var>, </var>\n      <div class=\"discogs-submitter__results__field\">\n        <select class=\"is-format\" autocomplete=\"off\" tabindex=\"-1\" data-placeholder=\"Format...\">\n          <optgroup data-unwrap data-loop=\"availableFormats\">\n            <option data-attr=\"value:_value\" data-if=\"isSelected\" data-text=\"_value\" selected></option>\n            <option data-attr=\"value:_value\" data-if=\"!isSelected\" data-text=\"_value\"></option>\n          </optgroup>\n        </select>\n      </div>\n      <div class=\"discogs-submitter__results__field\">\n        <select class=\"is-description\" multiple autocomplete=\"off\" tabindex=\"-1\" data-placeholder=\"Description...\">\n          <optgroup data-unwrap data-loop=\"availableDescriptions\">\n            <option data-attr=\"value:_value\" data-if=\"isSelected\" data-text=\"_value\" selected></option>\n            <option data-attr=\"value:_value\" data-if=\"!isSelected\" data-text=\"_value\"></option>\n          </optgroup>\n        </select>\n      </div>\n      <div class=\"discogs-submitter__results__field\">\n        <span class=\"discogs-submitter__input is-edit is-format-text\" contenteditable=\"plaintext-only\" spellcheck=\"false\" role=\"textbox\" aria-label=\"Format details\" data-field=\"formatText\" data-text=\"formatText\" placeholder=\"Free Text...\"></span>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row is-tracklist\" data-attr=\"class:rowClass\">\n    <div class=\"discogs-submitter__results__head\">#</div>\n    <var data-if=\"hasTrackArtists\">\n      <div class=\"discogs-submitter__results__head\">Artist</div>\n    </var>\n    <div class=\"discogs-submitter__results__head\">Title / Credits</div>\n    <div class=\"discogs-submitter__results__head\">Duration</div>\n  </div>\n\n  <var data-if=\"!tracks.length\">\n    <div class=\"discogs-submitter__results__row\">\n      <div class=\"discogs-submitter__results__body\">⚠️ No tracks found.</div>\n    </div>\n  </var>\n\n  <var data-loop=\"tracks\">\n    <div class=\"discogs-submitter__results__row is-tracklist\" data-attr=\"class:rowClass\" data-attr=\"data-index:_index\">\n      <div class=\"discogs-submitter__results__body\"><var>pos</var></div>\n      <var data-if=\"hasTrackArtists\">\n        <div class=\"discogs-submitter__results__body is-multiple\">\n          <var data-loop=\"trackArtists\">\n            <div class=\"discogs-submitter__results__field\">\n              <span class=\"discogs-submitter__input is-edit is-track-artists\" contenteditable=\"plaintext-only\" spellcheck=\"false\" role=\"textbox\" aria-label=\"Track artist\" data-field=\"tracks.artists.name\" data-text=\"name\" data-attr=\"data-index:_trackIndex|data-subindex:_index\" placeholder=\"Artist...\"></span>\n              <svg class=\"discogs-submitter__button is-icon\" role=\"button\" tabindex=\"0\" data-field=\"tracks.artists.name\" data-attr=\"data-index:_trackIndex|data-subindex:_index\" title=\"Restore original artist\" aria-label=\"Restore original track artist\"><use href=\"#ds-rotate-left\"></use></svg>\n            </div>\n            <var data-if=\"!_last\">\n              <var data-if=\"join\"><var>join</var></var>\n            </var>\n          </var>\n        </div>\n      </var>\n      <div class=\"discogs-submitter__results__body\">\n        <div class=\"discogs-submitter__results__field\">\n          <span class=\"discogs-submitter__input is-edit is-track-title\" contenteditable=\"plaintext-only\" spellcheck=\"false\" role=\"textbox\" aria-label=\"Track title\" data-field=\"tracks.title\" data-text=\"title\" data-attr=\"data-index:_index\" placeholder=\"Title...\"></span>\n          <svg class=\"discogs-submitter__button is-icon\" role=\"button\" tabindex=\"0\" data-field=\"tracks.title\" data-attr=\"data-index:_index\" title=\"Restore original title\" aria-label=\"Restore original track title\"><use href=\"#ds-rotate-left\"></use></svg>\n        </div>\n        <var data-if=\"trackExtraartists.length\">\n          <var data-loop=\"trackExtraartists\">\n            <div class=\"discogs-submitter__results__body is-multiple is-inner\">\n              <small><var>role</var> – </small>\n              <div class=\"discogs-submitter__results__field\">\n                <span class=\"discogs-submitter__input is-edit is-track-extraartists\" contenteditable=\"plaintext-only\" spellcheck=\"false\" role=\"textbox\" aria-label=\"Track credit artist\" data-field=\"tracks.extraartists.name\" data-text=\"name\" data-attr=\"data-index:_trackIndex|data-subindex:_index\" placeholder=\"Artist...\"></span>\n                <svg class=\"discogs-submitter__button is-icon\" role=\"button\" tabindex=\"0\" data-field=\"tracks.extraartists.name\" data-attr=\"data-index:_trackIndex|data-subindex:_index\" title=\"Restore original credit\" aria-label=\"Restore original track credit\"><use href=\"#ds-rotate-left\"></use></svg>\n              </div>\n            </div>\n          </var>\n        </var>\n      </div>\n      <div class=\"discogs-submitter__results__body\"><var>duration</var></div>\n    </div>\n  </var>\n\n  <var data-if=\"showExtraArtists\">\n    <div class=\"discogs-submitter__results__row is-notes\">\n      <div class=\"discogs-submitter__results__head\">Credits</div>\n      <div class=\"discogs-submitter__results__body is-multiple\">\n        <var data-loop=\"rawExtraartists\">\n          <var>role</var> –\n          <div class=\"discogs-submitter__results__field\">\n            <span class=\"discogs-submitter__input is-edit\" contenteditable=\"plaintext-only\" role=\"textbox\" aria-label=\"Credit artist\" data-field=\"extraartists.name\" data-text=\"name\" data-attr=\"data-index:_index\" placeholder=\"Artist...\"></span>\n            <svg class=\"discogs-submitter__button is-icon\" role=\"button\" tabindex=\"0\" data-field=\"extraartists.name\" data-attr=\"data-index:_index\" title=\"Restore original credit\" aria-label=\"Restore original credit\"><use href=\"#ds-rotate-left\"></use></svg>\n          </div>\n          <br />\n        </var>\n      </div>\n    </div>\n  </var>\n\n  <div class=\"discogs-submitter__results__row is-notes\">\n    <div class=\"discogs-submitter__results__head\">Notes</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <span class=\"discogs-submitter__textarea is-edit\" contenteditable=\"plaintext-only\" spellcheck=\"false\" role=\"textbox\" aria-multiline=\"true\" aria-label=\"Release notes\" data-field=\"notes\" data-text=\"rawNotes\" placeholder=\"Notes...\"></span>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" tabindex=\"0\" data-field=\"notes\" title=\"Restore original notes\" aria-label=\"Restore original notes\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row is-notes\">\n    <div class=\"discogs-submitter__results__head\">Submission Notes</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <span class=\"discogs-submitter__textarea is-edit\" contenteditable=\"plaintext-only\" spellcheck=\"false\" role=\"textbox\" aria-multiline=\"true\" aria-label=\"Submission notes\" data-field=\"submissionNotes\" data-text=\"rawSubmissionNotes\" placeholder=\"Submission Notes...\"></span>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" tabindex=\"0\" data-field=\"submissionNotes\" title=\"Restore original submission notes\" aria-label=\"Restore original submission notes\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n</div>\n";
-    async function renderFragment(release, options, container, editedData) {
+    var template_default$3 = "<div class=\"discogs-submitter__results\">\n  <div class=\"discogs-submitter__results__row\">\n    <div class=\"discogs-submitter__results__head\">Artists</div>\n    <div class=\"discogs-submitter__results__body is-multiple\">\n      <var data-loop=\"releaseArtists\">\n        <div class=\"discogs-submitter__results__field\">\n          <textarea class=\"discogs-submitter__textarea is-edit\" rows=\"1\" autocomplete=\"off\" autocorrect=\"off\" autocapitalize=\"off\" spellcheck=\"false\" aria-label=\"Release artist\" data-field=\"artists.name\" data-value=\"name\" data-attr=\"data-index:_index\" placeholder=\"Artist...\"></textarea>\n          <var data-if=\"_canRestore\"><svg class=\"discogs-submitter__button is-icon\" role=\"button\" tabindex=\"0\" data-field=\"artists.name\" data-attr=\"data-index:_index\" title=\"Restore original artist\" aria-label=\"Restore original artist\"><use href=\"#ds-rotate-left\"></use></svg></var>\n          <var data-if=\"_canRemove\"><svg class=\"discogs-submitter__button is-icon is-remove\" role=\"button\" tabindex=\"0\" data-field=\"artists.name\" data-attr=\"data-index:_index\" title=\"Remove artist\" aria-label=\"Remove artist\"><use href=\"#ds-icon-trash\"></use></svg></var>\n        </div>\n        <var data-if=\"!_last\">\n          <div class=\"discogs-submitter__results__field\">\n            <textarea class=\"discogs-submitter__textarea is-edit is-join\" rows=\"1\" autocomplete=\"off\" autocorrect=\"off\" autocapitalize=\"off\" spellcheck=\"false\" aria-label=\"Artist join\" data-field=\"artists.join\" data-value=\"join\" data-attr=\"data-index:_index\" placeholder=\",\"></textarea>\n          </div>\n        </var>\n      </var>\n      <div class=\"discogs-submitter__results__field\">\n        <svg class=\"discogs-submitter__button is-icon is-add\" role=\"button\" tabindex=\"0\" data-field=\"artists\" title=\"Add artist\" aria-label=\"Add artist\"><use href=\"#ds-icon-plus\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row\">\n    <div class=\"discogs-submitter__results__head\">Title</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <textarea class=\"discogs-submitter__textarea is-edit\" rows=\"1\" autocomplete=\"off\" autocorrect=\"off\" autocapitalize=\"off\" spellcheck=\"false\" aria-label=\"Release title\" data-field=\"title\" data-value=\"rawTitle\" placeholder=\"Title...\"></textarea>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" tabindex=\"0\" data-field=\"title\" title=\"Restore original title\" aria-label=\"Restore original title\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row is-half\">\n    <div class=\"discogs-submitter__results__head\">Label</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <textarea class=\"discogs-submitter__textarea is-edit\" rows=\"1\" autocomplete=\"off\" autocorrect=\"off\" autocapitalize=\"off\" spellcheck=\"false\" aria-label=\"Record label\" data-field=\"label\" data-value=\"rawLabel\" placeholder=\"Label...\"></textarea>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" tabindex=\"0\" data-field=\"label\" title=\"Restore original label\" aria-label=\"Restore original label\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row is-half\">\n    <div class=\"discogs-submitter__results__head\">Catalog</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <textarea class=\"discogs-submitter__textarea is-edit\" rows=\"1\" autocomplete=\"off\" autocorrect=\"off\" autocapitalize=\"off\" spellcheck=\"false\" aria-label=\"Catalog number\" data-field=\"number\" data-value=\"rawNumber\" placeholder=\"Catalog...\"></textarea>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" tabindex=\"0\" data-field=\"number\" title=\"Restore original catalog\" aria-label=\"Restore original catalog number\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row is-half\">\n    <div class=\"discogs-submitter__results__head\">Released</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <textarea class=\"discogs-submitter__textarea is-edit\" rows=\"1\" autocomplete=\"off\" autocorrect=\"off\" autocapitalize=\"off\" spellcheck=\"false\" aria-label=\"Release date\" data-field=\"released\" data-value=\"rawReleased\" placeholder=\"Date...\"></textarea>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" tabindex=\"0\" data-field=\"released\" title=\"Restore original release date\" aria-label=\"Restore original release date\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row is-half\">\n    <div class=\"discogs-submitter__results__head\">Country</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <select class=\"is-edit is-country\" autocomplete=\"off\" data-field=\"country\" data-placeholder=\"Country...\">\n          <option value=\"\">–</option>\n          <optgroup data-unwrap data-loop=\"availableCountries\">\n            <option data-attr=\"value:_value\" data-if=\"isSelected\" data-text=\"_value\" selected></option>\n            <option data-attr=\"value:_value\" data-if=\"!isSelected\" data-text=\"_value\"></option>\n          </optgroup>\n        </select>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" tabindex=\"0\" data-field=\"country\" title=\"Restore original country\" aria-label=\"Restore original country\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row\">\n    <div class=\"discogs-submitter__results__head\">Format</div>\n    <div class=\"discogs-submitter__results__body is-multiple\">\n      <var data-loop=\"format\"> <var>qty</var> x <var>name</var>, </var>\n      <div class=\"discogs-submitter__results__field\">\n        <select class=\"is-format\" autocomplete=\"off\" tabindex=\"-1\" data-placeholder=\"Format...\">\n          <optgroup data-unwrap data-loop=\"availableFormats\">\n            <option data-attr=\"value:_value\" data-if=\"isSelected\" data-text=\"_value\" selected></option>\n            <option data-attr=\"value:_value\" data-if=\"!isSelected\" data-text=\"_value\"></option>\n          </optgroup>\n        </select>\n      </div>\n      <div class=\"discogs-submitter__results__field\">\n        <select class=\"is-description\" multiple autocomplete=\"off\" tabindex=\"-1\" data-placeholder=\"Description...\">\n          <optgroup data-unwrap data-loop=\"availableDescriptions\">\n            <option data-attr=\"value:_value\" data-if=\"isSelected\" data-text=\"_value\" selected></option>\n            <option data-attr=\"value:_value\" data-if=\"!isSelected\" data-text=\"_value\"></option>\n          </optgroup>\n        </select>\n      </div>\n      <div class=\"discogs-submitter__results__field\">\n        <textarea class=\"discogs-submitter__textarea is-edit is-format-text\" rows=\"1\" autocomplete=\"off\" autocorrect=\"off\" autocapitalize=\"off\" spellcheck=\"false\" aria-label=\"Format details\" data-field=\"formatText\" data-value=\"formatText\" placeholder=\"Free Text...\"></textarea>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row is-tracklist\">\n    <div class=\"discogs-submitter__results__head\">#</div>\n    <div class=\"discogs-submitter__results__head\">Artist</div>\n    <div class=\"discogs-submitter__results__head\">Title / Credits</div>\n    <div class=\"discogs-submitter__results__head\">Duration</div>\n  </div>\n\n  <var data-if=\"!tracks.length\">\n    <div class=\"discogs-submitter__results__row\">\n      <div class=\"discogs-submitter__results__body\">⚠️ No tracks found.</div>\n    </div>\n  </var>\n\n  <var data-loop=\"tracks\">\n    <div class=\"discogs-submitter__results__row is-tracklist\" data-attr=\"data-index:_index\">\n      <div class=\"discogs-submitter__results__body\"><var>pos</var></div>\n      <div class=\"discogs-submitter__results__body is-multiple\">\n        <var data-if=\"showTrackArtists\">\n          <var data-loop=\"trackArtists\">\n            <div class=\"discogs-submitter__results__field\">\n              <textarea class=\"discogs-submitter__textarea is-edit is-track-artists\" rows=\"1\" autocomplete=\"off\" autocorrect=\"off\" autocapitalize=\"off\" spellcheck=\"false\" aria-label=\"Track artist\" data-field=\"tracks.artists.name\" data-value=\"name\" data-attr=\"data-index:_trackIndex|data-subindex:_index\" placeholder=\"Artist...\"></textarea>\n              <var data-if=\"_canRestore\"><svg class=\"discogs-submitter__button is-icon\" role=\"button\" tabindex=\"0\" data-field=\"tracks.artists.name\" data-attr=\"data-index:_trackIndex|data-subindex:_index\" title=\"Restore original artist\" aria-label=\"Restore original track artist\"><use href=\"#ds-rotate-left\"></use></svg></var>\n              <svg class=\"discogs-submitter__button is-icon is-remove\" role=\"button\" tabindex=\"0\" data-field=\"tracks.artists.name\" data-attr=\"data-index:_trackIndex|data-subindex:_index\" title=\"Remove artist\" aria-label=\"Remove track artist\"><use href=\"#ds-icon-trash\"></use></svg>\n            </div>\n            <var data-if=\"!_last\">\n              <div class=\"discogs-submitter__results__field\">\n                <textarea class=\"discogs-submitter__textarea is-edit is-join\" rows=\"1\" autocomplete=\"off\" autocorrect=\"off\" autocapitalize=\"off\" spellcheck=\"false\" aria-label=\"Track artist join\" data-field=\"tracks.artists.join\" data-value=\"join\" data-attr=\"data-index:_trackIndex|data-subindex:_index\" placeholder=\",\"></textarea>\n              </div>\n            </var>\n          </var>\n        </var>\n        <div class=\"discogs-submitter__results__field\">\n          <svg class=\"discogs-submitter__button is-icon is-add\" role=\"button\" tabindex=\"0\" data-field=\"tracks.artists\" data-attr=\"data-index:_index\" title=\"Add artist\" aria-label=\"Add track artist\"><use href=\"#ds-icon-plus\"></use></svg>\n        </div>\n      </div>\n      <div class=\"discogs-submitter__results__body\">\n        <div class=\"discogs-submitter__results__field\">\n          <textarea class=\"discogs-submitter__textarea is-edit is-track-title\" rows=\"1\" autocomplete=\"off\" autocorrect=\"off\" autocapitalize=\"off\" spellcheck=\"false\" aria-label=\"Track title\" data-field=\"tracks.title\" data-value=\"title\" data-attr=\"data-index:_index\" placeholder=\"Title...\"></textarea>\n          <svg class=\"discogs-submitter__button is-icon\" role=\"button\" tabindex=\"0\" data-field=\"tracks.title\" data-attr=\"data-index:_index\" title=\"Restore original title\" aria-label=\"Restore original track title\"><use href=\"#ds-rotate-left\"></use></svg>\n        </div>\n        <var data-loop=\"trackExtraartists\">\n          <div class=\"discogs-submitter__results__body is-multiple is-inner\">\n            <div class=\"discogs-submitter__results__field\">\n              <textarea class=\"discogs-submitter__textarea is-edit is-track-credit-role\" rows=\"1\" autocomplete=\"off\" autocorrect=\"off\" autocapitalize=\"off\" spellcheck=\"false\" aria-label=\"Track credit role\" data-field=\"tracks.extraartists.role\" data-value=\"role\" data-attr=\"data-index:_trackIndex|data-subindex:_index\" placeholder=\"Role...\"></textarea>\n              <small> – </small>\n              <textarea class=\"discogs-submitter__textarea is-edit is-track-extraartists\" rows=\"1\" autocomplete=\"off\" autocorrect=\"off\" autocapitalize=\"off\" spellcheck=\"false\" aria-label=\"Track credit artist\" data-field=\"tracks.extraartists.name\" data-value=\"name\" data-attr=\"data-index:_trackIndex|data-subindex:_index\" placeholder=\"Artist...\"></textarea>\n              <var data-if=\"_canRestore\"><svg class=\"discogs-submitter__button is-icon\" role=\"button\" tabindex=\"0\" data-field=\"tracks.extraartists.name\" data-attr=\"data-index:_trackIndex|data-subindex:_index\" title=\"Restore original credit\" aria-label=\"Restore original track credit\"><use href=\"#ds-rotate-left\"></use></svg></var>\n              <svg class=\"discogs-submitter__button is-icon is-remove\" role=\"button\" tabindex=\"0\" data-field=\"tracks.extraartists.name\" data-attr=\"data-index:_trackIndex|data-subindex:_index\" title=\"Remove credit\" aria-label=\"Remove track credit\"><use href=\"#ds-icon-trash\"></use></svg>\n            </div>\n          </div>\n        </var>\n        <div class=\"discogs-submitter__results__body is-multiple is-inner\">\n          <div class=\"discogs-submitter__results__field\">\n            <svg class=\"discogs-submitter__button is-icon is-add\" role=\"button\" tabindex=\"0\" data-field=\"tracks.extraartists\" data-attr=\"data-index:_index\" title=\"Add credit\" aria-label=\"Add track credit\"><use href=\"#ds-icon-plus\"></use></svg>\n          </div>\n        </div>\n      </div>\n      <div class=\"discogs-submitter__results__body\"><var>duration</var></div>\n    </div>\n  </var>\n\n  <div class=\"discogs-submitter__results__row is-notes\">\n    <div class=\"discogs-submitter__results__head\">Credits</div>\n    <div class=\"discogs-submitter__results__body is-multiple\">\n      <var data-loop=\"rawExtraartists\">\n        <div class=\"discogs-submitter__results__field\">\n          <textarea class=\"discogs-submitter__textarea is-edit is-credit-role\" rows=\"1\" autocomplete=\"off\" autocorrect=\"off\" autocapitalize=\"off\" spellcheck=\"false\" aria-label=\"Credit role\" data-field=\"extraartists.role\" data-value=\"role\" data-attr=\"data-index:_index\" placeholder=\"Role...\"></textarea>\n          <small> – </small>\n          <textarea class=\"discogs-submitter__textarea is-edit\" rows=\"1\" autocomplete=\"off\" autocorrect=\"off\" autocapitalize=\"off\" spellcheck=\"false\" aria-label=\"Credit artist\" data-field=\"extraartists.name\" data-value=\"name\" data-attr=\"data-index:_index\" placeholder=\"Artist...\"></textarea>\n          <var data-if=\"_canRestore\"><svg class=\"discogs-submitter__button is-icon\" role=\"button\" tabindex=\"0\" data-field=\"extraartists.name\" data-attr=\"data-index:_index\" title=\"Restore original credit\" aria-label=\"Restore original credit\"><use href=\"#ds-rotate-left\"></use></svg></var>\n          <svg class=\"discogs-submitter__button is-icon is-remove\" role=\"button\" tabindex=\"0\" data-field=\"extraartists.name\" data-attr=\"data-index:_index\" title=\"Remove credit\" aria-label=\"Remove credit\"><use href=\"#ds-icon-trash\"></use></svg>\n        </div>\n        <br />\n      </var>\n      <div class=\"discogs-submitter__results__field\">\n        <svg class=\"discogs-submitter__button is-icon is-add\" role=\"button\" tabindex=\"0\" data-field=\"extraartists\" title=\"Add credit\" aria-label=\"Add credit\"><use href=\"#ds-icon-plus\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row is-notes\">\n    <div class=\"discogs-submitter__results__head\">Notes</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <textarea class=\"discogs-submitter__textarea is-edit is-multiline\" autocomplete=\"off\" autocorrect=\"off\" autocapitalize=\"off\" spellcheck=\"false\" aria-label=\"Release notes\" data-field=\"notes\" data-value=\"rawNotes\" placeholder=\"Notes...\"></textarea>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" tabindex=\"0\" data-field=\"notes\" title=\"Restore original notes\" aria-label=\"Restore original notes\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"discogs-submitter__results__row is-notes\">\n    <div class=\"discogs-submitter__results__head\">Submission Notes</div>\n    <div class=\"discogs-submitter__results__body\">\n      <div class=\"discogs-submitter__results__field\">\n        <textarea class=\"discogs-submitter__textarea is-edit is-multiline\" autocomplete=\"off\" autocorrect=\"off\" autocapitalize=\"off\" spellcheck=\"false\" aria-label=\"Submission notes\" data-field=\"submissionNotes\" data-value=\"rawSubmissionNotes\" placeholder=\"Submission Notes...\"></textarea>\n        <svg class=\"discogs-submitter__button is-icon\" role=\"button\" tabindex=\"0\" data-field=\"submissionNotes\" title=\"Restore original submission notes\" aria-label=\"Restore original submission notes\"><use href=\"#ds-rotate-left\"></use></svg>\n      </div>\n    </div>\n  </div>\n</div>\n";
+    async function renderFragment(release, options, container, editedData, addedEntries) {
         const { selectedFormat, selectedDescriptions, formatText, supports } = options;
         const tracks = release.tracks || [];
-        const hasTrackArtists = tracks.some((track) => (track.artists || []).length > 0);
+        const releaseArtists = editedData.artists || [];
+        const showTrackArtists = tracks.some((track) => (track.artists || []).length > 0);
         renderTemplate(template_default$3, {
             ...release,
-            releaseArtists: (editedData.artists || []).map((artist, index) => ({
+            releaseArtists: releaseArtists.map((artist, index) => ({
                 ...artist,
                 _index: index,
-                _last: index === (editedData.artists || []).length - 1
+                _last: index === releaseArtists.length - 1,
+                _canRestore: !addedEntries.has(artist),
+                _canRemove: releaseArtists.length > 1
             })),
             rawTitle: editedData.title,
             rawLabel: editedData.label || "",
@@ -2238,9 +2222,9 @@
             rawCountry: editedData.country || "",
             rawExtraartists: (editedData.extraartists || []).map((credit, index) => ({
                 ...credit,
-                _index: index
+                _index: index,
+                _canRestore: !addedEntries.has(credit)
             })),
-            showExtraArtists: (editedData.extraartists || []).length > 0,
             rawNotes: editedData.notes,
             rawSubmissionNotes: editedData.submissionNotes,
             availableCountries: ALLOWED_COUNTRIES.map((country) => ({
@@ -2257,8 +2241,6 @@
                 _value: type,
                 isSelected: selectedDescriptions.includes(type)
             })),
-            hasTrackArtists,
-            rowClass: `${hasTrackArtists ? "" : "is-no-artist"}`,
             tracks: tracks.map((track, trackIndex) => {
                 const rawTrack = editedData.tracks[trackIndex];
                 return {
@@ -2267,41 +2249,71 @@
                         ...artist,
                         _trackIndex: trackIndex,
                         _index: artistIndex,
-                        _last: artistIndex === (rawTrack?.artists || []).length - 1
+                        _last: artistIndex === (rawTrack?.artists || []).length - 1,
+                        _canRestore: !addedEntries.has(artist)
                     })),
                     trackExtraartists: (rawTrack?.extraartists || []).map((credit, creditIndex) => ({
                         ...credit,
                         _trackIndex: trackIndex,
-                        _index: creditIndex
+                        _index: creditIndex,
+                        _canRestore: !addedEntries.has(credit)
                     })),
-                    hasTrackArtists,
-                    rowClass: `${hasTrackArtists ? "" : "is-no-artist"}`,
+                    showTrackArtists,
                     _index: trackIndex
                 };
             })
         }, container, { replace: true });
     }
+    function readIndices(element) {
+        const indexStr = element.dataset.index;
+        return {
+            indices: indexStr ? indexStr.split("|").map((segment) => Number.parseInt(segment, 10)) : [],
+            subindex: element.dataset.subindex ? Number.parseInt(element.dataset.subindex, 10) : null
+        };
+    }
     function resolvePath(element) {
         const field = element.dataset.field;
         if (!field) return "";
-        const indexStr = element.dataset.index;
-        const indices = indexStr ? indexStr.split("|").map((segment) => Number.parseInt(segment, 10)) : [];
-        const subindex = element.dataset.subindex ? Number.parseInt(element.dataset.subindex, 10) : null;
+        const { indices, subindex } = readIndices(element);
         if (field === "formatText") return "formatText";
-        if (field === "artists.name") return `artists.${indices[0]}.name`;
-        if (field === "extraartists.name") return `extraartists.${indices[0]}.name`;
+        if (field === "artists.name" || field === "artists.join" || field === "extraartists.name" || field === "extraartists.role") {
+            const [collection, leaf] = field.split(".");
+            return `${collection}.${indices[0]}.${leaf}`;
+        }
         if (field.startsWith("tracks.")) {
-            const trackIdx = indices[0];
-            const trackField = field.split(".")[1];
-            if (trackField === "artists" || trackField === "extraartists") return `tracks.${trackIdx}.${trackField}.${subindex}.name`;
-            return `tracks.${trackIdx}.${trackField}`;
+            const [, collection, leaf] = field.split(".");
+            if (collection === "artists" || collection === "extraartists") return `tracks.${indices[0]}.${collection}.${subindex}.${leaf || "name"}`;
+            return `tracks.${indices[0]}.${collection}`;
         }
         return field;
+    }
+    function resolveCollectionPath(element) {
+        const field = element.dataset.field;
+        if (field === "artists" || field === "extraartists") return field;
+        if (field === "tracks.artists" || field === "tracks.extraartists") {
+            const { indices } = readIndices(element);
+            const collection = field.split(".")[1];
+            return `tracks.${indices[0]}.${collection}`;
+        }
+        return "";
+    }
+    function resolveEntryRemoval(element) {
+        const path = resolvePath(element);
+        if (!path) return null;
+        const parts = path.split(".");
+        parts.pop();
+        const index = Number.parseInt(parts.pop() ?? "", 10);
+        if (Number.isNaN(index) || parts.length === 0) return null;
+        return {
+            arrayPath: parts.join("."),
+            index
+        };
     }
     var PreviewController = class {
         state;
         contentElement;
         hooks;
+        addedEntries = new WeakSet();
         constructor(state, contentElement, hooks) {
             this.state = state;
             this.contentElement = contentElement;
@@ -2325,10 +2337,11 @@
                     selectedDescriptions: this.state.selectedDescriptions,
                     formatText: this.state.formatText,
                     supports: this.state.currentDigitalStore.supports || { formats: [] }
-                }, this.contentElement, this.state.editedData);
+                }, this.contentElement, this.state.editedData, this.addedEntries);
                 Select.init(this.contentElement.querySelector(".is-format"));
                 Select.init(this.contentElement.querySelector(".is-description"));
                 Select.init(this.contentElement.querySelector(".is-country"));
+                this.contentElement.querySelectorAll("textarea.is-edit").forEach((textarea) => this.autosizeTextarea(textarea));
             }
             this.hooks.onRendered(rawJsonString);
         }
@@ -2336,8 +2349,8 @@
             if (!this.contentElement) return;
             this.contentElement.addEventListener("change", (event) => void this.handleChange(event));
             this.contentElement.addEventListener("click", async (event) => {
-                const fieldButton = event.target.closest(".discogs-submitter__results__field .discogs-submitter__button");
-                if (fieldButton) await this.handleRestore(fieldButton);
+                const action = this.resolveActionButton(event.target);
+                if (action) await this.runAction(action.kind, action.button);
             });
             this.contentElement.addEventListener("keydown", (event) => {
                 const target = event.target;
@@ -2346,22 +2359,20 @@
                     return;
                 }
                 if (event.key === "Enter" || event.key === " ") {
-                    const fieldButton = target.closest(".discogs-submitter__results__field .discogs-submitter__button");
-                    if (fieldButton) {
+                    const action = this.resolveActionButton(target);
+                    if (action) {
                         event.preventDefault();
-                        this.handleRestore(fieldButton);
+                        this.runAction(action.kind, action.button);
                     }
                 }
             });
             this.contentElement.addEventListener("keyup", (event) => {
                 if (event.target.classList.contains("is-edit")) event.stopPropagation();
             });
-            this.contentElement.addEventListener("paste", (event) => {
-                if (event.target.classList.contains("is-edit")) EditableHelper.handlePaste(event);
+            this.contentElement.addEventListener("input", (event) => {
+                const target = event.target;
+                if (target instanceof HTMLTextAreaElement && target.classList.contains("is-edit")) this.autosizeTextarea(target);
             });
-            this.contentElement.addEventListener("blur", (event) => {
-                if (event.target.classList.contains("is-edit")) this.handleChange(event);
-            }, true);
         }
         clear() {
             if (this.contentElement) this.contentElement.innerHTML = "";
@@ -2376,10 +2387,37 @@
                 this.state.selectedDescriptions = Array.from(select.selectedOptions).map((option) => option.value);
                 await this.render();
             } else if (target.classList.contains("is-edit") && this.state.editedData) {
-                const value = target.contentEditable === "plaintext-only" || target.contentEditable === "true" ? target.textContent?.trim() || "" : target.value;
+                const value = target.value;
                 this.updateEditedData(target, value);
                 await this.render();
             }
+        }
+        autosizeTextarea(textarea) {
+            textarea.style.height = "auto";
+            textarea.style.height = `${textarea.scrollHeight}px`;
+        }
+        resolveActionButton(target) {
+            const addButton = target.closest(".discogs-submitter__button.is-add");
+            if (addButton) {return {
+                kind: "add",
+                button: addButton
+            };}
+            const removeButton = target.closest(".discogs-submitter__button.is-remove");
+            if (removeButton) {return {
+                kind: "remove",
+                button: removeButton
+            };}
+            const restoreButton = target.closest(".discogs-submitter__results__field .discogs-submitter__button");
+            if (restoreButton) {return {
+                kind: "restore",
+                button: restoreButton
+            };}
+            return null;
+        }
+        async runAction(kind, button) {
+            if (kind === "add") await this.handleAdd(button);
+            else if (kind === "remove") await this.handleRemove(button);
+            else await this.handleRestore(button);
         }
         async handleRestore(element) {
             const path = resolvePath(element);
@@ -2394,6 +2432,33 @@
                 if (artistMatch && typeof oldValue === "string" && typeof valueToRestore === "string") this.syncTrackArtists(Number.parseInt(artistMatch[1], 10), oldValue, valueToRestore);
             }
             await this.render();
+        }
+        async handleAdd(element) {
+            if (!this.state.editedData) return;
+            const arrayPath = resolveCollectionPath(element);
+            if (!arrayPath) return;
+            const collection = getValueByPath(this.state.editedData, arrayPath);
+            if (!Array.isArray(collection)) return;
+            const entry = arrayPath.endsWith("extraartists") ? {
+                name: "",
+                role: ""
+            } : {
+                name: "",
+                join: ","
+            };
+            this.addedEntries.add(entry);
+            collection.push(entry);
+            await this.render();
+        }
+        async handleRemove(element) {
+            if (!this.state.editedData) return;
+            const removal = resolveEntryRemoval(element);
+            if (!removal) return;
+            const collection = getValueByPath(this.state.editedData, removal.arrayPath);
+            if (Array.isArray(collection)) {
+                collection.splice(removal.index, 1);
+                await this.render();
+            }
         }
         updateEditedData(element, value) {
             const path = resolvePath(element);
@@ -2474,34 +2539,40 @@
             return "<small><strong>The list of artists is presented in random order, separated by commas (`,`), and may not exactly match the list of authors from the official release source.</strong></small>";
         }
     };
-    var template_default$1 = "<div class=\"discogs-submitter__button is-full is-large is-primary\" role=\"button\" tabindex=\"0\" aria-label=\"Submit release to Discogs\" hidden>Submit to Discogs</div>\n";
+    var template_default$1 = "<svg class=\"discogs-submitter__button is-icon is-large is-danger\" role=\"button\" tabindex=\"0\" data-field=\"country\" title=\"Restore all original data\" aria-label=\"Restore all original data\" hidden><use href=\"#ds-rotate-left\"></use></svg>\n<div class=\"discogs-submitter__button is-full is-large is-primary\" role=\"button\" tabindex=\"0\" aria-label=\"Submit release to Discogs\" hidden>Submit to Discogs</div>\n";
     var MIN_STEP_DURATION_MS = 5e3;
     var SubmissionController = class {
         state;
         slot;
         loader;
         status;
+        onRestoreAll;
         submitButton = null;
-        constructor(state, slot, loader, status) {
+        restoreAllButton = null;
+        constructor(state, slot, loader, status, onRestoreAll) {
             this.state = state;
             this.slot = slot;
             this.loader = loader;
             this.status = status;
+            this.onRestoreAll = onRestoreAll;
             if (!this.slot) return;
             renderTemplate(template_default$1, {}, this.slot, { replace: true });
             this.submitButton = this.slot.querySelector(".discogs-submitter__button.is-primary");
+            this.restoreAllButton = this.slot.querySelector(".discogs-submitter__button.is-danger");
         }
         bindEvents() {
             bindActivation(this.submitButton, () => void this.submit());
+            bindActivation(this.restoreAllButton, () => this.onRestoreAll());
         }
         setHidden(hidden) {
-            if (!this.submitButton) return;
-            if (hidden) this.submitButton.setAttribute("hidden", "true");
-            else this.submitButton.removeAttribute("hidden");
+            for (const button of [this.submitButton, this.restoreAllButton]) {
+                if (!button) continue;
+                if (hidden) button.setAttribute("hidden", "true");
+                else button.removeAttribute("hidden");
+            }
         }
         async submit() {
             if (!this.state.currentPayload) return;
-            this.submitButton?.setAttribute("hidden", "true");
             this.loader.setActive(true, "Sending to Discogs...");
             let coverUploadFailed = false;
             let releaseId = null;
@@ -2517,39 +2588,39 @@
                 }));
                 if (!jsonData?.id) throw new Error("Response missing release ID");
                 releaseId = jsonData.id;
-                if (this.state.editedData?.cover) {
-                    const coverUrl = this.state.editedData.cover;
-                    try {
-                        await this.runStep("Draft created. Uploading cover image...", async () => {
-                            const coverBlob = await networkRequest({
-                                url: coverUrl,
-                                method: "GET",
-                                responseType: "blob"
-                            });
-                            const imageFormData = new FormData();
-                            imageFormData.append("image", coverBlob, "cover.jpg");
-                            imageFormData.append("pos", "1");
-                            await networkRequest({
-                                method: "POST",
-                                url: `https://www.discogs.com/release/${releaseId}/images/upload`,
-                                data: imageFormData
-                            });
+                const coverUrl = this.state.editedData?.cover;
+                if (coverUrl && !isHttpUrl(coverUrl)) {
+                    console.warn("[Discogs Submitter] Skipping cover upload: unsupported URL scheme:", coverUrl);
+                    coverUploadFailed = true;
+                } else if (coverUrl) {try {
+                    await this.runStep("Draft created. Uploading cover image...", async () => {
+                        const coverBlob = await networkRequest({
+                            url: coverUrl,
+                            method: "GET",
+                            responseType: "blob"
                         });
-                    } catch (imageError) {
-                        console.error("[Discogs Submitter] Cover upload failed:", imageError);
-                        coverUploadFailed = true;
-                    }
-                }
+                        const imageFormData = new FormData();
+                        imageFormData.append("image", coverBlob, "cover.jpg");
+                        imageFormData.append("pos", "1");
+                        await networkRequest({
+                            method: "POST",
+                            url: `https://www.discogs.com/release/${releaseId}/images/upload`,
+                            data: imageFormData
+                        });
+                    });
+                } catch (imageError) {
+                    console.error("[Discogs Submitter] Cover upload failed:", imageError);
+                    coverUploadFailed = true;
+                }}
                 GM_openInTab(`https://www.discogs.com/release/edit/${releaseId}`, true);
                 if (coverUploadFailed) this.status.set("Draft created, but cover upload failed!<br /><strong><em>Please review your draft before publishing on Discogs!</em></strong>", "warning");
                 else this.status.restoreReady();
             } catch (error) {
                 let errorMessage = error.message || String(error);
                 if (errorMessage.includes("404")) errorMessage = "This usually means you are not logged in or use Containers, Incognito, or strict tracking protection.";
-                this.status.set(`Failed to create Discogs draft:<br />${errorMessage}`, "error");
+                this.status.set(`Failed to create Discogs draft:<br />${escapeHtml(errorMessage)}`, "error");
             } finally {
                 this.loader.setActive(false);
-                this.submitButton?.removeAttribute("hidden");
             }
         }
         async runStep(message, operation) {
@@ -2659,11 +2730,24 @@
             this.status = new StatusController(this.footer.statusSlot, () => this.state.currentDigitalStore, () => Boolean(this.state.originalData));
             this.preview = new PreviewController(this.state, this.elements.content, { onRendered: (rawJson) => {
                 this.status.setRawJson(rawJson);
-                if (this.elements.widget && this.state.editedData?.thumb) document.documentElement.style.setProperty("--ds-thumb-url", `url('${this.state.editedData.thumb}')`);
+                const thumbUrl = this.state.editedData?.thumb;
+                if (this.elements.widget && isHttpUrl(thumbUrl)) document.documentElement.style.setProperty("--ds-thumb-url", `url('${thumbUrl}')`);
                 this.header.updateCover();
                 this.submission.setHidden(false);
             } });
-            this.submission = new SubmissionController(this.state, this.footer.actionsSlot, this.loader, this.status);
+            this.submission = new SubmissionController(this.state, this.footer.actionsSlot, this.loader, this.status, () => void this.resetEditsToOriginal());
+        }
+        primeFormatDefaults() {
+            this.state.selectedFormat = this.state.currentDigitalStore?.supports?.formats?.[0] || "WAV";
+            this.state.selectedDescriptions = extractFormatFromTitle(this.state.originalData?.title);
+            this.state.formatText = "";
+        }
+        async resetEditsToOriginal() {
+            if (!this.state.originalData) return;
+            this.state.editedData = JSON.parse(JSON.stringify(this.state.originalData));
+            this.primeFormatDefaults();
+            await this.preview.render();
+            this.status.set(this.status.getReadyMessage(), "success");
         }
         async startParsing() {
             if (!this.state.currentDigitalStore) return;
@@ -2675,14 +2759,12 @@
             try {
                 await this.state.currentDigitalStore.beforeParse?.();
                 const data = await this.state.currentDigitalStore.parse();
-                data.country = resolveCountry(data.country);
+                data.country = "Worldwide";
                 const primaryArtistName = (data.artists?.[0]?.name || "").trim();
                 data.label = normalizeLabel(data.label, primaryArtistName);
                 this.state.originalData = JSON.parse(JSON.stringify(data));
                 this.state.editedData = JSON.parse(JSON.stringify(data));
-                this.state.selectedFormat = this.state.currentDigitalStore.supports?.formats?.[0] || "WAV";
-                this.state.selectedDescriptions = extractFormatFromTitle(this.state.originalData?.title);
-                this.state.formatText = "";
+                this.primeFormatDefaults();
                 if (this.state.editedData && this.state.originalData) {
                     const tempPayload = DiscogsMapper.mapToPayload(this.state.editedData, unsafeWindow.location.href, {
                         format: this.state.selectedFormat || "WAV",
@@ -2704,7 +2786,7 @@
                 this.state.originalData = null;
                 this.state.editedData = null;
                 const errorMessage = error.message || String(error);
-                this.status.set(errorMessage, "error");
+                this.status.set(escapeHtml(errorMessage), "error");
                 this.status.setRawError(`URL: ${unsafeWindow.location.href}\nVersion: ${USERSCRIPT.VERSION}\nError Trace:\n${error.stack || error}`);
             } finally {
                 this.loader.setActive(false);
@@ -2786,8 +2868,8 @@
     var GLOBAL_CSS = Object.values([
         ".discogs-submitter,.discogs-submitter__inject{text-shadow:none;text-transform:none;font-size:14px;font-weight:400;line-height:1.2;font-family:var(--ds-font-sans)!important;& *,& :after,& :before{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;box-sizing:border-box;text-rendering:optimizelegibility}& a{text-decoration:none}& em{font-style:oblique}& strong{font-weight:700}& [hidden]{display:none!important}}",
         ":root{--ds-font-sans:\"Helvetica Neue\", Helvetica, Arial, sans-serif;--ds-font-monospace:\"SFMono-Regular\", Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace;--ds-gap:20px;--ds-radius:12px;--ds-color-primary:20, 138, 102;--ds-color-success:40, 167, 69;--ds-color-error:220, 53, 69;--ds-color-warning:255, 193, 7;--ds-color-info:23, 162, 184;--ds-color-white:255, 255, 255;--ds-color-black:0, 0, 0;--ds-palette-secondary-color:var(--ds-color-black);--ds-palette-primary-color:var(--ds-color-white)}",
-        ".discogs-submitter__select,.discogs-submitter__input,.discogs-submitter__textarea{z-index:1;border:1px solid rgba(var(--ds-palette-secondary-color), .25);border-radius:calc(var(--ds-radius) / 4);background:rgba(var(--ds-palette-secondary-color), .075);padding:calc(var(--ds-gap) / 8) calc(var(--ds-gap) / 4);min-width:20px;min-height:1.2em;font-size:inherit;font-family:inherit;line-height:normal;transition:all .3s;display:inline-block;position:relative}.discogs-submitter__input,.discogs-submitter__textarea{white-space:pre-wrap;word-break:break-word;&:focus{z-index:2;outline:.1px solid rgba(var(--ds-palette-secondary-color), 1);border-color:rgba(var(--ds-palette-secondary-color), 1);background:rgba(var(--ds-palette-primary-color), 1);color:rgba(var(--ds-palette-secondary-color), 1)}&[contenteditable]{&:empty:before{pointer-events:none;content:attr(placeholder);color:rgba(var(--ds-palette-secondary-color), .4)}}}.discogs-submitter__textarea{resize:vertical}.discogs-submitter__select{--min-width:60px;--max-width:160px;vertical-align:middle;min-width:var(--min-width);max-width:var(--max-width);user-select:none;display:inline-block;position:relative;&.is-open{z-index:2;outline-width:.1px;outline:1px solid rgba(var(--ds-palette-secondary-color), 1);border-color:rgba(var(--ds-palette-secondary-color), 1);background:rgba(var(--ds-palette-primary-color), 1);& .discogs-submitter__select__placeholder{&.is-selected{color:rgba(var(--ds-palette-secondary-color), 1)}&:not(.is-selected){color:rgba(var(--ds-palette-secondary-color), .4)}}& .discogs-submitter__select__arrow{transform:rotate(180deg)}& .discogs-submitter__select__list{visibility:visible;opacity:1;transform:translateY(6px)scale(1)}}}.discogs-submitter__select__arrow{fill:currentColor;width:1em;height:1em;transition:all .3s}.discogs-submitter__select__placeholder{text-overflow:ellipsis;white-space:nowrap;width:100%;transition:all .3s;overflow:hidden;&:not(.is-selected){color:rgba(var(--ds-palette-secondary-color), .4)}}.discogs-submitter__select__count{white-space:nowrap;font-size:9px}.discogs-submitter__select__label{align-items:center;gap:calc(var(--ds-gap) / 6);z-index:2;flex-wrap:nowrap;display:flex;position:relative}.discogs-submitter__select__list{visibility:hidden;z-index:1;min-width:calc(var(--min-width) + 4px);max-width:calc(var(--max-width) + 4px);-webkit-overflow-scrolling:touch;transform-origin:0 0;opacity:0;outline:1px solid rgba(var(--ds-palette-secondary-color), 1);border:1px solid rgba(var(--ds-palette-secondary-color), 1);border-radius:calc(var(--ds-radius) / 4);background:rgba(var(--ds-palette-primary-color), 1);scrollbar-color:rgba(var(--ds-palette-secondary-color), .5) transparent;scrollbar-width:thin;max-height:200px;color:rgba(var(--ds-palette-secondary-color), 1);transition:all .3s;position:absolute;top:100%;left:-2px;overflow-y:auto;transform:translateY(10px)scale(.9)}.discogs-submitter__select__list__item{align-items:center;gap:calc(var(--ds-gap) / 4);cursor:pointer;flex-wrap:nowrap;padding:2px 4px;transition:all .3s;display:flex;&:not(:last-child){border-bottom:1px solid rgba(var(--ds-palette-secondary-color), .1)}&:hover{background:rgba(var(--ds-palette-secondary-color), .5);color:rgba(var(--ds-palette-primary-color), 1)}&.is-selected{background:rgba(var(--ds-color-primary), 1);color:rgba(var(--ds-palette-primary-color), 1);&:hover{background:rgba(var(--ds-palette-secondary-color), .5);color:rgba(var(--ds-palette-primary-color), 1)}}&.is-showing{opacity:0;animation:.3s forwards ds-scale-up;transform:scale(0)}& .discogs-submitter__checkbox{flex:none}}.discogs-submitter__checkbox{fill:currentColor;width:1.75em;height:1.75em;transition:all .3s}@keyframes ds-scale-up{0%{opacity:0;transform:scale(0)}to{opacity:1;transform:scale(1)}}",
-        ".discogs-submitter__button{cursor:pointer;border-radius:calc(var(--ds-radius) / 4);background:rgba(var(--ds-palette-secondary-color), .1);padding:calc(var(--ds-gap) / 4);color:currentColor;user-select:none;text-align:center;justify-content:center;align-items:center;font-size:8px;font-weight:700;transition:all .3s;display:inline-flex;&.is-icon{fill:currentColor;width:2em;height:2em;&,&.is-large{border-radius:100%;padding:0}&:hover{background:rgba(var(--ds-palette-secondary-color), 1);color:rgba(var(--ds-palette-primary-color), 1)}}&.is-full{width:100%;display:flex}&.is-large{border-radius:calc(var(--ds-radius) / 2);padding:calc(var(--ds-gap) / 2);font-size:16px}&.is-primary{background:rgba(var(--ds-color-primary), 1);color:rgba(var(--ds-color-white), 1);&:hover{outline:2px solid rgba(var(--ds-palette-secondary-color), 1);outline-offset:2px;background:rgba(var(--ds-palette-secondary-color), 1);color:rgba(var(--ds-palette-primary-color), 1)}}}"
+        ".discogs-submitter__select,.discogs-submitter__input,.discogs-submitter__textarea{z-index:1;border:1px solid rgba(var(--ds-palette-secondary-color), .25);border-radius:calc(var(--ds-radius) / 4);background:rgba(var(--ds-palette-secondary-color), .075);padding:calc(var(--ds-gap) / 6) calc(var(--ds-gap) / 4);min-width:20px;min-height:1.2em;color:rgba(var(--ds-palette-secondary-color), 1);font-size:inherit;font-family:inherit;line-height:normal;transition:all .3s;display:inline-block;position:relative}.discogs-submitter__input,.discogs-submitter__textarea{field-sizing:content;white-space:pre-wrap;word-break:break-word;max-width:100%;&:focus{z-index:2;outline:.1px solid rgba(var(--ds-palette-secondary-color), 1);border-color:rgba(var(--ds-palette-secondary-color), 1);background:rgba(var(--ds-palette-primary-color), 1);color:rgba(var(--ds-palette-secondary-color), 1)}&::placeholder{color:rgba(var(--ds-palette-secondary-color), .4)}}.discogs-submitter__textarea{resize:none}.discogs-submitter__select{--min-width:60px;--max-width:160px;vertical-align:middle;min-width:var(--min-width);max-width:var(--max-width);user-select:none;display:inline-block;position:relative;&.is-open{z-index:2;outline-width:.1px;outline:1px solid rgba(var(--ds-palette-secondary-color), 1);border-color:rgba(var(--ds-palette-secondary-color), 1);background:rgba(var(--ds-palette-primary-color), 1);& .discogs-submitter__select__placeholder{&.is-selected{color:rgba(var(--ds-palette-secondary-color), 1)}&:not(.is-selected){color:rgba(var(--ds-palette-secondary-color), .4)}}& .discogs-submitter__select__arrow{transform:rotate(180deg)}& .discogs-submitter__select__list{visibility:visible;opacity:1;transform:translateY(6px)scale(1)}}}.discogs-submitter__select__arrow{fill:currentColor;width:1em;height:1em;transition:all .3s}.discogs-submitter__select__placeholder{text-overflow:ellipsis;white-space:nowrap;width:100%;transition:all .3s;overflow:hidden;&:not(.is-selected){color:rgba(var(--ds-palette-secondary-color), .4)}}.discogs-submitter__select__count{white-space:nowrap;font-size:9px}.discogs-submitter__select__label{align-items:center;gap:calc(var(--ds-gap) / 6);z-index:2;flex-wrap:nowrap;display:flex;position:relative}.discogs-submitter__select__list{visibility:hidden;z-index:1;min-width:calc(var(--min-width) + 4px);max-width:calc(var(--max-width) + 4px);-webkit-overflow-scrolling:touch;transform-origin:0 0;opacity:0;outline:1px solid rgba(var(--ds-palette-secondary-color), 1);border:1px solid rgba(var(--ds-palette-secondary-color), 1);border-radius:calc(var(--ds-radius) / 4);background:rgba(var(--ds-palette-primary-color), 1);scrollbar-color:rgba(var(--ds-palette-secondary-color), .5) transparent;scrollbar-width:thin;max-height:200px;color:rgba(var(--ds-palette-secondary-color), 1);transition:all .3s;position:absolute;top:100%;left:-2px;overflow-y:auto;transform:translateY(10px)scale(.9)}.discogs-submitter__select__list__item{align-items:center;gap:calc(var(--ds-gap) / 4);cursor:pointer;flex-wrap:nowrap;padding:2px 4px;transition:all .3s;display:flex;&:not(:last-child){border-bottom:1px solid rgba(var(--ds-palette-secondary-color), .1)}&:hover{background:rgba(var(--ds-palette-secondary-color), .5);color:rgba(var(--ds-palette-primary-color), 1)}&.is-selected{background:rgba(var(--ds-color-primary), 1);color:rgba(var(--ds-palette-primary-color), 1);&:hover{background:rgba(var(--ds-palette-secondary-color), .5);color:rgba(var(--ds-palette-primary-color), 1)}}&.is-showing{opacity:0;animation:.3s forwards ds-scale-up;transform:scale(0)}& .discogs-submitter__checkbox{flex:none}}.discogs-submitter__checkbox{fill:currentColor;width:1.75em;height:1.75em;transition:all .3s}@keyframes ds-scale-up{0%{opacity:0;transform:scale(0)}to{opacity:1;transform:scale(1)}}",
+        ".discogs-submitter__button{--size:18px;cursor:pointer;border-radius:calc(var(--ds-radius) / 4);background:rgba(var(--ds-palette-secondary-color), .1);padding:calc(var(--ds-gap) / 4);height:var(--size);color:currentColor;user-select:none;text-align:center;justify-content:center;align-items:center;font-size:8px;font-weight:700;transition:all .3s;display:inline-flex;&.is-large{--size:32px}&.is-icon{fill:currentColor;width:var(--size);border-radius:100%;padding:0;&:hover{background:rgba(var(--ds-palette-secondary-color), 1);color:rgba(var(--ds-palette-primary-color), 1)}}&.is-full{width:100%;display:flex}&.is-large{font-size:16px;&:not(.is-icon){border-radius:calc(var(--ds-radius) / 2);padding:0 calc(var(--ds-gap) / 2)}}&.is-primary{background:rgba(var(--ds-color-primary), 1);color:rgba(var(--ds-color-white), 1);&:hover{outline:2px solid rgba(var(--ds-palette-secondary-color), 1);outline-offset:2px;background:rgba(var(--ds-palette-secondary-color), 1);color:rgba(var(--ds-palette-primary-color), 1)}}&.is-danger{background:rgba(var(--ds-color-warning), 1);color:rgba(var(--ds-color-black), 1);&:hover{outline:2px solid rgba(var(--ds-color-warning), 1);outline-offset:2px;background:rgba(var(--ds-color-black), 1);color:rgba(var(--ds-color-warning), 1)}}}"
     ]).join("\n");
     var GLOBAL_STYLES_ID = `${USERSCRIPT.ID}-styles`;
     var PROVIDER_STYLES_ID_PREFIX = `${USERSCRIPT.ID}-styles-`;
@@ -2820,7 +2902,9 @@
         "ds-icon-bug": "<svg viewBox=\"0 0 640 640\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m224 160c0-53 43-96 96-96s96 43 96 96v3.6c0 15.7-12.7 28.4-28.4 28.4h-135.1c-15.7 0-28.4-12.7-28.4-28.4v-3.6zm345.6 12.8c10.6 14.1 7.7 34.2-6.4 44.8l-97.8 73.3c5.3 8.9 9.3 18.7 11.8 29.1h98.8c17.7 0 32 14.3 32 32s-14.3 32-32 32h-96v32c0 2.6-.1 5.3-.2 7.9l83.4 62.5c14.1 10.6 17 30.7 6.4 44.8s-30.7 17-44.8 6.4l-63.1-47.3c-23.2 44.2-66.5 76.2-117.7 83.9v-230.2c0-13.3-10.7-24-24-24s-24 10.7-24 24v230.2c-51.2-7.7-94.5-39.7-117.7-83.9l-63.1 47.3c-14.1 10.6-34.2 7.7-44.8-6.4s-7.7-34.2 6.4-44.8l83.4-62.5c-.1-2.6-.2-5.2-.2-7.9v-32h-96c-17.7 0-32-14.3-32-32s14.3-32 32-32h98.8c2.5-10.4 6.5-20.2 11.8-29.1l-97.8-73.3c-14.1-10.6-17-30.7-6.4-44.8s30.7-17 44.8-6.4l108.8 81.6c12.3-5.1 25.8-8 40-8h112c14.2 0 27.7 2.8 40 8l108.8-81.6c14.1-10.6 34.2-7.7 44.8 6.4z\"/></svg>",
         "ds-icon-chevron-down": "<svg viewBox=\"0 0 640 640\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m297.4 470.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-169.4 169.4-169.4-169.3c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z\"/></svg>",
         "ds-square-check": "<svg viewBox=\"0 0 640 640\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m480 96c35.3 0 64 28.7 64 64v320c0 35.3-28.7 64-64 64h-320c-35.3 0-64-28.7-64-64v-320c0-35.3 28.7-64 64-64zm-42 113.7c-10.7-7.8-25.7-5.4-33.5 5.3l-119.4 164.2-52.1-52.1c-9.4-9.4-24.6-9.4-33.9 0s-9.4 24.6 0 33.9l72 72c5 5 11.9 7.5 18.8 7s13.4-4.1 17.5-9.8l135.9-187c7.8-10.7 5.4-25.7-5.3-33.5z\"/></svg>",
-        "ds-rotate-left": "<svg viewBox=\"0 0 640 640\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m88 256h144c9.7 0 18.5-5.8 22.2-14.8s1.7-19.3-5.2-26.2l-46.7-46.7c75.3-58.6 184.3-53.3 253.5 15.9 75 75 75 196.5 0 271.5s-196.5 75-271.5 0c-10.2-10.2-19-21.3-26.4-33-9.5-14.9-29.3-19.3-44.2-9.8s-19.3 29.3-9.8 44.2c9.8 15.6 21.5 30.4 35.1 43.9 100 100 262 100 362 0s100-262 0-362c-94.2-94.3-243.7-99.7-344.3-16.2l-51.7-51.8c-6.9-6.8-17.2-8.9-26.2-5.2s-14.8 12.5-14.8 22.2v144c0 13.3 10.7 24 24 24z\"/></svg>"
+        "ds-rotate-left": "<svg viewBox=\"0 0 640 640\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m88 256h144c9.7 0 18.5-5.8 22.2-14.8s1.7-19.3-5.2-26.2l-46.7-46.7c75.3-58.6 184.3-53.3 253.5 15.9 75 75 75 196.5 0 271.5s-196.5 75-271.5 0c-10.2-10.2-19-21.3-26.4-33-9.5-14.9-29.3-19.3-44.2-9.8s-19.3 29.3-9.8 44.2c9.8 15.6 21.5 30.4 35.1 43.9 100 100 262 100 362 0s100-262 0-362c-94.2-94.3-243.7-99.7-344.3-16.2l-51.7-51.8c-6.9-6.8-17.2-8.9-26.2-5.2s-14.8 12.5-14.8 22.2v144c0 13.3 10.7 24 24 24z\"/></svg>",
+        "ds-icon-plus": "<svg viewBox=\"0 0 640 640\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m352 128c0-17.7-14.3-32-32-32s-32 14.3-32 32v160h-160c-17.7 0-32 14.3-32 32s14.3 32 32 32h160v160c0 17.7 14.3 32 32 32s32-14.3 32-32v-160h160c17.7 0 32-14.3 32-32s-14.3-32-32-32h-160z\"/></svg>",
+        "ds-icon-trash": "<svg viewBox=\"0 0 640 640\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m232.7 69.9-8.7 26.1h-96c-17.7 0-32 14.3-32 32s14.3 32 32 32h384c17.7 0 32-14.3 32-32s-14.3-32-32-32h-96l-8.7-26.1c-4.4-13.1-16.6-21.9-30.4-21.9h-113.8c-13.8 0-26 8.8-30.4 21.9zm279.3 138.1h-384l21.1 323.1c1.6 25.3 22.6 44.9 47.9 44.9h246c25.3 0 46.3-19.6 47.9-44.9z\"/></svg>"
     };
     var SvgSprite = class {
         mount() {
