@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discogs Submitter
 // @namespace    discogs-submitter
-// @version      3.3.3
+// @version      3.3.4
 // @author       Denis G. <https://github.com/denis-g>
 // @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital, Amazon Music, Bleep, HDtracks and submit releases to Discogs.
 // @license      MIT
@@ -19,6 +19,7 @@
 // @match        https://*.beatport.com/*
 // @match        https://*.7digital.com/artist/*/release/*
 // @match        https://bleep.com/*
+// @match        https://web.archive.org/web/*/*://bleep.com/*
 // @match        https://*.hdtracks.com/*
 // @match        https://*.amazon.co.jp/*
 // @match        https://*.amazon.com/*
@@ -355,7 +356,7 @@
     var USERSCRIPT = {
         ID: info?.script?.namespace || "discogs-submitter",
         NAME: info?.script?.name || "discogs-submitter",
-        VERSION: info?.script?.version || "3.3.3",
+        VERSION: info?.script?.version || "3.3.4",
         HOMEPAGE: info?.script?.homepage || "https://github.com/denis-g/userscript-discogs-submitter",
         SUPPORT_URL: info?.script?.supportURL || bugs?.url,
         FUNDING_URL: "https://buymeacoffee.com/denis_g"
@@ -1071,7 +1072,7 @@
     };
     var bleep = {
         id: "bleep",
-        test: matchUrls("https://bleep.com/*"),
+        test: matchUrls("https://bleep.com/*", "https://web.archive.org/web/*/*://bleep.com/*"),
         supports: { formats: [
             "WAV",
             "FLAC",
