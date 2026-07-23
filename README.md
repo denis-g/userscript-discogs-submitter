@@ -27,7 +27,7 @@ It extracts metadata from the source page, normalizes it to meet Discogs formatt
 | **Beatport**      | `*.beatport.com/*`                  |       ✅       |    ✅    |   ✅   |      ✅       |      ❌      |
 | **7digital**      | `*.7digital.com/artist/*/release/*` |       ❌       |    ❌    |   ✅   |      ❌       |      ❌      |
 | **Amazon Music**  | `*.amazon.*/*`                      |       ❌       |    ❌    |   ❌   |      ❌       |      ❌      |
-| **Bleep**         | `bleep.com/*`                       |       ✅       |    ❌    |   ✅   |      ❌       |      ❌      |
+| **Bleep**         | `bleep.com/*`                       |       ✅       |    ❌    |   ✅   |      ❌       |      🟡      |
 | **HDtracks**      | `*.hdtracks.com/*`                  |       ❌       |    ❌    |   ✅   |      ✅       |      ❌      |
 
 <div><sup><strong>Bandcamp</strong>: Catalog number and BPM extraction relies on both the release credits and description.</sup></div>

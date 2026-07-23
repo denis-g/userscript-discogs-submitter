@@ -15,6 +15,7 @@ export const bleep: StoreAdapter = {
   id: 'bleep',
   test: matchUrls(
     'https://bleep.com/*',
+    'https://web.archive.org/web/*/*://bleep.com/*',
   ),
   supports: {
     formats: ['WAV', 'FLAC', 'MP3'],

@@ -34,6 +34,7 @@ export default defineConfig({
           'https://*.beatport.com/*',
           'https://*.7digital.com/artist/*/release/*',
           'https://bleep.com/*',
+          'https://web.archive.org/web/*/*://bleep.com/*',
           'https://*.hdtracks.com/*',
           'https://*.amazon.co.jp/*',
           'https://*.amazon.com/*',
