@@ -23,6 +23,21 @@ function buildPrefixRegex(prefixes: string[]): RegExp {
 }
 
 /**
+ * Builds a case-insensitive regex that captures a catalog-number-shaped token following any of
+ * the given prefixes. Unlike {@link buildPrefixRegex}, the capture is bounded to a single token
+ * (e.g. `DDD113`) so a prefix embedded mid-sentence (e.g. in a prose "about" blurb) doesn't
+ * swallow the rest of the sentence.
+ *
+ * @param prefixes - Catalog-number prefixes to match (e.g. `['Cat.', 'Catalog Number']`).
+ * @returns A RegExp whose first capture group is the catalog number token following the matched prefix.
+ */
+function buildCatalogRegex(prefixes: string[]): RegExp {
+  const escaped = prefixes.map(prefix => escapeRegExp(prefix).replace(/\s+/g, '\\s+'));
+
+  return new RegExp(`(?:${escaped.join('|')})[\\s:-]+([A-Za-z0-9][\\w./-]{1,19})`, 'i');
+}
+
+/**
  * Extracts catalog number from credits and about items.
  *
  * @param items - Array of string items describing the release.
@@ -47,7 +62,7 @@ function extractCatalogNumber(items: string[]): string | null {
     'Catalogue No',
     'Cat No.',
   ];
-  const catRegex = buildPrefixRegex(catPrefixes);
+  const catRegex = buildCatalogRegex(catPrefixes);
   const bracketedCatRegex = /\[([A-Z0-9-]{3,15})\]/;
   let labelNumber: string | null = null;
 

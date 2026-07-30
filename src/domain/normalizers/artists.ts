@@ -50,8 +50,10 @@ export function isValidCreditPhrase(text: string | null | undefined): boolean {
  *
  * @example
  * ```typescript
- * const credits = parseArtists('Artist One & Artist Two feat. Artist Three');
- * // [{name: "Artist One", join: "&"}, {name: "Artist Two", join: "feat."}, {name: "Artist Three", join: ","}]
+ * const extraArtists = [];
+ * const credits = parseArtists('Artist One & Artist Two feat. Artist Three', extraArtists);
+ * // credits: [{name: "Artist One", join: "&"}, {name: "Artist Two", join: ","}]
+ * // extraArtists: [{name: "Artist Three", role: "Featuring"}]
  * ```
  */
 export function parseArtists(artistString: string | null | undefined, extraArtists: ArtistCredit[] | null = null): ArtistCredit[] {
@@ -63,6 +65,10 @@ export function parseArtists(artistString: string | null | undefined, extraArtis
 
   if (oxfordPattern) {
     processedString = artistString.replace(oxfordPattern, ' $1 ');
+  }
+
+  if (extraArtists) {
+    processedString = extractExtraArtists(processedString, extraArtists);
   }
 
   const parts = processedString.split(joinerPattern);
@@ -126,7 +132,7 @@ export function extractExtraArtists(text: string, extraArtists: ArtistCredit[], 
           return fullMatch;
         }
 
-        let cleanCapture = capturedName.replace(/[.:,;\s]+$/, '').trim();
+        let cleanCapture = capturedName.replace(/[:,;\s]+$/, '').replace(/(?<!\b[a-z])\.\s*$/i, '').trim();
         const chunks = cleanCapture.split(/\.\s+/);
 
         if (chunks.length > 1) {

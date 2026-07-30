@@ -25,7 +25,7 @@ export const ARTIST_CREDIT_ROLES: Record<string, RegExp[]> = {
     ['featuring', 'feat', 'ft', 'f/'],
     [
       '(?:\\(|\\[)\\s*{{p}}\\b\\.?\\s*([^()[\\]]+)(?:\\)|\\])',
-      '(?:\\s+|^){{p}}\\b\\.?\\s*(.+?)(?=\\s+\\b(?:feat|ft|prod|remix|vs|with|and|&)\\b|\\s*[\\[\\(]|$)',
+      '(?:\\s+|^){{p}}\\b\\.?\\s*(.+?)(?=\\s+\\b(?:feat|ft|prod|remix|vs|with)\\b|\\s*[\\[\\(]|$)',
     ],
   ),
   'Remix': [

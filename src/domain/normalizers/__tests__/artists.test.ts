@@ -1,5 +1,37 @@
 import { describe, expect, it } from 'vitest';
-import { groupExtraArtists, normalizeMainArtists } from '../artists';
+import { groupExtraArtists, normalizeMainArtists, parseArtists } from '../artists';
+
+describe('parseArtists', () => {
+  it('treats "&"-joined names after "feat" as featured artists, not additional main artists', () => {
+    const extraArtists: any[] = [];
+    const result = parseArtists('Artist One Feat Artist Two & Artist Three', extraArtists);
+
+    expect(result).toEqual([{ name: 'Artist One', join: ',' }]);
+    expect(extraArtists).toEqual([
+      { name: 'Artist Two', role: 'Featuring' },
+      { name: 'Artist Three', role: 'Featuring' },
+    ]);
+  });
+
+  it('keeps "&"-joined names before "feat" as separate main artists', () => {
+    const extraArtists: any[] = [];
+    const result = parseArtists('Artist One & Artist Two feat. Artist Three', extraArtists);
+
+    expect(result).toEqual([
+      { name: 'Artist One', join: '&' },
+      { name: 'Artist Two', join: ',' },
+    ]);
+    expect(extraArtists).toEqual([{ name: 'Artist Three', role: 'Featuring' }]);
+  });
+
+  it('preserves a trailing single-letter abbreviation period in a featured artist name', () => {
+    const extraArtists: any[] = [];
+    const result = parseArtists('Artist One feat Artist B.', extraArtists);
+
+    expect(result).toEqual([{ name: 'Artist One', join: ',' }]);
+    expect(extraArtists).toEqual([{ name: 'Artist B.', role: 'Featuring' }]);
+  });
+});
 
 describe('normalizeMainArtists', () => {
   it('converts 6 or more artists to "Various"', () => {

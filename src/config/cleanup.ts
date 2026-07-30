@@ -12,7 +12,10 @@ export const REMOVE_FROM_ARTIST = [];
 export const REMOVE_FROM_TITLE = [
   ...buildCreditRegexes(
     ['original mix', 'original', 'remaster', 'remastered', 'explicit', 'digital bonus track', 'digital bonus', 'bonus track', 'bonus', '24bit', '24 bit', '16bit', '16 bit'],
-    ['\\(\\s*{{p}}\\s*\\)', '\\[\\s*{{p}}\\s*\\]', '-\\s*{{p}}\\b'],
+    ['\\(\\s*{{p}}\\s*\\)', '\\[\\s*{{p}}\\s*\\]', '-\\s*{{p}}\\b$'],
   ),
+  // Some stores (e.g. Qobuz) append the "Explicit" content-warning badge as plain trailing
+  // text with no separator, e.g. "Tweedle Dee, Tweedle Dumb! Explicit".
+  ...buildCreditRegexes(['explicit'], ['\\s+{{p}}\\s*$']),
   /[([-]?\s*\b\d{2,3}\s*bpm\b\s*[)\]]?/gi,
 ];

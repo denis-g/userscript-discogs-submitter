@@ -16,6 +16,13 @@ describe('normalizeTitle', () => {
   it('standardizes capitalization and extra spaces', () => {
     expect(normalizeTitle('  Track   Title  ')).toBe('Track Title');
   });
+
+  it('strips a trailing "Explicit" badge appended with no separator', () => {
+    expect(normalizeTitle('Track Title! Explicit')).toBe('Track Title!');
+    expect(normalizeTitle('Track Title (Explicit)')).toBe('Track Title');
+    expect(normalizeTitle('Track Title [Explicit]')).toBe('Track Title');
+    expect(normalizeTitle('Track Title - Explicit')).toBe('Track Title');
+  });
 });
 
 describe('splitArtistTitle', () => {
@@ -61,6 +68,25 @@ describe('splitArtistTitle', () => {
 
     expect(result.artists).toEqual(defaultArtists);
     expect(result.title).toBe('Intro - Title');
+  });
+
+  it('does not strip "Original" when it is the first word of the title, not a trailing version marker', () => {
+    const result = splitArtistTitle('Artist Name - Original Track', defaultArtists, []);
+
+    expect(result.artists[0].name).toBe('Artist Name');
+    expect(result.title).toBe('Original Track');
+  });
+
+  it('keeps only the main artist when "&"-joined names follow "feat", routing the rest to extraArtists', () => {
+    const extraArtists: any[] = [];
+    const result = splitArtistTitle('Artist One Feat Artist Two & Artist Three - Track Title', defaultArtists, extraArtists);
+
+    expect(result.artists).toEqual([{ name: 'Artist One', join: ',' }]);
+    expect(result.title).toBe('Track Title');
+    expect(extraArtists).toEqual([
+      { name: 'Artist Two', role: 'Featuring' },
+      { name: 'Artist Three', role: 'Featuring' },
+    ]);
   });
 });
 

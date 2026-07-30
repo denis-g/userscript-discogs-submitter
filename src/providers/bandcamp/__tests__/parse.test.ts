@@ -181,6 +181,34 @@ describe('bandcamp provider', () => {
     });
   });
 
+  describe('catalog number extraction', () => {
+    it('extracts only the catalog number token from a prose "about" blurb, not the rest of the sentence', async () => {
+      document.body.innerHTML = `
+        <div id="name-section">
+          <h2 class="trackTitle" itemprop="name">Track Title</h2>
+        </div>
+        <div class="tralbum-about">Straight from the depths of Artist Name's imagination comes the "Track Title" EP (with the appropriate 'lucky' catalog number DDD113). Each track inspired by a theme.</div>
+      `;
+
+      const result = await bandcamp.parse();
+
+      expect(result.number).toBe('DDD113');
+    });
+
+    it('extracts the catalog number from its own dedicated credits line', async () => {
+      document.body.innerHTML = `
+        <div id="name-section">
+          <h2 class="trackTitle" itemprop="name">Album</h2>
+        </div>
+        <div class="tralbum-credits">Catalog Number: ABC-123</div>
+      `;
+
+      const result = await bandcamp.parse();
+
+      expect(result.number).toBe('ABC-123');
+    });
+  });
+
   it('reads cover from `a.popupImage` on the live (non-archive) layout', async () => {
     document.body.innerHTML = `
       <div id="name-section">
