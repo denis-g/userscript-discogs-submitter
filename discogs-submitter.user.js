@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discogs Submitter
 // @namespace    discogs-submitter
-// @version      3.3.4
+// @version      3.3.5
 // @author       Denis G. <https://github.com/denis-g>
 // @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital, Amazon Music, Bleep, HDtracks and submit releases to Discogs.
 // @license      MIT
@@ -162,25 +162,29 @@
         return nonCommaJoiners.length > 0 ? new RegExp(`,\\s*(${nonCommaJoiners.join("|")})(?:\\s+|$)`, "gi") : null;
     }
     var REMOVE_FROM_ARTIST = [];
-    var REMOVE_FROM_TITLE = [...buildCreditRegexes([
-        "original mix",
-        "original",
-        "remaster",
-        "remastered",
-        "explicit",
-        "digital bonus track",
-        "digital bonus",
-        "bonus track",
-        "bonus",
-        "24bit",
-        "24 bit",
-        "16bit",
-        "16 bit"
-    ], [
-        "\\(\\s*{{p}}\\s*\\)",
-        "\\[\\s*{{p}}\\s*\\]",
-        "-\\s*{{p}}\\b"
-    ]), /[([-]?\s*\b\d{2,3}\s*bpm\b\s*[)\]]?/gi];
+    var REMOVE_FROM_TITLE = [
+        ...buildCreditRegexes([
+            "original mix",
+            "original",
+            "remaster",
+            "remastered",
+            "explicit",
+            "digital bonus track",
+            "digital bonus",
+            "bonus track",
+            "bonus",
+            "24bit",
+            "24 bit",
+            "16bit",
+            "16 bit"
+        ], [
+            "\\(\\s*{{p}}\\s*\\)",
+            "\\[\\s*{{p}}\\s*\\]",
+            "-\\s*{{p}}\\b$"
+        ]),
+        ...buildCreditRegexes(["explicit"], ["\\s+{{p}}\\s*$"]),
+        /[([-]?\s*\b\d{2,3}\s*bpm\b\s*[)\]]?/gi
+    ];
     var GLOBAL_CREDIT_REGEX = [
         "(?:\\(|\\[)\\s*{{p}}\\b\\s*(?:by)?\\s*[:\\s-]*([^()[\\]]+)(?:\\)|\\])",
         "(?:\\s+|^)(?:\\w+\\s+(?:and|&)\\s+)?{{p}}(?:\\s+(?:and|&)\\s+\\w+)?\\s+by\\b\\s*[:\\s-]*(.+?)(?=\\s*(?:\\/|;|[A-Z][a-z]+:(?=\\s*\\S)|,|$))",
@@ -193,7 +197,7 @@
             "feat",
             "ft",
             "f/"
-        ], ["(?:\\(|\\[)\\s*{{p}}\\b\\.?\\s*([^()[\\]]+)(?:\\)|\\])", "(?:\\s+|^){{p}}\\b\\.?\\s*(.+?)(?=\\s+\\b(?:feat|ft|prod|remix|vs|with|and|&)\\b|\\s*[\\[\\(]|$)"]),
+        ], ["(?:\\(|\\[)\\s*{{p}}\\b\\.?\\s*([^()[\\]]+)(?:\\)|\\])", "(?:\\s+|^){{p}}\\b\\.?\\s*(.+?)(?=\\s+\\b(?:feat|ft|prod|remix|vs|with)\\b|\\s*[\\[\\(]|$)"]),
         "Remix": [
             ...buildCreditRegexes([
                 "remix",
@@ -356,7 +360,7 @@
     var USERSCRIPT = {
         ID: info?.script?.namespace || "discogs-submitter",
         NAME: info?.script?.name || "discogs-submitter",
-        VERSION: info?.script?.version || "3.3.4",
+        VERSION: info?.script?.version || "3.3.5",
         HOMEPAGE: info?.script?.homepage || "https://github.com/denis-g/userscript-discogs-submitter",
         SUPPORT_URL: info?.script?.supportURL || bugs?.url,
         FUNDING_URL: "https://buymeacoffee.com/denis_g"
@@ -460,6 +464,7 @@
         if (!artistString) return [];
         let processedString = artistString;
         if (oxfordPattern) processedString = artistString.replace(oxfordPattern, " $1 ");
+        if (extraArtists) processedString = extractExtraArtists(processedString, extraArtists);
         const parts = processedString.split(joinerPattern);
         const artists = [];
         for (let index = 0; index < parts.length; index += 2) {
@@ -482,7 +487,7 @@
         let processedText = text;
         for (const [role, patterns] of Object.entries(ARTIST_CREDIT_ROLES)) {for (const pattern of patterns) {processedText = processedText.replace(pattern, (fullMatch, capturedName) => {
             if (typeof capturedName !== "string") return fullMatch;
-            let cleanCapture = capturedName.replace(/[.:,;\s]+$/, "").trim();
+            let cleanCapture = capturedName.replace(/[:,;\s]+$/, "").replace(/(?<!\b[a-z])\.\s*$/i, "").trim();
             const chunks = cleanCapture.split(/\.\s+/);
             if (chunks.length > 1) {
                 let validName = chunks[0];
@@ -881,8 +886,12 @@
         const escaped = prefixes.map((prefix) => escapeRegExp(prefix).replace(/\s+/g, "\\s+"));
         return new RegExp(`(?:${escaped.join("|")})[\\s:-]+(\\S.+)`, "i");
     }
+    function buildCatalogRegex(prefixes) {
+        const escaped = prefixes.map((prefix) => escapeRegExp(prefix).replace(/\s+/g, "\\s+"));
+        return new RegExp(`(?:${escaped.join("|")})[\\s:-]+([A-Za-z0-9][\\w./-]{1,19})`, "i");
+    }
     function extractCatalogNumber(items) {
-        const catRegex = buildPrefixRegex([
+        const catRegex = buildCatalogRegex([
             "Catalog Number",
             "Calalog No",
             "Catalogue N°",
