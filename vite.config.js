@@ -14,6 +14,9 @@ export default defineConfig({
         fileName: 'discogs-submitter.user.js',
         autoGrant: false,
       },
+      server: {
+        open: false,
+      },
       userscript: {
         'name': 'Discogs Submitter',
         'namespace': `${pkg.name}`,
