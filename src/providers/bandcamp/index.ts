@@ -54,6 +54,7 @@ function extractCatalogNumber(items: string[]): string | null {
     'CatNo',
     'Cat.no',
     'Cat. Number',
+    'Cat. No.',
     'Cat.',
     'Catalog#',
     'Catalog #',

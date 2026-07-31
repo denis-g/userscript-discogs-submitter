@@ -207,6 +207,19 @@ describe('bandcamp provider', () => {
 
       expect(result.number).toBe('ABC-123');
     });
+
+    it('extracts the catalog number from a "Cat. No." prefix, not the "No." token', async () => {
+      document.body.innerHTML = `
+        <div id="name-section">
+          <h2 class="trackTitle" itemprop="name">Album</h2>
+        </div>
+        <div class="tralbum-credits">Cat. No. CAT001 – All right reserved</div>
+      `;
+
+      const result = await bandcamp.parse();
+
+      expect(result.number).toBe('CAT001');
+    });
   });
 
   it('reads cover from `a.popupImage` on the live (non-archive) layout', async () => {
