@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discogs Submitter
 // @namespace    discogs-submitter
-// @version      3.3.6
+// @version      3.3.7
 // @author       Denis G. <https://github.com/denis-g>
 // @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital, Amazon Music, Bleep, HDtracks and submit releases to Discogs.
 // @license      MIT
@@ -69,7 +69,7 @@
 
 (function() {
     "use strict";
-    var styles_default$8 = ".discogs-submitter__header__cover__image{opacity:1}";
+    var styles_default$8 = ".discogs-submitter__header__cover__image{opacity:1}.discogs-submitter__textarea{margin-bottom:unset;width:unset}";
     var IGNORE_CAPITALIZATION = [
         "FM",
         "VHS",
@@ -360,7 +360,7 @@
     var USERSCRIPT = {
         ID: info?.script?.namespace || "discogs-submitter",
         NAME: info?.script?.name || "discogs-submitter",
-        VERSION: info?.script?.version || "3.3.6",
+        VERSION: info?.script?.version || "3.3.7",
         HOMEPAGE: info?.script?.homepage || "https://github.com/denis-g/userscript-discogs-submitter",
         SUPPORT_URL: info?.script?.supportURL || bugs?.url,
         FUNDING_URL: "https://buymeacoffee.com/denis_g"
