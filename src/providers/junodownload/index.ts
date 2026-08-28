@@ -38,6 +38,7 @@ export const junodownload: StoreAdapter = {
   id: 'junodownload',
   test: matchUrls(
     'https://*.junodownload.com/*',
+    'https://web.archive.org/web/*/*://*.junodownload.com/*',
   ),
   supports: {
     formats: ['WAV', 'FLAC', 'AIFF', 'MP3'],

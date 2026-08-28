@@ -34,6 +34,7 @@ export default defineConfig({
           'https://web.archive.org/web/*/*://*.bandcamp.com*/album/*',
           'https://*.qobuz.com/*',
           'https://*.junodownload.com/*',
+          'https://web.archive.org/web/*/*://*.junodownload.com/*',
           'https://*.beatport.com/*',
           'https://*.7digital.com/artist/*/release/*',
           'https://bleep.com/*',
