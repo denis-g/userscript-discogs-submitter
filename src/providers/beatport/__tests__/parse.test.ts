@@ -62,4 +62,67 @@ describe('beatport provider', () => {
     expect(result.tracks[0].title).toBe('Track One');
     expect(result.tracks[0].bpm).toBe(124);
   });
+
+  it('should filter out featured/remix artists from main track artists', async () => {
+    vi.mocked(getReleaseIdFromUrl).mockReturnValue('987654');
+    vi.mocked(networkRequest).mockImplementation(async (options) => {
+      const url = typeof options.url === 'string' ? options.url : '';
+
+      if (url.includes('refresh-anon-token')) {
+        return { access_token: 'fake_token' };
+      }
+
+      if (url.includes('/catalog/releases/987654/tracks')) {
+        return {
+          results: [
+            {
+              name: 'Track One feat. Artist Three',
+              mix_name: 'Original Mix',
+              artists: [{ name: 'Artist One' }, { name: 'Artist Two' }, { name: 'Artist Three' }],
+              length: '04:30',
+              bpm: 172,
+            },
+            {
+              name: 'Track Two',
+              mix_name: 'Remixer One Remix',
+              artists: [{ name: 'Artist Four' }, { name: 'Remixer One' }],
+              length: '05:00',
+              bpm: 174,
+            },
+          ],
+        };
+      }
+
+      if (url.includes('/catalog/releases/987654')) {
+        return {
+          name: 'Release Title',
+          artists: [{ name: 'Various Artists' }],
+          label: { name: 'Label Name' },
+          catalog_number: 'CAT002',
+          publish_date: '2020-06-04',
+          image: { uri: 'cover.jpg' },
+        };
+      }
+
+      return {};
+    });
+
+    const result = await beatport.parse();
+    // Verify track 1 (Featuring)
+    const track1 = result.tracks[0];
+
+    expect(track1.title).toBe('Track One');
+    expect(track1.artists).toHaveLength(2);
+    expect(track1.artists[0].name).toBe('Artist One');
+    expect(track1.artists[1].name).toBe('Artist Two');
+    expect(track1.extraartists).toContainEqual({ name: 'Artist Three', role: 'Featuring' });
+
+    // Verify track 2 (Remixer)
+    const track2 = result.tracks[1];
+
+    expect(track2.title).toBe('Track Two (Remixer One Remix)');
+    expect(track2.artists).toHaveLength(1);
+    expect(track2.artists[0].name).toBe('Artist Four');
+    expect(track2.extraartists).toContainEqual({ name: 'Remixer One', role: 'Remix' });
+  });
 });

@@ -76,8 +76,19 @@ export const beatport: StoreAdapter = {
     const albumTracks = data.tracks.map((track, index) => {
       const trackPosition = `${index + 1}`;
       const trackExtraArtists: ArtistCredit[] = [];
-      const trackArtists = normalizeArtists(track.artists.map(artist => artist.name), trackExtraArtists);
+      let trackArtists = normalizeArtists(track.artists.map(artist => artist.name), trackExtraArtists);
       const trackTitle = normalizeTitle(track.mix_name !== '' ? `${track.name} (${track.mix_name})` : track.name, trackExtraArtists);
+
+      if (trackExtraArtists.length > 0) {
+        const extraArtistNames = new Set(trackExtraArtists.map(extraArtist => extraArtist.name.toLowerCase()));
+        const filteredArtists = trackArtists.filter(trackArtist => !extraArtistNames.has(trackArtist.name.toLowerCase()));
+
+        if (filteredArtists.length > 0) {
+          trackArtists = filteredArtists;
+          trackArtists[trackArtists.length - 1].join = ',';
+        }
+      }
+
       const trackDuration = track.length;
       const trackBpm = track.bpm;
 
