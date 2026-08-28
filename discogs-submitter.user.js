@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discogs Submitter
 // @namespace    discogs-submitter
-// @version      3.3.7
+// @version      3.3.8
 // @author       Denis G. <https://github.com/denis-g>
 // @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital, Amazon Music, Bleep, HDtracks and submit releases to Discogs.
 // @license      MIT
@@ -16,6 +16,7 @@
 // @match        https://web.archive.org/web/*/*://*.bandcamp.com*/album/*
 // @match        https://*.qobuz.com/*
 // @match        https://*.junodownload.com/*
+// @match        https://web.archive.org/web/*/*://*.junodownload.com/*
 // @match        https://*.beatport.com/*
 // @match        https://*.7digital.com/artist/*/release/*
 // @match        https://bleep.com/*
@@ -360,7 +361,7 @@
     var USERSCRIPT = {
         ID: info?.script?.namespace || "discogs-submitter",
         NAME: info?.script?.name || "discogs-submitter",
-        VERSION: info?.script?.version || "3.3.7",
+        VERSION: info?.script?.version || "3.3.8",
         HOMEPAGE: info?.script?.homepage || "https://github.com/denis-g/userscript-discogs-submitter",
         SUPPORT_URL: info?.script?.supportURL || bugs?.url,
         FUNDING_URL: "https://buymeacoffee.com/denis_g"
@@ -1068,13 +1069,25 @@
                 tracks: data.tracks.map((track, index) => {
                     const trackPosition = `${index + 1}`;
                     const trackExtraArtists = [];
+                    let trackArtists = normalizeArtists(track.artists.map((artist) => artist.name), trackExtraArtists);
+                    const trackTitle = normalizeTitle(track.mix_name !== "" ? `${track.name} (${track.mix_name})` : track.name, trackExtraArtists);
+                    if (trackExtraArtists.length > 0) {
+                        const extraArtistNames = new Set(trackExtraArtists.map((extraArtist) => extraArtist.name.toLowerCase()));
+                        const filteredArtists = trackArtists.filter((trackArtist) => !extraArtistNames.has(trackArtist.name.toLowerCase()));
+                        if (filteredArtists.length > 0) {
+                            trackArtists = filteredArtists;
+                            trackArtists[trackArtists.length - 1].join = ",";
+                        }
+                    }
+                    const trackDuration = track.length;
+                    const trackBpm = track.bpm;
                     return {
                         pos: trackPosition,
                         extraartists: trackExtraArtists,
-                        artists: normalizeArtists(track.artists.map((artist) => artist.name), trackExtraArtists),
-                        title: normalizeTitle(track.mix_name !== "" ? `${track.name} (${track.mix_name})` : track.name, trackExtraArtists),
-                        duration: track.length,
-                        bpm: track.bpm
+                        artists: trackArtists,
+                        title: trackTitle,
+                        duration: trackDuration,
+                        bpm: trackBpm
                     };
                 })
             };
@@ -1185,7 +1198,7 @@
     }
     var junodownload = {
         id: "junodownload",
-        test: matchUrls("https://*.junodownload.com/*"),
+        test: matchUrls("https://*.junodownload.com/*", "https://web.archive.org/web/*/*://*.junodownload.com/*"),
         supports: { formats: [
             "WAV",
             "FLAC",
