@@ -39,6 +39,25 @@ describe('qobuz provider', () => {
     expect(result.released).toBe('2026-01-01');
     expect(result.tracks).toHaveLength(1);
     expect(result.tracks[0].title).toBe('Track One');
-    expect(result.cover).toContain('_max.jpg');
+    expect(result.cover).toBe('cover_max.jpg');
+    expect(result.thumb).toBe('cover_600.jpg');
+  });
+
+  it.each([
+    ['https://example.com/images/covers/cover_600.jpg', 'https://example.com/images/covers/cover_max.jpg'],
+    ['https://example.com/images/covers/cover_230.jpg', 'https://example.com/images/covers/cover_max.jpg'],
+    ['https://example.com/images/covers/cover_150.jpg', 'https://example.com/images/covers/cover_max.jpg'],
+    ['https://example.com/images/covers/cover_300.jpg', 'https://example.com/images/covers/cover_max.jpg'],
+    ['https://example.com/images/covers/cover_800.jpg', 'https://example.com/images/covers/cover_max.jpg'],
+  ])('should transform cover URL from %s to %s', async (sourceUrl, expectedMaxUrl) => {
+    document.body.innerHTML = `
+      <img class="album-cover__image" src="${sourceUrl}" />
+      <div id="playerTracks"></div>
+    `;
+
+    const result = await qobuz.parse();
+
+    expect(result.cover).toBe(expectedMaxUrl);
+    expect(result.thumb).toBe(sourceUrl);
   });
 });
