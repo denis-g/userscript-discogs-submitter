@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discogs Submitter
 // @namespace    discogs-submitter
-// @version      3.3.9
+// @version      3.3.10
 // @author       Denis G. <https://github.com/denis-g>
 // @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital, Amazon Music, Bleep, HDtracks and submit releases to Discogs.
 // @license      MIT
@@ -361,7 +361,7 @@
     var USERSCRIPT = {
         ID: info?.script?.namespace || "discogs-submitter",
         NAME: info?.script?.name || "discogs-submitter",
-        VERSION: info?.script?.version || "3.3.9",
+        VERSION: info?.script?.version || "3.3.10",
         HOMEPAGE: info?.script?.homepage || "https://github.com/denis-g/userscript-discogs-submitter",
         SUPPORT_URL: info?.script?.supportURL || bugs?.url,
         FUNDING_URL: "https://buymeacoffee.com/denis_g"
@@ -708,9 +708,10 @@
                 cookiePartition: { topLevelSite: unsafeWindow.location.origin },
                 ...options,
                 onload: (response) => {
-                    if (response.status >= 200 && response.status < 300) {if (config.responseType === "json") resolve(response.response);
-                    else resolve(!config.responseType || config.responseType === "text" ? response.responseText : response.response);}
-                    else reject(new Error(`HTTP Error: ${response.status} ${response.statusText || ""}`.trim()));
+                    if (response.status >= 200 && response.status < 300) {
+                        if (config.responseType === "json") resolve(response.response);
+                        else resolve(!config.responseType || config.responseType === "text" ? response.responseText : response.response);
+                    } else reject(new Error(`HTTP Error: ${response.status} ${response.statusText || ""}`.trim()));
                 },
                 onerror: (response) => {
                     reject(new Error(`Network Error: ${response.status} ${response.statusText || ""}`.trim() || "Connection failed"));
@@ -1284,7 +1285,7 @@
         parse: async () => {
             const data = await getData();
             const smallCover = getTextFromTag(".album-cover__image", null, "src");
-            const albumCover = smallCover?.replace(/_(600|300)\.jpg$/, "_max.jpg").replace("_600", "_max") || null;
+            const albumCover = smallCover?.replace(/_\d+(\.[a-z0-9]+)$/i, "_max$1") || null;
             const albumExtraArtists = [];
             const albumArtists = normalizeMainArtists(getTextFromTag(".album-meta__title .artist-name"), albumExtraArtists);
             return {
@@ -1493,10 +1494,12 @@
         element.dataset.attr.split("|").forEach((binding) => {
             const [key, path] = binding.split(":");
             const value = getValueByPath(context, path);
-            if (value != null) {if (key === "class") {
-                const classNames = String(value).trim().split(/\s+/).filter(Boolean);
-                if (classNames.length) element.classList.add(...classNames);
-            } else element.setAttribute(key, String(value));}
+            if (value != null) {
+                if (key === "class") {
+                    const classNames = String(value).trim().split(/\s+/).filter(Boolean);
+                    if (classNames.length) element.classList.add(...classNames);
+                } else element.setAttribute(key, String(value));
+            }
         });
         element.removeAttribute("data-attr");
         return false;
@@ -2529,8 +2532,10 @@
                 this.statusElement.classList.remove("is-error", "is-success", "is-info", "is-warning");
                 this.statusElement.classList.add(`is-${kind}`);
             }
-            if (this.debugButton) {if (kind === "error" || kind === "success") this.debugButton.removeAttribute("hidden");
-            else this.debugButton.setAttribute("hidden", "true");}
+            if (this.debugButton) {
+                if (kind === "error" || kind === "success") this.debugButton.removeAttribute("hidden");
+                else this.debugButton.setAttribute("hidden", "true");
+            }
         }
         restoreReady() {
             if (!this.hasParsedData()) return;
