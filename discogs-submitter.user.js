@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discogs Submitter
 // @namespace    discogs-submitter
-// @version      3.3.10
+// @version      3.3.11
 // @author       Denis G. <https://github.com/denis-g>
 // @description  Parse release data from Bandcamp, Qobuz, Juno Download, Beatport, 7digital, Amazon Music, Bleep, HDtracks and submit releases to Discogs.
 // @license      MIT
@@ -13,7 +13,9 @@
 // @downloadURL  https://raw.githubusercontent.com/denis-g/userscript-discogs-submitter/master/discogs-submitter.user.js
 // @updateURL    https://raw.githubusercontent.com/denis-g/userscript-discogs-submitter/master/discogs-submitter.user.js
 // @match        https://*.bandcamp.com/album/*
+// @match        https://*.bandcamp.com/track/*
 // @match        https://web.archive.org/web/*/*://*.bandcamp.com*/album/*
+// @match        https://web.archive.org/web/*/*://*.bandcamp.com*/track/*
 // @match        https://*.qobuz.com/*
 // @match        https://*.junodownload.com/*
 // @match        https://web.archive.org/web/*/*://*.junodownload.com/*
@@ -361,7 +363,7 @@
     var USERSCRIPT = {
         ID: info?.script?.namespace || "discogs-submitter",
         NAME: info?.script?.name || "discogs-submitter",
-        VERSION: info?.script?.version || "3.3.10",
+        VERSION: info?.script?.version || "3.3.11",
         HOMEPAGE: info?.script?.homepage || "https://github.com/denis-g/userscript-discogs-submitter",
         SUPPORT_URL: info?.script?.supportURL || bugs?.url,
         FUNDING_URL: "https://buymeacoffee.com/denis_g"
@@ -650,6 +652,13 @@
     function normalizeDuration(rawDuration) {
         if (!rawDuration) return "";
         const trimmed = String(rawDuration).trim();
+        const isoMatch = trimmed.match(/^PT?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?$/i);
+        if (isoMatch && (isoMatch[1] || isoMatch[2] || isoMatch[3])) {
+            const hours = Number.parseInt(isoMatch[1] || "0", 10);
+            const minutes = Number.parseInt(isoMatch[2] || "0", 10);
+            const seconds = Math.round(Number.parseFloat(isoMatch[3] || "0"));
+            return normalizeDuration(hours * 3600 + minutes * 60 + seconds);
+        }
         if (/^\d+(?:\.\d+)?$/.test(trimmed)) {
             const totalSeconds = Math.round(Number.parseFloat(trimmed));
             const hours = Math.floor(totalSeconds / 3600);
@@ -953,9 +962,42 @@
         if (!albumLabel && credits.length) albumLabel = credits.find((item) => item.length > 1) || null;
         return albumLabel;
     }
+    function extractSingleTrackDuration() {
+        const domDuration = getTextFromTag(".time_total") || getTextFromTag(".time, .time.secondaryText");
+        if (domDuration) {
+            const normalized = normalizeDuration(domDuration);
+            if (normalized) return normalized;
+        }
+        const tralbumScript = document.querySelector("script[data-tralbum]");
+        if (tralbumScript) {try {
+            const trackDuration = JSON.parse(tralbumScript.getAttribute("data-tralbum") || "{}").trackinfo?.[0]?.duration;
+            if (trackDuration != null) {
+                const normalized = normalizeDuration(trackDuration);
+                if (normalized) return normalized;
+            }
+        } catch {}}
+        try {
+            const trackDuration = (globalThis.unsafeWindow?.TralbumData)?.trackinfo?.[0]?.duration;
+            if (trackDuration != null) {
+                const normalized = normalizeDuration(trackDuration);
+                if (normalized) return normalized;
+            }
+        } catch {}
+        const jsonLdScript = document.querySelector("script[type=\"application/ld+json\"]");
+        if (jsonLdScript) {try {
+            const jsonLd = JSON.parse(jsonLdScript.textContent || "{}");
+            if (jsonLd.duration) {
+                const normalized = normalizeDuration(jsonLd.duration);
+                if (normalized) return normalized;
+            }
+        } catch {}}
+        const metaDuration = getTextFromTag("meta[itemprop=\"duration\"]", null, "content");
+        if (metaDuration) return normalizeDuration(metaDuration);
+        return "";
+    }
     var bandcamp = {
         id: "bandcamp",
-        test: matchUrls("https://*.bandcamp.com/album/*", "https://web.archive.org/web/*/*://*.bandcamp.com*/album/*"),
+        test: matchUrls("https://*.bandcamp.com/album/*", "https://*.bandcamp.com/track/*", "https://web.archive.org/web/*/*://*.bandcamp.com*/album/*", "https://web.archive.org/web/*/*://*.bandcamp.com*/track/*"),
         supports: { formats: [
             "WAV",
             "FLAC",
@@ -972,9 +1014,9 @@
                 const trimmedLine = line.trim();
                 if (trimmedLine) normalizeTitle(trimmedLine, albumExtraArtists);
             });
-            const albumArtists = normalizeMainArtists(isWebarchive() ? getTextFromTag("[itemtype*=\"MusicGroup\"] meta[itemprop=\"name\"]", null, "content") || getTextFromTag("#name-section h3 span") : getTextFromTag("#name-section h3 span") || getTextFromTag("#band-name-location .title"), albumExtraArtists);
+            const albumArtists = normalizeMainArtists(isWebarchive() ? getTextFromTag("[itemtype*=\"MusicGroup\"] meta[itemprop=\"name\"]", null, "content") || getTextFromTag("#name-section [itemprop=\"byArtist\"]") || getTextFromTag("#name-section h3 > span:last-of-type") : getTextFromTag("#name-section [itemprop=\"byArtist\"]") || getTextFromTag("#name-section h3 > span:last-of-type") || getTextFromTag("#band-name-location .title"), albumExtraArtists);
             const albumTitle = normalizeTitle(getTextFromTag("#name-section .trackTitle"), albumExtraArtists);
-            const albumTracks = Array.from(document.querySelectorAll("#track_table .track_row_view")).map((track, index) => {
+            let albumTracks = Array.from(document.querySelectorAll("#track_table .track_row_view")).map((track, index) => {
                 const trackPosition = `${index + 1}`;
                 const trackExtraArtists = [];
                 const { artists: trackArtists, title: trackTitle, bpm: trackBpm } = splitArtistTitle(getTextFromTag(".title > span, .title > a", track), albumArtists, trackExtraArtists);
@@ -987,6 +1029,21 @@
                     bpm: trackBpm
                 };
             });
+            if (albumTracks.length === 0) {
+                const rawTrackTitle = getTextFromTag("#name-section .trackTitle");
+                if (rawTrackTitle) {
+                    const trackExtraArtists = [];
+                    const { artists: trackArtists, title: trackTitle, bpm: trackBpm } = splitArtistTitle(rawTrackTitle, albumArtists, trackExtraArtists);
+                    albumTracks = [{
+                        pos: "1",
+                        extraartists: trackExtraArtists,
+                        artists: trackArtists,
+                        title: trackTitle,
+                        duration: extractSingleTrackDuration(),
+                        bpm: trackBpm
+                    }];
+                }
+            }
             const location = document.querySelector("#band-name-location");
             let albumLabel = location ? getTextFromTag(".title", location) : null;
             let labelNumber = null;
