@@ -18,4 +18,11 @@ describe('normalizeDuration', () => {
     expect(normalizeDuration(null)).toBe('');
     expect(normalizeDuration(undefined)).toBe('');
   });
+
+  it('handles ISO 8601 duration format', () => {
+    expect(normalizeDuration('P00H03M10S')).toBe('3:10');
+    expect(normalizeDuration('PT3M10S')).toBe('3:10');
+    expect(normalizeDuration('PT45S')).toBe('0:45');
+    expect(normalizeDuration('PT1H02M05S')).toBe('1:02:05');
+  });
 });

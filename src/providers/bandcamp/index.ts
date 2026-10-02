@@ -135,16 +135,100 @@ function extractLabelName(items: string[], credits: string[]): string | null {
 }
 
 /**
+ * Extracts track duration on single-track Bandcamp pages where `#track_table` is absent.
+ * Checks audio player DOM elements, `data-tralbum` script attribute,
+ * `unsafeWindow.TralbumData`, JSON-LD schema metadata, and duration meta tags.
+ *
+ * @returns The normalized duration string, or an empty string if not found.
+ */
+function extractSingleTrackDuration(): string {
+  const domDuration = getTextFromTag('.time_total') || getTextFromTag('.time, .time.secondaryText');
+
+  if (domDuration) {
+    const normalized = normalizeDuration(domDuration);
+
+    if (normalized) {
+      return normalized;
+    }
+  }
+
+  const tralbumScript = document.querySelector('script[data-tralbum]');
+
+  if (tralbumScript) {
+    try {
+      const tralbumData = JSON.parse(tralbumScript.getAttribute('data-tralbum') || '{}');
+      const trackDuration = tralbumData.trackinfo?.[0]?.duration;
+
+      if (trackDuration != null) {
+        const normalized = normalizeDuration(trackDuration);
+
+        if (normalized) {
+          return normalized;
+        }
+      }
+    }
+    catch {
+      // Ignore JSON parse errors in malformed script attributes
+    }
+  }
+
+  try {
+    const windowTralbum = (globalThis as any).unsafeWindow?.TralbumData;
+    const trackDuration = windowTralbum?.trackinfo?.[0]?.duration;
+
+    if (trackDuration != null) {
+      const normalized = normalizeDuration(trackDuration);
+
+      if (normalized) {
+        return normalized;
+      }
+    }
+  }
+  catch {
+    // Ignore unsafeWindow access errors
+  }
+
+  const jsonLdScript = document.querySelector('script[type="application/ld+json"]');
+
+  if (jsonLdScript) {
+    try {
+      const jsonLd = JSON.parse(jsonLdScript.textContent || '{}');
+
+      if (jsonLd.duration) {
+        const normalized = normalizeDuration(jsonLd.duration);
+
+        if (normalized) {
+          return normalized;
+        }
+      }
+    }
+    catch {
+      // Ignore JSON parse errors
+    }
+  }
+
+  const metaDuration = getTextFromTag('meta[itemprop="duration"]', null, 'content');
+
+  if (metaDuration) {
+    return normalizeDuration(metaDuration);
+  }
+
+  return '';
+}
+
+/**
  * Adapter configuration for the Bandcamp digital store.
- * Handles pattern matching, DOM extraction, and normalization for Bandcamp release pages.
+ * Handles pattern matching, DOM extraction, and normalization for Bandcamp release and track pages.
  */
 export const bandcamp: StoreAdapter = {
   id: 'bandcamp',
   test: matchUrls(
     'https://*.bandcamp.com/album/*',
+    'https://*.bandcamp.com/track/*',
     // The archived URL preserves the original scheme + port (e.g. `http://...bandcamp.com:80/album/`),
-    // so allow anything between `.com` and `/album/` to swallow the port segment.
+    // so allow anything between `.com` and `/album/` or `/track/` to swallow the port segment.
     'https://web.archive.org/web/*/*://*.bandcamp.com*/album/*',
+    'https://web.archive.org/web/*/*://*.bandcamp.com*/track/*',
   ),
   supports: {
     formats: ['WAV', 'FLAC', 'AIFF', 'MP3'],
@@ -176,12 +260,12 @@ export const bandcamp: StoreAdapter = {
       isWebarchive()
         // Older snapshots expose the artist as schema.org microdata; newer snapshots mirror the
         // live layout, so fall back to the same `#name-section` heading the live branch reads.
-        ? getTextFromTag('[itemtype*="MusicGroup"] meta[itemprop="name"]', null, 'content') || getTextFromTag('#name-section h3 span')
-        : getTextFromTag('#name-section h3 span') || getTextFromTag('#band-name-location .title'),
+        ? getTextFromTag('[itemtype*="MusicGroup"] meta[itemprop="name"]', null, 'content') || getTextFromTag('#name-section [itemprop="byArtist"]') || getTextFromTag('#name-section h3 > span:last-of-type')
+        : getTextFromTag('#name-section [itemprop="byArtist"]') || getTextFromTag('#name-section h3 > span:last-of-type') || getTextFromTag('#band-name-location .title'),
       albumExtraArtists,
     );
     const albumTitle = normalizeTitle(getTextFromTag('#name-section .trackTitle'), albumExtraArtists);
-    const albumTracks: TrackData[] = Array.from(document.querySelectorAll('#track_table .track_row_view')).map((track, index) => {
+    let albumTracks: TrackData[] = Array.from(document.querySelectorAll('#track_table .track_row_view')).map((track, index) => {
       const trackPosition = `${index + 1}`;
       const trackExtraArtists: ArtistCredit[] = [];
       const { artists: trackArtists, title: trackTitle, bpm: trackBpm } = splitArtistTitle(getTextFromTag('.title > span, .title > a', track), albumArtists, trackExtraArtists);
@@ -196,6 +280,28 @@ export const bandcamp: StoreAdapter = {
         bpm: trackBpm,
       };
     });
+
+    if (albumTracks.length === 0) {
+      const rawTrackTitle = getTextFromTag('#name-section .trackTitle');
+
+      if (rawTrackTitle) {
+        const trackExtraArtists: ArtistCredit[] = [];
+        const { artists: trackArtists, title: trackTitle, bpm: trackBpm } = splitArtistTitle(rawTrackTitle, albumArtists, trackExtraArtists);
+        const trackDuration = extractSingleTrackDuration();
+
+        albumTracks = [
+          {
+            pos: '1',
+            extraartists: trackExtraArtists,
+            artists: trackArtists,
+            title: trackTitle,
+            duration: trackDuration,
+            bpm: trackBpm,
+          },
+        ];
+      }
+    }
+
     const location = document.querySelector('#band-name-location');
     let albumLabel = location ? getTextFromTag('.title', location) : null;
     let labelNumber = null;

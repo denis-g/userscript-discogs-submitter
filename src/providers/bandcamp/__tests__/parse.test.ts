@@ -20,6 +20,12 @@ describe('bandcamp provider', () => {
     expect(bandcamp.test(archivedWithPort)).toBe(true);
   });
 
+  it('should match live and archived track URLs', () => {
+    expect(bandcamp.test('https://example.bandcamp.com/track/track-title')).toBe(true);
+    expect(bandcamp.test('https://web.archive.org/web/timestamp/https://example.bandcamp.com/track/track-title')).toBe(true);
+    expect(bandcamp.test('https://web.archive.org/web/timestamp/http://example.bandcamp.com:80/track/track-title')).toBe(true);
+  });
+
   it('should parse basic album data from DOM', async () => {
     document.body.innerHTML = `
       <div id="name-section">
@@ -236,5 +242,85 @@ describe('bandcamp provider', () => {
 
     expect(result.thumb).toBe('https://example.com/cover-thumb.jpg');
     expect(result.cover).toBe('https://example.com/cover-full.jpg');
+  });
+
+  describe('single track parsing', () => {
+    it('parses single track data using data-tralbum duration', async () => {
+      document.body.innerHTML = `
+        <div id="name-section">
+          <h2 class="trackTitle">Track Title</h2>
+          <h3 class="albumTitle">by <span><a href="#">Artist Name</a></span></h3>
+        </div>
+        <div id="band-name-location">
+          <span class="title">Label Name</span>
+        </div>
+        <div class="tralbum-credits">
+          released April 13, 2026
+        </div>
+        <script type="text/javascript" data-tralbum='{"trackinfo":[{"id":123,"duration":190.909}]}'></script>
+      `;
+
+      const result = await bandcamp.parse();
+
+      expect(result.title).toBe('Track Title');
+      expect(result.artists[0].name).toBe('Artist Name');
+      expect(result.label).toBe('Label Name');
+      expect(result.released).toBe('2026-04-13');
+      expect(result.tracks).toHaveLength(1);
+      expect(result.tracks[0].pos).toBe('1');
+      expect(result.tracks[0].title).toBe('Track Title');
+      expect(result.tracks[0].duration).toBe('3:11');
+    });
+
+    it('parses single track duration from schema.org JSON-LD', async () => {
+      document.body.innerHTML = `
+        <div id="name-section">
+          <h2 class="trackTitle">Track Title</h2>
+          <h3 class="albumTitle">by <span><a href="#">Artist Name</a></span></h3>
+        </div>
+        <script type="application/ld+json">
+          {"@type":"MusicRecording","name":"Track Title","duration":"P00H03M10S"}
+        </script>
+      `;
+
+      const result = await bandcamp.parse();
+
+      expect(result.tracks).toHaveLength(1);
+      expect(result.tracks[0].title).toBe('Track Title');
+      expect(result.tracks[0].duration).toBe('3:10');
+    });
+
+    it('parses single track duration from audio player DOM element', async () => {
+      document.body.innerHTML = `
+        <div id="name-section">
+          <h2 class="trackTitle">Track Title</h2>
+          <h3 class="albumTitle">by <span><a href="#">Artist Name</a></span></h3>
+        </div>
+        <span class="time_total">4:15</span>
+      `;
+
+      const result = await bandcamp.parse();
+
+      expect(result.tracks).toHaveLength(1);
+      expect(result.tracks[0].duration).toBe('4:15');
+    });
+
+    it('parses artist correctly when track has fromAlbum link', async () => {
+      document.body.innerHTML = `
+        <div id="name-section">
+          <h2 class="trackTitle">Track Title</h2>
+          <h3 class="albumTitle">
+            from <span><a href="/album/release"><span class="fromAlbum">Album Title</span></a></span> by
+            <span><a href="#">Artist Name</a></span>
+          </h3>
+        </div>
+      `;
+
+      const result = await bandcamp.parse();
+
+      expect(result.artists[0].name).toBe('Artist Name');
+      expect(result.tracks[0].title).toBe('Track Title');
+      expect(result.tracks[0].artists[0].name).toBe('Artist Name');
+    });
   });
 });

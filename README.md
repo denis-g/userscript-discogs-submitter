@@ -21,7 +21,7 @@ It extracts metadata from the source page, normalizes it to meet Discogs formatt
 
 | Store             | Release page URL pattern            | Catalog Number | BPM info | 24-bit | Hi-Res Cover | Web Archive |
 | ----------------- |-------------------------------------| :------------: | :------: | :----: |:------------:|:-----------:|
-| **Bandcamp**      | `*.bandcamp.com/album/*`            |       🟡       |    🟡    |   ✅   |       ✅      |     ✅       |
+| **Bandcamp**      | `*.bandcamp.com/album/*`, `*.bandcamp.com/track/*` |       🟡       |    🟡    |   ✅   |       ✅      |     ✅       |
 | **Qobuz**         | `*.qobuz.com/*`                     |       ❌       |    ❌    |   ✅   |      ✅       |      ❌      |
 | **Juno Download** | `*.junodownload.com/*`              |       ✅       |    ✅    |   ❌   |      ❌       |      ❌      |
 | **Beatport**      | `*.beatport.com/*`                  |       ✅       |    ✅    |   ✅   |      ✅       |      ❌      |

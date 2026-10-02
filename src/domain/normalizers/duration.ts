@@ -1,13 +1,15 @@
 /**
- * Normalizes duration strings or numbers (e.g., seconds or HH:MM:SS) into a standard MM:SS or HH:MM:SS format.
+ * Normalizes duration strings or numbers (e.g., seconds, HH:MM:SS, or ISO 8601)
+ * into a standard MM:SS or HH:MM:SS format.
  *
  * @param rawDuration - The raw duration value scraped from the store.
  * @returns The normalized duration string, or an empty string if input is falsy.
  *
  * @example
  * ```typescript
- * console.log(normalizeDuration(326)); // "05:26"
+ * console.log(normalizeDuration(326)); // "5:26"
  * console.log(normalizeDuration("00:01:01")); // "1:01"
+ * console.log(normalizeDuration("P00H03M10S")); // "3:10"
  * ```
  */
 export function normalizeDuration(rawDuration: string | number | null | undefined): string {
@@ -16,6 +18,17 @@ export function normalizeDuration(rawDuration: string | number | null | undefine
   }
 
   const trimmed = String(rawDuration).trim();
+  // ISO 8601 duration (ex. P00H03M10S, PT3M10S, PT45S) - Bandcamp JSON-LD, schema.org
+  const isoMatch = trimmed.match(/^PT?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?$/i);
+
+  if (isoMatch && (isoMatch[1] || isoMatch[2] || isoMatch[3])) {
+    const hours = Number.parseInt(isoMatch[1] || '0', 10);
+    const minutes = Number.parseInt(isoMatch[2] || '0', 10);
+    const seconds = Math.round(Number.parseFloat(isoMatch[3] || '0'));
+    const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+
+    return normalizeDuration(totalSeconds);
+  }
 
   // Seconds based (ex. 326 or 397.24) - Bandcamp, Juno Download, 7digital
   if (/^\d+(?:\.\d+)?$/.test(trimmed)) {
